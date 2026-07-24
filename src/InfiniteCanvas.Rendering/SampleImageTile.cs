@@ -10,11 +10,14 @@ public sealed class SampleImageTile
 {
     private readonly object _cacheGate = new();
     private readonly Func<byte[]> _pixelFactory;
+    private readonly byte _placeholderValue;
     private byte[]? _pixels;
+    private int _generationQueued;
 #if WINDOWS
     private readonly Func<Bitmap>? _backgroundBitmapFactory;
     private int _backgroundFetched;
 #endif
+    public event EventHandler? PixelsGenerated;
 
     public SampleImageTile(
         string id,
@@ -22,7 +25,8 @@ public sealed class SampleImageTile
         int pixelWidth,
         int pixelHeight,
         Func<byte[]> pixelFactory,
-        IReadOnlyList<SampleAnnotation> annotations)
+        IReadOnlyList<SampleAnnotation> annotations,
+        byte placeholderValue = 128)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentNullException.ThrowIfNull(pixelFactory);
@@ -37,6 +41,7 @@ public sealed class SampleImageTile
         Bounds = bounds;
         PixelWidth = pixelWidth;
         PixelHeight = pixelHeight;
+        _placeholderValue = placeholderValue;
         _pixelFactory = () => ValidatePixels(pixelFactory(), pixelWidth, pixelHeight);
         Annotations = annotations;
     }
@@ -48,7 +53,8 @@ public sealed class SampleImageTile
         int pixelWidth,
         int pixelHeight,
         Func<Bitmap> backgroundBitmapFactory,
-        IReadOnlyList<SampleAnnotation> annotations)
+        IReadOnlyList<SampleAnnotation> annotations,
+        byte placeholderValue = 128)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentNullException.ThrowIfNull(backgroundBitmapFactory);
@@ -63,11 +69,11 @@ public sealed class SampleImageTile
         Bounds = bounds;
         PixelWidth = pixelWidth;
         PixelHeight = pixelHeight;
+        _placeholderValue = placeholderValue;
         _backgroundBitmapFactory = backgroundBitmapFactory;
         _pixelFactory = () =>
         {
             using var bitmap = _backgroundBitmapFactory();
-            Interlocked.Exchange(ref _backgroundFetched, 1);
             return ConvertBitmapToGray8(bitmap, pixelWidth, pixelHeight);
         };
         Annotations = annotations;
@@ -81,6 +87,8 @@ public sealed class SampleImageTile
     public int PixelWidth { get; }
 
     public int PixelHeight { get; }
+
+    public byte PlaceholderValue => _placeholderValue;
 
     public bool IsImageGenerated => Volatile.Read(ref _pixels) is not null;
 
@@ -105,6 +113,10 @@ public sealed class SampleImageTile
                 if (_pixels is null)
                 {
                     _pixels = _pixelFactory();
+#if WINDOWS
+                    Interlocked.Exchange(ref _backgroundFetched, 1);
+#endif
+                    Interlocked.Exchange(ref _generationQueued, 1);
                 }
 
                 return _pixels;
@@ -112,11 +124,26 @@ public sealed class SampleImageTile
         }
     }
 
+    public bool TryGetPixelsNonBlocking(out byte[] pixels)
+    {
+        var cached = Volatile.Read(ref _pixels);
+        if (cached is not null)
+        {
+            pixels = cached;
+            return true;
+        }
+
+        EnsurePixelsGenerationStarted();
+        pixels = Array.Empty<byte>();
+        return false;
+    }
+
     public void ResetImageCache()
     {
         lock (_cacheGate)
         {
             _pixels = null;
+            Interlocked.Exchange(ref _generationQueued, 0);
 #if WINDOWS
             Interlocked.Exchange(ref _backgroundFetched, 0);
 #endif
@@ -147,8 +174,52 @@ public sealed class SampleImageTile
             0,
             PixelHeight - 1);
 
-        value = Pixels[(sourceY * PixelWidth) + sourceX];
+        if (!TryGetPixelsNonBlocking(out var pixels))
+        {
+            value = _placeholderValue;
+            return true;
+        }
+
+        value = pixels[(sourceY * PixelWidth) + sourceX];
         return true;
+    }
+
+    private void EnsurePixelsGenerationStarted()
+    {
+        if (Interlocked.CompareExchange(ref _generationQueued, 1, 0) != 0)
+        {
+            return;
+        }
+
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                var generated = _pixelFactory();
+                var shouldRaiseEvent = false;
+                lock (_cacheGate)
+                {
+                    if (_pixels is null)
+                    {
+                        _pixels = generated;
+                        shouldRaiseEvent = true;
+                    }
+                }
+
+#if WINDOWS
+                Interlocked.Exchange(ref _backgroundFetched, 1);
+#endif
+
+                if (shouldRaiseEvent)
+                {
+                    PixelsGenerated?.Invoke(this, EventArgs.Empty);
+                }
+            }
+            catch
+            {
+                Interlocked.Exchange(ref _generationQueued, 0);
+            }
+        });
     }
 
     private static byte[] ValidatePixels(byte[] pixels, int width, int height)
@@ -225,14 +296,19 @@ public sealed record SampleAnnotation(
             return false;
         }
 
-        var sourceX = Math.Clamp(
-            (int)((worldX - Bounds.X) * DefectPixelWidth / Bounds.Width),
-            0,
-            DefectPixelWidth - 1);
-        var sourceY = Math.Clamp(
-            (int)((worldY - Bounds.Y) * DefectPixelHeight / Bounds.Height),
-            0,
-            DefectPixelHeight - 1);
+        var localX = worldX - Bounds.X;
+        var localY = worldY - Bounds.Y;
+        var imageLeft = (Bounds.Width - DefectPixelWidth) / 2.0;
+        var imageTop = (Bounds.Height - DefectPixelHeight) / 2.0;
+        var imageRight = imageLeft + DefectPixelWidth;
+        var imageBottom = imageTop + DefectPixelHeight;
+        if (localX < imageLeft || localX >= imageRight || localY < imageTop || localY >= imageBottom)
+        {
+            return false;
+        }
+
+        var sourceX = Math.Clamp((int)(localX - imageLeft), 0, DefectPixelWidth - 1);
+        var sourceY = Math.Clamp((int)(localY - imageTop), 0, DefectPixelHeight - 1);
 
         value = DefectPixels[(sourceY * DefectPixelWidth) + sourceX];
         return true;

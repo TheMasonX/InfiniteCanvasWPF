@@ -15,7 +15,7 @@ public class SampleImageGeneratorTests
         {
             Assert.That(first, Has.Count.EqualTo(2));
             Assert.That(first[0].Pixels, Is.EqualTo(second[0].Pixels));
-            Assert.That(first[0].Pixels, Has.All.InRange((byte)120, (byte)136));
+            Assert.That(first[0].Pixels, Has.All.EqualTo((byte)128));
             Assert.That(first[0].Annotations, Has.Count.EqualTo(3));
             Assert.That(first[0].Annotations.Select(item => item.Id),
                 Is.EqualTo(second[0].Annotations.Select(item => item.Id)));
@@ -36,8 +36,8 @@ public class SampleImageGeneratorTests
             Assert.That(tiles, Has.All.Property(nameof(SampleImageTile.IsImageGenerated)).False);
             Assert.That(tiles[0].PixelWidth, Is.EqualTo(8192));
             Assert.That(tiles[0].PixelHeight, Is.EqualTo(2048));
-            Assert.That(tiles[0].Annotations[0].DefectPixelWidth, Is.GreaterThan((int)tiles[0].Annotations[0].Bounds.Width));
-            Assert.That(tiles[0].Annotations[0].DefectPixelHeight, Is.GreaterThan((int)tiles[0].Annotations[0].Bounds.Height));
+            Assert.That(tiles[0].Annotations[0].DefectPixelWidth, Is.GreaterThan(0));
+            Assert.That(tiles[0].Annotations[0].DefectPixelHeight, Is.GreaterThan(0));
             Assert.That(tiles[1].Bounds.X, Is.EqualTo(8192));
             Assert.That(tiles[1].Bounds.Y, Is.EqualTo(0));
             Assert.That(tiles[2].Bounds.X, Is.EqualTo(0));
@@ -88,8 +88,31 @@ public class SampleImageGeneratorTests
         Assert.Multiple(() =>
         {
             Assert.That(inside, Is.True);
-            Assert.That(insideValue, Is.InRange((byte)120, (byte)136));
+            Assert.That(insideValue, Is.EqualTo((byte)128));
             Assert.That(outside, Is.False);
+        });
+    }
+
+    [Test]
+    public void GenerateSet_ValidatesEachParameterWithAccurateName()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                () => SampleImageGenerator.GenerateSet(pixelWidth: 0),
+                Throws.TypeOf<ArgumentOutOfRangeException>().With.Property(nameof(ArgumentOutOfRangeException.ParamName)).EqualTo("pixelWidth"));
+            Assert.That(
+                () => SampleImageGenerator.GenerateSet(pixelHeight: 0),
+                Throws.TypeOf<ArgumentOutOfRangeException>().With.Property(nameof(ArgumentOutOfRangeException.ParamName)).EqualTo("pixelHeight"));
+            Assert.That(
+                () => SampleImageGenerator.GenerateSet(objectsPerTile: -1),
+                Throws.TypeOf<ArgumentOutOfRangeException>().With.Property(nameof(ArgumentOutOfRangeException.ParamName)).EqualTo("objectsPerTile"));
+            Assert.That(
+                () => SampleImageGenerator.GenerateSet(columns: 0),
+                Throws.TypeOf<ArgumentOutOfRangeException>().With.Property(nameof(ArgumentOutOfRangeException.ParamName)).EqualTo("columns"));
+            Assert.That(
+                () => SampleImageGenerator.GenerateSet(defectPoolSize: 0),
+                Throws.TypeOf<ArgumentOutOfRangeException>().With.Property(nameof(ArgumentOutOfRangeException.ParamName)).EqualTo("defectPoolSize"));
         });
     }
 

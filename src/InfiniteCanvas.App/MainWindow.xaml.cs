@@ -112,6 +112,7 @@ public partial class MainWindow : Window
             InitializeSpatialState();
             _selectedAnnotationId = null;
             _camera = new CameraTransform(0.01, 50);
+            UnsubscribeTileGenerationEvents(_tiles);
 
             var tileCount = checked(_tileColumns * _tileRows);
             StatusText.Text = $"Generating metadata for {tileCount:N0} inspection tiles";
@@ -126,6 +127,7 @@ public partial class MainWindow : Window
                     seed: _generationSeed++,
                     defectPoolSize: 64),
                 _lifetime.Token);
+            SubscribeTileGenerationEvents(_tiles);
             _sceneBounds = GetSceneBounds(_tiles);
 
             _annotations = _tiles.SelectMany(tile => tile.Annotations).ToArray();
@@ -151,6 +153,40 @@ public partial class MainWindow : Window
             EndBusyOperation();
             _generationGate.Release();
         }
+    }
+
+    private void SubscribeTileGenerationEvents(IReadOnlyList<SampleImageTile> tiles)
+    {
+        for (var i = 0; i < tiles.Count; i++)
+        {
+            tiles[i].PixelsGenerated += OnTilePixelsGenerated;
+        }
+    }
+
+    private void UnsubscribeTileGenerationEvents(IReadOnlyList<SampleImageTile> tiles)
+    {
+        for (var i = 0; i < tiles.Count; i++)
+        {
+            tiles[i].PixelsGenerated -= OnTilePixelsGenerated;
+        }
+    }
+
+    private void OnTilePixelsGenerated(object? sender, EventArgs e)
+    {
+        if (_lifetime.IsCancellationRequested)
+        {
+            return;
+        }
+
+        _ = Dispatcher.InvokeAsync(async () =>
+        {
+            if (!IsLoaded || _lifetime.IsCancellationRequested)
+            {
+                return;
+            }
+
+            await RequestRenderAsync();
+        });
     }
 
     private async Task RequestRenderAsync()
@@ -893,6 +929,7 @@ public partial class MainWindow : Window
     {
         _resizeTimer.Stop();
         _anchorPanTimer.Stop();
+        UnsubscribeTileGenerationEvents(_tiles);
         _lifetime.Cancel();
 
         await _renderAction.DisposeAsync();

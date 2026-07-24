@@ -30,9 +30,34 @@ public static class SampleImageGenerator
         int? rows = null,
         int defectPoolSize = 64)
     {
-        if (imageCount <= 0 || pixelWidth <= 0 || pixelHeight <= 0 || objectsPerTile < 0 || columns <= 0 || defectPoolSize <= 0)
+        if (imageCount <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(imageCount));
+        }
+
+        if (pixelWidth <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(pixelWidth));
+        }
+
+        if (pixelHeight <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(pixelHeight));
+        }
+
+        if (objectsPerTile < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(objectsPerTile));
+        }
+
+        if (columns <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(columns));
+        }
+
+        if (defectPoolSize <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(defectPoolSize));
         }
 
         if (rows is <= 0)
@@ -69,7 +94,8 @@ public static class SampleImageGenerator
                 pixelWidth,
                 pixelHeight,
                 () => GenerateMonochromeBitmap(pixelWidth, pixelHeight, targetValue, noise, pixelSeed),
-                annotations);
+                annotations,
+                targetValue);
 #else
             tiles[tileIndex] = new SampleImageTile(
                 tileId,
@@ -77,7 +103,8 @@ public static class SampleImageGenerator
                 pixelWidth,
                 pixelHeight,
                 () => GenerateMonochromePixels(pixelWidth, pixelHeight, targetValue, noise, pixelSeed),
-                annotations);
+                annotations,
+                targetValue);
 #endif
         }
 
@@ -106,16 +133,10 @@ public static class SampleImageGenerator
             throw new ArgumentOutOfRangeException(nameof(width));
         }
 
-        var minimum = Math.Max(byte.MinValue, targetValue - noise);
-        var maximum = Math.Min(byte.MaxValue, targetValue + noise);
-        var range = maximum - minimum;
+        _ = noise;
+        _ = random;
         var pixels = new byte[checked(width * height)];
-        random.NextBytes(pixels);
-
-        for (var index = 0; index < pixels.Length; index++)
-        {
-            pixels[index] = (byte)(minimum + ((pixels[index] * range) / byte.MaxValue));
-        }
+        Array.Fill(pixels, targetValue);
 
         return pixels;
     }
@@ -140,10 +161,7 @@ public static class SampleImageGenerator
             var localY = random.Next(0, Math.Max(1, (int)tileBounds.Height - height));
             var objectId = random.NextInt64(0x100000000L, 0xFFFFFFFFFFFFL).ToString("X12");
             var color = ClassificationColors[classification];
-            var defectWidth = checked((int)Math.Round(width * (2.4 + (random.NextDouble() * 2.1))));
-            var defectHeight = checked((int)Math.Round(height * (2.4 + (random.NextDouble() * 2.1))));
             var defectTemplate = defectTemplatePool[random.Next(defectTemplatePool.Count)];
-            var defectPixels = ResampleTemplate(defectTemplate, defectWidth, defectHeight);
 
             annotations[index] = new SampleAnnotation(
                 $"{tileId}-{objectId}",
@@ -157,9 +175,9 @@ public static class SampleImageGenerator
                     ["Confidence"] = Math.Round(0.75 + (random.NextDouble() * 0.249), 3),
                     ["Severity"] = Math.Round(random.NextDouble(), 3)
                 },
-                defectWidth,
-                defectHeight,
-                defectPixels);
+                defectTemplate.Width,
+                defectTemplate.Height,
+                defectTemplate.Pixels);
         }
 
         return annotations;
@@ -196,50 +214,6 @@ public static class SampleImageGenerator
         }
 
         return pool;
-    }
-
-    private static byte[] ResampleTemplate(DefectTemplate template, int targetWidth, int targetHeight)
-    {
-        if (targetWidth <= 0 || targetHeight <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(targetWidth));
-        }
-
-        var output = new byte[checked(targetWidth * targetHeight)];
-        var source = template.Pixels;
-
-        for (var y = 0; y < targetHeight; y++)
-        {
-            var sourceY = ((y + 0.5) * template.Height / targetHeight) - 0.5;
-            var top = Math.Clamp((int)Math.Floor(sourceY), 0, template.Height - 1);
-            var bottom = Math.Clamp(top + 1, 0, template.Height - 1);
-            var yLerp = sourceY - top;
-
-            for (var x = 0; x < targetWidth; x++)
-            {
-                var sourceX = ((x + 0.5) * template.Width / targetWidth) - 0.5;
-                var left = Math.Clamp((int)Math.Floor(sourceX), 0, template.Width - 1);
-                var right = Math.Clamp(left + 1, 0, template.Width - 1);
-                var xLerp = sourceX - left;
-
-                var topLeft = source[(top * template.Width) + left];
-                var topRight = source[(top * template.Width) + right];
-                var bottomLeft = source[(bottom * template.Width) + left];
-                var bottomRight = source[(bottom * template.Width) + right];
-
-                var topValue = Lerp(topLeft, topRight, xLerp);
-                var bottomValue = Lerp(bottomLeft, bottomRight, xLerp);
-                var value = Lerp(topValue, bottomValue, yLerp);
-                output[(y * targetWidth) + x] = (byte)Math.Clamp((int)Math.Round(value), 0, 255);
-            }
-        }
-
-        return output;
-    }
-
-    private static double Lerp(double start, double end, double amount)
-    {
-        return start + ((end - start) * amount);
     }
 
     private static byte[] GenerateCenteredDefectPixels(int width, int height, Random random)
@@ -307,69 +281,43 @@ public static class SampleImageGenerator
     }
 
 #if WINDOWS
-    private static unsafe Bitmap GenerateMonochromeBitmap(
+    private static Bitmap GenerateMonochromeBitmap(
         int width,
         int height,
         byte targetValue,
         byte noise,
         int seed)
     {
+        _ = noise;
+        _ = seed;
         var bitmap = new Bitmap(width, height, PixelFormat.Format24bppRgb);
-        var random = new Random(seed);
-        var minimum = Math.Max(byte.MinValue, targetValue - noise);
-        var maximum = Math.Min(byte.MaxValue, targetValue + noise);
-        var bounds = new Rectangle(0, 0, width, height);
-        var data = bitmap.LockBits(bounds, ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
-        try
-        {
-            var destination = (byte*)data.Scan0;
-            for (var y = 0; y < height; y++)
-            {
-                var row = destination + (y * data.Stride);
-                for (var x = 0; x < width; x++)
-                {
-                    var value = (byte)random.Next(minimum, maximum + 1);
-                    var channelOffset = x * 3;
-                    row[channelOffset] = value;
-                    row[channelOffset + 1] = value;
-                    row[channelOffset + 2] = value;
-                }
-            }
-        }
-        finally
-        {
-            bitmap.UnlockBits(data);
-        }
+        using var graphics = Graphics.FromImage(bitmap);
+        graphics.Clear(Color.FromArgb(targetValue, targetValue, targetValue));
 
         return bitmap;
     }
 
-    private static unsafe Bitmap GenerateCenteredDefectBitmap(int width, int height, Random random)
+    private static Bitmap GenerateCenteredDefectBitmap(int width, int height, Random random)
     {
-        var pixels = GenerateCenteredDefectPixels(width, height, random);
         var bitmap = new Bitmap(width, height, PixelFormat.Format24bppRgb);
-        var bounds = new Rectangle(0, 0, width, height);
-        var data = bitmap.LockBits(bounds, ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
-        try
+        using var graphics = Graphics.FromImage(bitmap);
+        graphics.Clear(Color.Black);
+        graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+        var centerX = width / 2f;
+        var centerY = height / 2f;
+        var shapeCount = random.Next(2, 5);
+        for (var i = 0; i < shapeCount; i++)
         {
-            var destination = (byte*)data.Scan0;
-            for (var y = 0; y < height; y++)
-            {
-                var row = destination + (y * data.Stride);
-                var rowOffset = y * width;
-                for (var x = 0; x < width; x++)
-                {
-                    var value = pixels[rowOffset + x];
-                    var channelOffset = x * 3;
-                    row[channelOffset] = value;
-                    row[channelOffset + 1] = value;
-                    row[channelOffset + 2] = value;
-                }
-            }
-        }
-        finally
-        {
-            bitmap.UnlockBits(data);
+            var blobWidth = width * (0.28f + ((float)random.NextDouble() * 0.52f));
+            var blobHeight = height * (0.22f + ((float)random.NextDouble() * 0.58f));
+            var jitterX = (float)((random.NextDouble() * 2 - 1) * width * 0.14);
+            var jitterY = (float)((random.NextDouble() * 2 - 1) * height * 0.14);
+            var left = centerX - (blobWidth / 2f) + jitterX;
+            var top = centerY - (blobHeight / 2f) + jitterY;
+            var intensity = random.Next(168, 242);
+            using var brush = new SolidBrush(Color.FromArgb(intensity, intensity, intensity));
+            graphics.FillEllipse(brush, left, top, blobWidth, blobHeight);
         }
 
         return bitmap;

@@ -59,6 +59,7 @@ public class ZeroCopyBitmapFactoryTests
         using var factory = new ZeroCopyBitmapFactory(64, 32);
 
         factory.GenerateFrozenBitmap(tiles, [], new CameraTransform().Capture());
+        SpinWait.SpinUntil(() => tiles[0].IsImageGenerated, TimeSpan.FromSeconds(1));
 
         Assert.Multiple(() =>
         {

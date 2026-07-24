@@ -156,7 +156,8 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
             return;
         }
 
-        var sourcePixels = tile.Pixels;
+        var hasSourcePixels = tile.TryGetPixelsNonBlocking(out var sourcePixels);
+        var placeholder = tile.PlaceholderValue;
 
         for (var y = top; y < bottom; y++)
         {
@@ -173,7 +174,9 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
                     (int)((worldX - tile.Bounds.X) * tile.PixelWidth / tile.Bounds.Width),
                     0,
                     tile.PixelWidth - 1);
-                var value = sourcePixels[(sourceY * tile.PixelWidth) + sourceX];
+                var value = hasSourcePixels
+                    ? sourcePixels[(sourceY * tile.PixelWidth) + sourceX]
+                    : placeholder;
                 var offset = _layout.GetPixelOffset(x, y);
                 destination[offset] = value;
                 destination[offset + 1] = value;
@@ -196,22 +199,30 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
             return;
         }
 
+        var imageLeftWorld = annotation.Bounds.X + ((annotation.Bounds.Width - annotation.DefectPixelWidth) / 2.0);
+        var imageTopWorld = annotation.Bounds.Y + ((annotation.Bounds.Height - annotation.DefectPixelHeight) / 2.0);
+        var imageRightWorld = imageLeftWorld + annotation.DefectPixelWidth;
+        var imageBottomWorld = imageTopWorld + annotation.DefectPixelHeight;
         var patchPixels = annotation.DefectPixels;
         for (var y = top; y < bottom; y++)
         {
             var worldY = (y - camera.OffsetY) / camera.ScaleY;
-            var sourceY = Math.Clamp(
-                (int)((worldY - annotation.Bounds.Y) * annotation.DefectPixelHeight / annotation.Bounds.Height),
-                0,
-                annotation.DefectPixelHeight - 1);
+            if (worldY < imageTopWorld || worldY >= imageBottomWorld)
+            {
+                continue;
+            }
+
+            var sourceY = Math.Clamp((int)(worldY - imageTopWorld), 0, annotation.DefectPixelHeight - 1);
 
             for (var x = left; x < right; x++)
             {
                 var worldX = (x - camera.OffsetX) / camera.ScaleX;
-                var sourceX = Math.Clamp(
-                    (int)((worldX - annotation.Bounds.X) * annotation.DefectPixelWidth / annotation.Bounds.Width),
-                    0,
-                    annotation.DefectPixelWidth - 1);
+                if (worldX < imageLeftWorld || worldX >= imageRightWorld)
+                {
+                    continue;
+                }
+
+                var sourceX = Math.Clamp((int)(worldX - imageLeftWorld), 0, annotation.DefectPixelWidth - 1);
                 var defectValue = patchPixels[(sourceY * annotation.DefectPixelWidth) + sourceX];
                 if (defectValue == 0)
                 {
