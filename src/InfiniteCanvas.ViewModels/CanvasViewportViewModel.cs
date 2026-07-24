@@ -26,6 +26,18 @@ public partial class CanvasViewportViewModel<T> : ObservableObject where T : ISp
     [ObservableProperty]
     private DateTimeOffset? lastSnapshotPublishedAtUtc;
 
+    public void ApplyFrame(SpatialBounds viewport, int visibleItemCount)
+    {
+        Viewport = viewport;
+        VisibleItemCount = visibleItemCount;
+        TotalItemCount = _spatialIndexService.Count;
+
+        if (_spatialIndexService is LiveSpatialIndexService<T> liveSpatialIndexService)
+        {
+            LastSnapshotPublishedAtUtc = liveSpatialIndexService.LastPublishedAtUtc;
+        }
+    }
+
     [RelayCommand]
     private async Task RefreshAsync(CancellationToken cancellationToken)
     {

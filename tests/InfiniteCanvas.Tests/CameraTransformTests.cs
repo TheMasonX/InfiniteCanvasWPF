@@ -52,4 +52,20 @@ public class CameraTransformTests
             Assert.That(camera.WorldToScreen(2, 2), Is.EqualTo(new ScreenPoint(4, 8)));
         });
     }
+
+    [Test]
+    public void Capture_RemainsStableAfterCameraChanges()
+    {
+        var camera = new CameraTransform();
+        camera.Pan(20, 10);
+        var snapshot = camera.Capture();
+
+        camera.Pan(100, 100);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.WorldToScreen(5, 10), Is.EqualTo(new ScreenPoint(25, 20)));
+            Assert.That(snapshot.GetViewportBounds(100, 80), Is.EqualTo(new SpatialBounds(-20, -10, 100, 80)));
+        });
+    }
 }

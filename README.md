@@ -1,5 +1,9 @@
 # InfiniteCanvasWPF
 
+A WPF inspection canvas for large monochrome image tiles and spatially indexed defect annotations.
+The sample scene generates eight deterministic `8192x2048` Gray8 images, each with configurable colored
+objects, bounding boxes, centered identifiers, metadata tooltips, and animated selection outlines.
+
 Architecture baseline for a high-scale infinite canvas engine targeting .NET 10 and WPF.
 
 ## Solution layout
@@ -11,6 +15,7 @@ Architecture baseline for a high-scale infinite canvas engine targeting .NET 10 
 - `src/InfiniteCanvas.ViewModels` - MVVM-friendly view models using CommunityToolkit.Mvvm
 - `tests/InfiniteCanvas.Tests` - focused NUnit coverage for live updates and snapshot publication
 - `tests/InfiniteCanvas.Windows.Tests` - Windows-only WPF interop and bitmap lifetime coverage
+- `benchmarks/InfiniteCanvas.Benchmarks` - BenchmarkDotNet suites for spatial queries, rebuilds, and frame generation
 
 ## Run the MVP
 
@@ -69,3 +74,19 @@ dotnet build InfiniteCanvasWPF.slnx --configuration Release
 dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release
 dotnet test tests/InfiniteCanvas.Windows.Tests/InfiniteCanvas.Windows.Tests.csproj --configuration Release
 ```
+
+## Benchmarks
+
+Build benchmarks in Release mode, then select the target and suite explicitly. The cross-platform
+target includes STR-tree queries, live-buffer queries, and snapshot rebuilds. The Windows target
+also includes world-to-screen projection and zero-copy bitmap generation.
+
+```shell
+dotnet build benchmarks/InfiniteCanvas.Benchmarks/InfiniteCanvas.Benchmarks.csproj --configuration Release
+dotnet run --project benchmarks/InfiniteCanvas.Benchmarks/InfiniteCanvas.Benchmarks.csproj --configuration Release --framework net10.0 --no-build -- --filter "*StrTreeQueryBenchmarks*"
+dotnet run --project benchmarks/InfiniteCanvas.Benchmarks/InfiniteCanvas.Benchmarks.csproj --configuration Release --framework net10.0-windows --no-build -- --filter "*ProjectionAndBitmapBenchmarks*"
+```
+
+Use `--list flat` to list suites and `--job Dry` for a quick harness smoke test. A full run includes
+10-million-record cases and can require substantial time and memory. Benchmark artifacts are ignored,
+and benchmark timing is not enforced as a unit-test or CI pass/fail threshold.

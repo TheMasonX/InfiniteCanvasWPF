@@ -35,4 +35,20 @@ public class ZeroCopyBitmapFactoryTests
             () => factory.GenerateFrozenBitmap([]),
             Throws.TypeOf<ObjectDisposedException>());
     }
+
+    [Test]
+    public void GenerateFrozenBitmap_ComposesImageTilesAndAnnotations()
+    {
+        var tile = SampleImageGenerator.GenerateSet(1, 64, 32, objectsPerTile: 1, seed: 42)[0];
+        using var factory = new ZeroCopyBitmapFactory(64, 32);
+
+        var bitmap = factory.GenerateFrozenBitmap([tile], tile.Annotations, new CameraTransform().Capture());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(bitmap.IsFrozen, Is.True);
+            Assert.That(bitmap.PixelWidth, Is.EqualTo(64));
+            Assert.That(bitmap.PixelHeight, Is.EqualTo(32));
+        });
+    }
 }

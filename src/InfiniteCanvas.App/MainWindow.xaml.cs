@@ -4,39 +4,37 @@ using InfiniteCanvas.Spatial;
 using InfiniteCanvas.ViewModels;
 using System.Diagnostics;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 
 namespace InfiniteCanvas.App;
 
 public partial class MainWindow : Window
 {
-    private const int InitialItemCount = 100_000;
-    private const int LiveBatchSize = 250;
-
-    private readonly LiveSpatialIndexService<SpatialRecord<int>> _spatialIndex;
-    private readonly CanvasViewportViewModel<SpatialRecord<int>> _viewModel;
-    private readonly CameraTransform _camera = new();
+    private readonly LiveSpatialIndexService<SampleAnnotation> _spatialIndex;
+    private readonly CanvasViewportViewModel<SampleAnnotation> _viewModel;
+    private readonly CameraTransform _camera = new(0.01, 50);
     private readonly CoalescingAsyncAction _renderAction;
-    private readonly DispatcherTimer _liveTimer;
     private readonly DispatcherTimer _resizeTimer;
     private readonly CancellationTokenSource _lifetime = new();
+    private IReadOnlyList<SampleImageTile> _tiles = [];
     private ZeroCopyBitmapFactory? _bitmapFactory;
     private Point? _lastPointerPosition;
-    private int _nextItemId = InitialItemCount;
-    private int _liveTick;
+    private string? _selectedAnnotationId;
 
     public MainWindow()
     {
         InitializeComponent();
 
-        _spatialIndex = new LiveSpatialIndexService<SpatialRecord<int>>(
-            new StrTreeSpatialIndexBuilder<SpatialRecord<int>>());
-        _viewModel = new CanvasViewportViewModel<SpatialRecord<int>>(_spatialIndex);
+        _spatialIndex = new LiveSpatialIndexService<SampleAnnotation>(
+            new StrTreeSpatialIndexBuilder<SampleAnnotation>());
+        _viewModel = new CanvasViewportViewModel<SampleAnnotation>(_spatialIndex);
         DataContext = _viewModel;
         _renderAction = new CoalescingAsyncAction(DispatchRenderFrameAsync);
 
-        _liveTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(500), DispatcherPriority.Background, OnLiveTick, Dispatcher);
         _resizeTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(150), DispatcherPriority.Background, OnResizeElapsed, Dispatcher)
         {
             IsEnabled = false
@@ -50,20 +48,19 @@ public partial class MainWindow : Window
     {
         try
         {
-            StatusText.Text = $"Generating {InitialItemCount:N0} deterministic points";
-            var initialItems = await Task.Run(
-                () => GenerateItems(0, InitialItemCount),
+            StatusText.Text = "Generating 8 monochrome 8192x2048 inspection images";
+            _tiles = await Task.Run(
+                () => SampleImageGenerator.GenerateSet(),
                 _lifetime.Token);
 
-            _spatialIndex.AddRange(initialItems);
-            StatusText.Text = "Publishing initial STR snapshot";
+            var annotations = _tiles.SelectMany(tile => tile.Annotations).ToArray();
+            _spatialIndex.AddRange(annotations);
+            StatusText.Text = $"Publishing {annotations.Length:N0} classified annotations";
             await _spatialIndex.PublishSnapshotAsync(_lifetime.Token);
 
-            _camera.Zoom(0.4, new ScreenPoint(0, 0));
-            _camera.Pan(40, 40);
+            FitSceneToViewport();
             LoadingOverlay.Visibility = Visibility.Collapsed;
             await RequestRenderAsync();
-            _liveTimer.Start();
         }
         catch (OperationCanceledException)
         {
@@ -108,29 +105,24 @@ public partial class MainWindow : Window
 
         var width = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualWidth), 1, 4096);
         var height = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualHeight), 1, 4096);
-        var viewport = _camera.GetViewportBounds(width, height);
+        var camera = _camera.Capture();
+        var viewport = camera.GetViewportBounds(width, height);
         var stopwatch = Stopwatch.StartNew();
 
         var factory = EnsureBitmapFactory(width, height);
-        var bitmap = await Task.Run(() =>
+        var frame = await Task.Run(() =>
         {
             var visibleItems = _spatialIndex.Query(viewport);
-            var screenPoints = visibleItems.Select(item =>
-                _camera.WorldToScreen(
-                    item.Bounds.X + (item.Bounds.Width / 2),
-                    item.Bounds.Y + (item.Bounds.Height / 2)));
-
-            return factory.GenerateFrozenBitmap(
-                screenPoints,
-                new Bgra32Color(186, 208, 53, 255));
+            var bitmap = factory.GenerateFrozenBitmap(_tiles, visibleItems, camera);
+            return (Bitmap: bitmap, VisibleItems: visibleItems);
         }, cancellationToken);
 
-        CanvasImage.Source = bitmap;
-        _viewModel.Viewport = viewport;
-        await _viewModel.RefreshCommand.ExecuteAsync(null);
+        CanvasImage.Source = frame.Bitmap;
+        RenderAnnotationOverlay(frame.VisibleItems, camera);
+        _viewModel.ApplyFrame(viewport, frame.VisibleItems.Count);
 
         stopwatch.Stop();
-        StatusText.Text = $"Frame {width}x{height}  |  {stopwatch.Elapsed.TotalMilliseconds:F1} ms  |  Zoom {_camera.ScaleX:F2}x";
+        StatusText.Text = $"Frame {width}x{height}  |  {stopwatch.Elapsed.TotalMilliseconds:F1} ms  |  Zoom {camera.ScaleX:F2}x";
     }
 
     private ZeroCopyBitmapFactory EnsureBitmapFactory(int width, int height)
@@ -148,31 +140,100 @@ public partial class MainWindow : Window
         return _bitmapFactory;
     }
 
-    private async void OnLiveTick(object? sender, EventArgs e)
+    private void FitSceneToViewport()
     {
-        _liveTimer.Stop();
-        try
-        {
-            _spatialIndex.AddRange(GenerateItems(_nextItemId, LiveBatchSize));
-            _nextItemId += LiveBatchSize;
-            _liveTick++;
+        var sceneRight = _tiles.Max(tile => tile.Bounds.Right);
+        var sceneBottom = _tiles.Max(tile => tile.Bounds.Bottom);
+        var scale = Math.Min(
+            ViewportHost.ActualWidth / sceneRight,
+            ViewportHost.ActualHeight / sceneBottom) * 0.92;
 
-            if (_liveTick % 4 == 0)
+        if (_camera.Zoom(scale, new ScreenPoint(0, 0)))
+        {
+            _camera.Pan(
+                (ViewportHost.ActualWidth - (sceneRight * scale)) / 2,
+                (ViewportHost.ActualHeight - (sceneBottom * scale)) / 2);
+        }
+    }
+
+    private void RenderAnnotationOverlay(IReadOnlyList<SampleAnnotation> annotations, CameraSnapshot camera)
+    {
+        AnnotationLayer.Children.Clear();
+
+        foreach (var annotation in annotations)
+        {
+            var topLeft = camera.WorldToScreen(annotation.Bounds.X, annotation.Bounds.Y);
+            var width = annotation.Bounds.Width * camera.ScaleX;
+            var height = annotation.Bounds.Height * camera.ScaleY;
+            if (width <= 0 || height <= 0)
             {
-                await _spatialIndex.PublishSnapshotAsync(_lifetime.Token);
+                continue;
             }
 
+            var color = Color.FromArgb(
+                annotation.Color.Alpha,
+                annotation.Color.Red,
+                annotation.Color.Green,
+                annotation.Color.Blue);
+            var borderBrush = new SolidColorBrush(color);
+            var label = new TextBlock
+            {
+                Text = annotation.Id,
+                Foreground = Brushes.White,
+                FontFamily = new FontFamily("Cascadia Mono"),
+                FontWeight = FontWeights.SemiBold,
+                TextAlignment = TextAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            var annotationElement = new Border
+            {
+                Width = width,
+                Height = height,
+                BorderThickness = new Thickness(2),
+                BorderBrush = borderBrush,
+                Background = Brushes.Transparent,
+                Child = new Viewbox { Child = label, Margin = new Thickness(3) },
+                Tag = annotation,
+                ToolTip = CreateAnnotationToolTip(annotation)
+            };
+            annotationElement.MouseLeftButtonDown += OnAnnotationMouseLeftButtonDown;
+            Canvas.SetLeft(annotationElement, topLeft.X);
+            Canvas.SetTop(annotationElement, topLeft.Y);
+            AnnotationLayer.Children.Add(annotationElement);
+
+            if (annotation.Id == _selectedAnnotationId)
+            {
+                var animation = new ColorAnimation(
+                    color,
+                    Colors.White,
+                    TimeSpan.FromMilliseconds(450))
+                {
+                    AutoReverse = true,
+                    RepeatBehavior = RepeatBehavior.Forever
+                };
+                borderBrush.BeginAnimation(SolidColorBrush.ColorProperty, animation);
+            }
+        }
+    }
+
+    private static ToolTip CreateAnnotationToolTip(SampleAnnotation annotation)
+    {
+        var confidence = annotation.Features["Confidence"];
+        var severity = annotation.Features["Severity"];
+        return new ToolTip
+        {
+            Content = $"{annotation.Id}\n{annotation.Classification}\nConfidence {confidence:P1}  |  Severity {severity:P1}"
+        };
+    }
+
+    private async void OnAnnotationMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is Border { Tag: SampleAnnotation annotation })
+        {
+            _selectedAnnotationId = annotation.Id;
+            e.Handled = true;
             await RequestRenderAsync();
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        finally
-        {
-            if (!_lifetime.IsCancellationRequested)
-            {
-                _liveTimer.Start();
-            }
         }
     }
 
@@ -238,7 +299,6 @@ public partial class MainWindow : Window
 
     private async void OnClosed(object? sender, EventArgs e)
     {
-        _liveTimer.Stop();
         _resizeTimer.Stop();
         _lifetime.Cancel();
 
@@ -246,22 +306,5 @@ public partial class MainWindow : Window
         CanvasImage.Source = null;
         _bitmapFactory?.Dispose();
         _lifetime.Dispose();
-    }
-
-    private static SpatialRecord<int>[] GenerateItems(int startId, int count)
-    {
-        var items = new SpatialRecord<int>[count];
-        for (var offset = 0; offset < count; offset++)
-        {
-            var id = startId + offset;
-            var x = ((id * 7919L) % 2_900) + (Math.Sin(id * 0.071) * 80);
-            var y = ((id * 3571L) % 1_700) + (Math.Cos(id * 0.053) * 55);
-            items[offset] = new SpatialRecord<int>(
-                id.ToString(),
-                new SpatialBounds(x, y, 1, 1),
-                id);
-        }
-
-        return items;
     }
 }

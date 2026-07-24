@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/InfiniteCanvas.Benchmarks/InfiniteCanvas.Benchmarks.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/InfiniteCanvas.App/InfiniteCanvas.App.csproj" />
     <Project Path="src/InfiniteCanvas.Core/InfiniteCanvas.Core.csproj" />

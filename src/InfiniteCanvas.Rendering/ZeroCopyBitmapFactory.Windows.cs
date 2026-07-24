@@ -106,6 +106,103 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
         }
     }
 
+    public unsafe InteropBitmap GenerateFrozenBitmap(
+        IReadOnlyList<SampleImageTile> tiles,
+        IReadOnlyList<SampleAnnotation> annotations,
+        CameraSnapshot camera)
+    {
+        ArgumentNullException.ThrowIfNull(tiles);
+        ArgumentNullException.ThrowIfNull(annotations);
+
+        lock (_lifetimeGate)
+        {
+            ObjectDisposedException.ThrowIf(_section is null, this);
+            NativeMemory.Clear((void*)_view, (nuint)_layout.ByteCount);
+
+            var pixels = (byte*)_view;
+            foreach (var tile in tiles)
+            {
+                DrawTile(pixels, tile, camera);
+            }
+
+            foreach (var annotation in annotations)
+            {
+                FillBounds(pixels, annotation.Bounds, annotation.Color, camera);
+            }
+
+            var bitmap = (InteropBitmap)Imaging.CreateBitmapSourceFromMemorySection(
+                _section.DangerousGetHandle(),
+                _layout.Width,
+                _layout.Height,
+                PixelFormats.Bgra32,
+                _layout.Stride,
+                0);
+
+            bitmap.Freeze();
+            return bitmap;
+        }
+    }
+
+    private unsafe void DrawTile(byte* destination, SampleImageTile tile, CameraSnapshot camera)
+    {
+        var topLeft = camera.WorldToScreen(tile.Bounds.X, tile.Bounds.Y);
+        var bottomRight = camera.WorldToScreen(tile.Bounds.Right, tile.Bounds.Bottom);
+        var left = Math.Clamp((int)Math.Floor(topLeft.X), 0, _layout.Width);
+        var top = Math.Clamp((int)Math.Floor(topLeft.Y), 0, _layout.Height);
+        var right = Math.Clamp((int)Math.Ceiling(bottomRight.X), 0, _layout.Width);
+        var bottom = Math.Clamp((int)Math.Ceiling(bottomRight.Y), 0, _layout.Height);
+
+        for (var y = top; y < bottom; y++)
+        {
+            var worldY = (y - camera.OffsetY) / camera.ScaleY;
+            var sourceY = Math.Clamp(
+                (int)((worldY - tile.Bounds.Y) * tile.PixelHeight / tile.Bounds.Height),
+                0,
+                tile.PixelHeight - 1);
+
+            for (var x = left; x < right; x++)
+            {
+                var worldX = (x - camera.OffsetX) / camera.ScaleX;
+                var sourceX = Math.Clamp(
+                    (int)((worldX - tile.Bounds.X) * tile.PixelWidth / tile.Bounds.Width),
+                    0,
+                    tile.PixelWidth - 1);
+                var value = tile.Pixels[(sourceY * tile.PixelWidth) + sourceX];
+                var offset = _layout.GetPixelOffset(x, y);
+                destination[offset] = value;
+                destination[offset + 1] = value;
+                destination[offset + 2] = value;
+                destination[offset + 3] = byte.MaxValue;
+            }
+        }
+    }
+
+    private unsafe void FillBounds(
+        byte* destination,
+        SpatialBounds bounds,
+        Bgra32Color color,
+        CameraSnapshot camera)
+    {
+        var topLeft = camera.WorldToScreen(bounds.X, bounds.Y);
+        var bottomRight = camera.WorldToScreen(bounds.Right, bounds.Bottom);
+        var left = Math.Clamp((int)Math.Floor(topLeft.X), 0, _layout.Width);
+        var top = Math.Clamp((int)Math.Floor(topLeft.Y), 0, _layout.Height);
+        var right = Math.Clamp((int)Math.Ceiling(bottomRight.X), 0, _layout.Width);
+        var bottom = Math.Clamp((int)Math.Ceiling(bottomRight.Y), 0, _layout.Height);
+
+        for (var y = top; y < bottom; y++)
+        {
+            for (var x = left; x < right; x++)
+            {
+                var offset = _layout.GetPixelOffset(x, y);
+                destination[offset] = color.Blue;
+                destination[offset + 1] = color.Green;
+                destination[offset + 2] = color.Red;
+                destination[offset + 3] = color.Alpha;
+            }
+        }
+    }
+
     public void Dispose()
     {
         Dispose(true);

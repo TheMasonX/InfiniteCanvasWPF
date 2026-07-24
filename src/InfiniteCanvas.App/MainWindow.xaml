@@ -23,7 +23,7 @@
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="INFINITE CANVAS" FontFamily="Cascadia Mono"
                                FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
-                    <TextBlock Text="Live STR snapshot and unmanaged BGRA32 surface"
+                    <TextBlock Text="Inspection imagery with classified spatial annotations"
                                FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -50,6 +50,7 @@
                 SizeChanged="OnViewportSizeChanged">
             <Grid>
                 <Image x:Name="CanvasImage" Stretch="Fill" SnapsToDevicePixels="True" />
+                <Canvas x:Name="AnnotationLayer" ClipToBounds="True" />
                 <TextBlock x:Name="LoadingOverlay" Text="BUILDING INITIAL SNAPSHOT"
                            HorizontalAlignment="Center" VerticalAlignment="Center"
                            FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold"
@@ -57,7 +58,7 @@
                 <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="14"
                         Padding="10,7" Background="#DD1A2026"
                         BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-                    <TextBlock Text="Drag to pan  |  Wheel to zoom" FontFamily="Cascadia Mono"
+                    <TextBlock Text="Drag to pan  |  Wheel to zoom  |  Select an annotation" FontFamily="Cascadia Mono"
                                FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
                 </Border>
             </Grid>
@@ -68,7 +69,7 @@
             <Grid Margin="20,0">
                 <TextBlock x:Name="StatusText" VerticalAlignment="Center" FontFamily="Cascadia Mono"
                            FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
-                <TextBlock Text="LIVE 2 HZ" HorizontalAlignment="Right" VerticalAlignment="Center"
+                <TextBlock Text="8 TILE INSPECTION SCENE" HorizontalAlignment="Right" VerticalAlignment="Center"
                            FontFamily="Cascadia Mono" FontSize="11" FontWeight="SemiBold"
                            Foreground="{StaticResource AccentBrush}" />
             </Grid>

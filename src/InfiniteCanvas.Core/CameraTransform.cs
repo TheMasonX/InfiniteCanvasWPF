@@ -28,6 +28,12 @@ public sealed class CameraTransform
 
     public double ScaleY => Volatile.Read(ref _state).ScaleY;
 
+    public CameraSnapshot Capture()
+    {
+        var state = Volatile.Read(ref _state);
+        return new CameraSnapshot(state.ScaleX, state.ScaleY, state.OffsetX, state.OffsetY);
+    }
+
     public void Pan(double deltaX, double deltaY)
     {
         if (!double.IsFinite(deltaX))
@@ -144,5 +150,38 @@ public sealed class CameraTransform
     private sealed record TransformState(double ScaleX, double ScaleY, double OffsetX, double OffsetY)
     {
         public static TransformState Identity { get; } = new(1, 1, 0, 0);
+    }
+}
+
+public readonly record struct CameraSnapshot(
+    double ScaleX,
+    double ScaleY,
+    double OffsetX,
+    double OffsetY)
+{
+    public ScreenPoint WorldToScreen(double worldX, double worldY)
+    {
+        return new ScreenPoint(
+            (worldX * ScaleX) + OffsetX,
+            (worldY * ScaleY) + OffsetY);
+    }
+
+    public SpatialBounds GetViewportBounds(double screenWidth, double screenHeight)
+    {
+        if (!double.IsFinite(screenWidth) || screenWidth < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(screenWidth));
+        }
+
+        if (!double.IsFinite(screenHeight) || screenHeight < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(screenHeight));
+        }
+
+        return new SpatialBounds(
+            -OffsetX / ScaleX,
+            -OffsetY / ScaleY,
+            screenWidth / ScaleX,
+            screenHeight / ScaleY);
     }
 }
