@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/InfiniteCanvas.App/InfiniteCanvas.App.csproj" />
     <Project Path="src/InfiniteCanvas.Core/InfiniteCanvas.Core.csproj" />
     <Project Path="src/InfiniteCanvas.Rendering/InfiniteCanvas.Rendering.csproj" />
     <Project Path="src/InfiniteCanvas.Spatial/InfiniteCanvas.Spatial.csproj" />
@@ -7,5 +8,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj" />
+    <Project Path="tests/InfiniteCanvas.Windows.Tests/InfiniteCanvas.Windows.Tests.csproj" />
   </Folder>
 </Solution>

@@ -4,11 +4,23 @@ Architecture baseline for a high-scale infinite canvas engine targeting .NET 10 
 
 ## Solution layout
 
+- `src/InfiniteCanvas.App` - runnable WPF MVP with live data, pan, zoom, and resize handling
 - `src/InfiniteCanvas.Core` - spatial primitives and shared contracts
 - `src/InfiniteCanvas.Rendering` - renderer abstractions and the Windows zero-copy bitmap surface
 - `src/InfiniteCanvas.Spatial` - pluggable spatial index contracts plus immutable/live hybrid implementations
 - `src/InfiniteCanvas.ViewModels` - MVVM-friendly view models using CommunityToolkit.Mvvm
 - `tests/InfiniteCanvas.Tests` - focused NUnit coverage for live updates and snapshot publication
+- `tests/InfiniteCanvas.Windows.Tests` - Windows-only WPF interop and bitmap lifetime coverage
+
+## Run the MVP
+
+The demo starts with 100,000 deterministic spatial records, ingests 250 more every 500 ms,
+and publishes the hot buffer into a packed STR snapshot every two seconds. Drag to pan and
+use the mouse wheel to zoom.
+
+```shell
+dotnet run --project src/InfiniteCanvas.App/InfiniteCanvas.App.csproj
+```
 
 ## Implemented design pillars
 
@@ -55,4 +67,5 @@ command is asynchronous, runs spatial queries away from the caller thread, expos
 ```shell
 dotnet build InfiniteCanvasWPF.slnx --configuration Release
 dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release
+dotnet test tests/InfiniteCanvas.Windows.Tests/InfiniteCanvas.Windows.Tests.csproj --configuration Release
 ```

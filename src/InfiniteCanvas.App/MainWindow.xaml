@@ -1,0 +1,77 @@
+<Window x:Class="InfiniteCanvas.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Infinite Canvas" Width="1280" Height="820"
+        MinWidth="760" MinHeight="520"
+        Background="{StaticResource WindowBackgroundBrush}"
+        Foreground="{StaticResource PrimaryTextBrush}"
+        FontFamily="Segoe UI Variable Text">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="64" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="34" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="{StaticResource PanelBackgroundBrush}"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+            <Grid Margin="20,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="INFINITE CANVAS" FontFamily="Cascadia Mono"
+                               FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                    <TextBlock Text="Live STR snapshot and unmanaged BGRA32 surface"
+                               FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="VISIBLE" Margin="0,0,8,0" VerticalAlignment="Center"
+                               FontFamily="Cascadia Mono" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                    <TextBlock Text="{Binding VisibleItemCount, StringFormat=N0}" MinWidth="72"
+                               FontFamily="Cascadia Mono" FontSize="18" FontWeight="SemiBold" />
+                    <Border Width="1" Height="28" Margin="18,0" Background="{StaticResource BorderBrush}" />
+                    <TextBlock Text="TOTAL" Margin="0,0,8,0" VerticalAlignment="Center"
+                               FontFamily="Cascadia Mono" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                    <TextBlock Text="{Binding TotalItemCount, StringFormat=N0}" MinWidth="72"
+                               FontFamily="Cascadia Mono" FontSize="18" FontWeight="SemiBold" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border x:Name="ViewportHost" Grid.Row="1" Margin="20"
+                Background="#080B0D" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                ClipToBounds="True"
+                MouseLeftButtonDown="OnViewportMouseLeftButtonDown"
+                MouseLeftButtonUp="OnViewportMouseLeftButtonUp"
+                MouseMove="OnViewportMouseMove"
+                MouseWheel="OnViewportMouseWheel"
+                SizeChanged="OnViewportSizeChanged">
+            <Grid>
+                <Image x:Name="CanvasImage" Stretch="Fill" SnapsToDevicePixels="True" />
+                <TextBlock x:Name="LoadingOverlay" Text="BUILDING INITIAL SNAPSHOT"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold"
+                           Foreground="{StaticResource AccentBrush}" />
+                <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="14"
+                        Padding="10,7" Background="#DD1A2026"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                    <TextBlock Text="Drag to pan  |  Wheel to zoom" FontFamily="Cascadia Mono"
+                               FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                </Border>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="2" Background="{StaticResource PanelBackgroundBrush}"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
+            <Grid Margin="20,0">
+                <TextBlock x:Name="StatusText" VerticalAlignment="Center" FontFamily="Cascadia Mono"
+                           FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                <TextBlock Text="LIVE 2 HZ" HorizontalAlignment="Right" VerticalAlignment="Center"
+                           FontFamily="Cascadia Mono" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{StaticResource AccentBrush}" />
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
