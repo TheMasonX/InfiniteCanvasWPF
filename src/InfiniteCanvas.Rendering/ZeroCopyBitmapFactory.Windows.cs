@@ -151,6 +151,12 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
         var top = Math.Clamp((int)Math.Floor(topLeft.Y), 0, _layout.Height);
         var right = Math.Clamp((int)Math.Ceiling(bottomRight.X), 0, _layout.Width);
         var bottom = Math.Clamp((int)Math.Ceiling(bottomRight.Y), 0, _layout.Height);
+        if (left >= right || top >= bottom)
+        {
+            return;
+        }
+
+        var sourcePixels = tile.Pixels;
 
         for (var y = top; y < bottom; y++)
         {
@@ -167,7 +173,7 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
                     (int)((worldX - tile.Bounds.X) * tile.PixelWidth / tile.Bounds.Width),
                     0,
                     tile.PixelWidth - 1);
-                var value = tile.Pixels[(sourceY * tile.PixelWidth) + sourceX];
+                var value = sourcePixels[(sourceY * tile.PixelWidth) + sourceX];
                 var offset = _layout.GetPixelOffset(x, y);
                 destination[offset] = value;
                 destination[offset + 1] = value;

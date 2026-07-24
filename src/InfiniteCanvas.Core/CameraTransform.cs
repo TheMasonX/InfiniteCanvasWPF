@@ -123,6 +123,25 @@ public sealed class CameraTransform
             screenHeight / state.ScaleY);
     }
 
+    public void ClampToBounds(SpatialBounds bounds, double screenWidth, double screenHeight)
+    {
+        if (!double.IsFinite(screenWidth) || screenWidth < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(screenWidth));
+        }
+
+        if (!double.IsFinite(screenHeight) || screenHeight < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(screenHeight));
+        }
+
+        Update(state => state with
+        {
+            OffsetX = ClampOffset(state.ScaleX, state.OffsetX, bounds.X, bounds.Right, screenWidth),
+            OffsetY = ClampOffset(state.ScaleY, state.OffsetY, bounds.Y, bounds.Bottom, screenHeight)
+        });
+    }
+
     private void Update(Func<TransformState, TransformState> update)
     {
         while (true)
@@ -145,6 +164,24 @@ public sealed class CameraTransform
     private static bool IsPositiveFinite(double value)
     {
         return double.IsFinite(value) && value > 0;
+    }
+
+    private static double ClampOffset(
+        double scale,
+        double offset,
+        double worldStart,
+        double worldEnd,
+        double screenLength)
+    {
+        var contentLength = (worldEnd - worldStart) * scale;
+        if (contentLength <= screenLength)
+        {
+            return ((screenLength - contentLength) / 2) - (worldStart * scale);
+        }
+
+        var minimum = screenLength - (worldEnd * scale);
+        var maximum = -(worldStart * scale);
+        return Math.Clamp(offset, minimum, maximum);
     }
 
     private sealed record TransformState(double ScaleX, double ScaleY, double OffsetX, double OffsetY)

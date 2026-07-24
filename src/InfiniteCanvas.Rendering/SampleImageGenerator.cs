@@ -7,13 +7,13 @@ public static class SampleImageGenerator
     private static readonly string[] Classifications = ["Scratch", "Inclusion", "Stain", "Edge defect"];
 
     public static IReadOnlyList<SampleImageTile> GenerateSet(
-        int imageCount = 8,
+        int imageCount = 32,
         int pixelWidth = 8192,
         int pixelHeight = 2048,
         byte targetValue = 128,
         byte noise = 8,
         int objectsPerTile = 16,
-        int columns = 4,
+        int columns = 2,
         int seed = 1729)
     {
         if (imageCount <= 0 || pixelWidth <= 0 || pixelHeight <= 0 || objectsPerTile < 0 || columns <= 0)
@@ -21,7 +21,6 @@ public static class SampleImageGenerator
             throw new ArgumentOutOfRangeException(nameof(imageCount));
         }
 
-        var random = new Random(seed);
         var tiles = new SampleImageTile[imageCount];
 
         for (var tileIndex = 0; tileIndex < imageCount; tileIndex++)
@@ -30,14 +29,19 @@ public static class SampleImageGenerator
             var tileX = (tileIndex % columns) * (double)pixelWidth;
             var tileY = (tileIndex / columns) * (double)pixelHeight;
             var bounds = new SpatialBounds(tileX, tileY, pixelWidth, pixelHeight);
-            var pixels = GenerateMonochromePixels(pixelWidth, pixelHeight, targetValue, noise, random);
-            var annotations = GenerateAnnotations(tileId, bounds, objectsPerTile, random);
+            var pixelSeed = unchecked(seed + (tileIndex * 104729));
+            var annotationSeed = unchecked(seed + (tileIndex * 130363) + 7919);
+            var annotations = GenerateAnnotations(
+                tileId,
+                bounds,
+                objectsPerTile,
+                new Random(annotationSeed));
             tiles[tileIndex] = new SampleImageTile(
                 tileId,
                 bounds,
                 pixelWidth,
                 pixelHeight,
-                pixels,
+                () => GenerateMonochromePixels(pixelWidth, pixelHeight, targetValue, noise, pixelSeed),
                 annotations);
         }
 

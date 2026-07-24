@@ -51,4 +51,19 @@ public class ZeroCopyBitmapFactoryTests
             Assert.That(bitmap.PixelHeight, Is.EqualTo(32));
         });
     }
+
+    [Test]
+    public void GenerateFrozenBitmap_GeneratesOnlyTilesWithVisiblePixels()
+    {
+        var tiles = SampleImageGenerator.GenerateSet(2, 64, 32, objectsPerTile: 0, columns: 2, seed: 42);
+        using var factory = new ZeroCopyBitmapFactory(64, 32);
+
+        factory.GenerateFrozenBitmap(tiles, [], new CameraTransform().Capture());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tiles[0].IsImageGenerated, Is.True);
+            Assert.That(tiles[1].IsImageGenerated, Is.False);
+        });
+    }
 }

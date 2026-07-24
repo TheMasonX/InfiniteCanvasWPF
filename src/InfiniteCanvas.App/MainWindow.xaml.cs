@@ -21,8 +21,11 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _resizeTimer;
     private readonly CancellationTokenSource _lifetime = new();
     private IReadOnlyList<SampleImageTile> _tiles = [];
-    private ZeroCopyBitmapFactory? _bitmapFactory;
+    private SpatialBounds _sceneBounds;
+    private ZeroCopyBitmapFactory? _frontBitmapFactory;
+    private ZeroCopyBitmapFactory? _backBitmapFactory;
     private Point? _lastPointerPosition;
+    private Point? _hoverPointerPosition;
     private string? _selectedAnnotationId;
 
     public MainWindow()
@@ -40,6 +43,9 @@ public partial class MainWindow : Window
             IsEnabled = false
         };
 
+        PixelometerWorldText.Text = "WORLD X --  Y --";
+        PixelometerValueText.Text = "PIXEL --";
+
         Loaded += OnLoaded;
         Closed += OnClosed;
     }
@@ -48,10 +54,11 @@ public partial class MainWindow : Window
     {
         try
         {
-            StatusText.Text = "Generating 8 monochrome 8192x2048 inspection images";
+            StatusText.Text = "Generating metadata for 32 inspection tiles";
             _tiles = await Task.Run(
                 () => SampleImageGenerator.GenerateSet(),
                 _lifetime.Token);
+            _sceneBounds = GetSceneBounds(_tiles);
 
             var annotations = _tiles.SelectMany(tile => tile.Annotations).ToArray();
             _spatialIndex.AddRange(annotations);
@@ -105,60 +112,101 @@ public partial class MainWindow : Window
 
         var width = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualWidth), 1, 4096);
         var height = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualHeight), 1, 4096);
+        _camera.ClampToBounds(_sceneBounds, width, height);
         var camera = _camera.Capture();
         var viewport = camera.GetViewportBounds(width, height);
         var stopwatch = Stopwatch.StartNew();
 
-        var factory = EnsureBitmapFactory(width, height);
+        var factory = AcquireBackBuffer(width, height);
         var frame = await Task.Run(() =>
         {
             var visibleItems = _spatialIndex.Query(viewport);
-            var bitmap = factory.GenerateFrozenBitmap(_tiles, visibleItems, camera);
-            return (Bitmap: bitmap, VisibleItems: visibleItems);
+            var visibleTiles = _tiles.Where(tile => tile.Bounds.Intersects(viewport)).ToArray();
+            var bitmap = factory.GenerateFrozenBitmap(visibleTiles, visibleItems, camera);
+            return (Bitmap: bitmap, VisibleItems: visibleItems, VisibleTiles: visibleTiles);
         }, cancellationToken);
 
-        CanvasImage.Source = frame.Bitmap;
-        RenderAnnotationOverlay(frame.VisibleItems, camera);
+        var frameVisual = BuildFrameVisual(frame.Bitmap, frame.VisibleItems, camera, width, height);
+        PublishFrame(factory, frameVisual);
         _viewModel.ApplyFrame(viewport, frame.VisibleItems.Count);
 
         stopwatch.Stop();
-        StatusText.Text = $"Frame {width}x{height}  |  {stopwatch.Elapsed.TotalMilliseconds:F1} ms  |  Zoom {camera.ScaleX:F2}x";
+        var generatedTileCount = _tiles.Count(tile => tile.IsImageGenerated);
+        StatusText.Text = $"Frame {width}x{height}  |  {stopwatch.Elapsed.TotalMilliseconds:F1} ms  |  Zoom {camera.ScaleX:F2}x  |  Images {generatedTileCount}/32";
+
+        if (_hoverPointerPosition is Point hoverPointer)
+        {
+            UpdatePixelometer(hoverPointer);
+        }
     }
 
-    private ZeroCopyBitmapFactory EnsureBitmapFactory(int width, int height)
+    private ZeroCopyBitmapFactory AcquireBackBuffer(int width, int height)
     {
-        if (_bitmapFactory is not null
-            && _bitmapFactory.Width == width
-            && _bitmapFactory.Height == height)
+        if (_backBitmapFactory is not null
+            && _backBitmapFactory.Width == width
+            && _backBitmapFactory.Height == height)
         {
-            return _bitmapFactory;
+            return _backBitmapFactory;
         }
 
-        CanvasImage.Source = null;
-        _bitmapFactory?.Dispose();
-        _bitmapFactory = new ZeroCopyBitmapFactory(width, height);
-        return _bitmapFactory;
+        _backBitmapFactory?.Dispose();
+        _backBitmapFactory = new ZeroCopyBitmapFactory(width, height);
+        return _backBitmapFactory;
+    }
+
+    private void PublishFrame(ZeroCopyBitmapFactory renderedBuffer, Grid frameVisual)
+    {
+        FramePresenter.Child = frameVisual;
+
+        var previousFront = _frontBitmapFactory;
+        _frontBitmapFactory = renderedBuffer;
+        _backBitmapFactory = null;
+
+        if (previousFront is not null
+            && previousFront.Width == renderedBuffer.Width
+            && previousFront.Height == renderedBuffer.Height)
+        {
+            _backBitmapFactory = previousFront;
+        }
+        else
+        {
+            previousFront?.Dispose();
+        }
     }
 
     private void FitSceneToViewport()
     {
-        var sceneRight = _tiles.Max(tile => tile.Bounds.Right);
-        var sceneBottom = _tiles.Max(tile => tile.Bounds.Bottom);
-        var scale = Math.Min(
-            ViewportHost.ActualWidth / sceneRight,
-            ViewportHost.ActualHeight / sceneBottom) * 0.92;
+        var scale = (ViewportHost.ActualHeight / _sceneBounds.Height) * 0.92;
 
         if (_camera.Zoom(scale, new ScreenPoint(0, 0)))
         {
-            _camera.Pan(
-                (ViewportHost.ActualWidth - (sceneRight * scale)) / 2,
-                (ViewportHost.ActualHeight - (sceneBottom * scale)) / 2);
+            ClampCameraToScene();
         }
     }
 
-    private void RenderAnnotationOverlay(IReadOnlyList<SampleAnnotation> annotations, CameraSnapshot camera)
+    private Grid BuildFrameVisual(
+        ImageSource bitmap,
+        IReadOnlyList<SampleAnnotation> annotations,
+        CameraSnapshot camera,
+        int frameWidth,
+        int frameHeight)
     {
-        AnnotationLayer.Children.Clear();
+        var frame = new Grid
+        {
+            Width = frameWidth,
+            Height = frameHeight,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top
+        };
+        frame.Children.Add(new Image
+        {
+            Source = bitmap,
+            Stretch = Stretch.Fill,
+            SnapsToDevicePixels = true
+        });
+
+        var annotationLayer = new Canvas { ClipToBounds = true };
+        frame.Children.Add(annotationLayer);
 
         foreach (var annotation in annotations)
         {
@@ -200,7 +248,7 @@ public partial class MainWindow : Window
             annotationElement.MouseLeftButtonDown += OnAnnotationMouseLeftButtonDown;
             Canvas.SetLeft(annotationElement, topLeft.X);
             Canvas.SetTop(annotationElement, topLeft.Y);
-            AnnotationLayer.Children.Add(annotationElement);
+            annotationLayer.Children.Add(annotationElement);
 
             if (annotation.Id == _selectedAnnotationId)
             {
@@ -215,6 +263,24 @@ public partial class MainWindow : Window
                 borderBrush.BeginAnimation(SolidColorBrush.ColorProperty, animation);
             }
         }
+
+        return frame;
+    }
+
+    private static SpatialBounds GetSceneBounds(IReadOnlyList<SampleImageTile> tiles)
+    {
+        var left = tiles.Min(tile => tile.Bounds.X);
+        var top = tiles.Min(tile => tile.Bounds.Y);
+        var right = tiles.Max(tile => tile.Bounds.Right);
+        var bottom = tiles.Max(tile => tile.Bounds.Bottom);
+        return new SpatialBounds(left, top, right - left, bottom - top);
+    }
+
+    private void ClampCameraToScene()
+    {
+        var width = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualWidth), 1, 4096);
+        var height = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualHeight), 1, 4096);
+        _camera.ClampToBounds(_sceneBounds, width, height);
     }
 
     private static ToolTip CreateAnnotationToolTip(SampleAnnotation annotation)
@@ -253,23 +319,37 @@ public partial class MainWindow : Window
 
     private async void OnViewportMouseMove(object sender, MouseEventArgs e)
     {
+        var current = e.GetPosition(ViewportHost);
+        _hoverPointerPosition = current;
+        UpdatePixelometer(current);
+
         if (_lastPointerPosition is not Point previous || e.LeftButton != MouseButtonState.Pressed)
         {
             return;
         }
 
-        var current = e.GetPosition(ViewportHost);
         _lastPointerPosition = current;
         _camera.Pan(current.X - previous.X, current.Y - previous.Y);
+        ClampCameraToScene();
         await RequestRenderAsync();
+    }
+
+    private void OnViewportMouseLeave(object sender, MouseEventArgs e)
+    {
+        _hoverPointerPosition = null;
+        PixelometerWorldText.Text = "WORLD X --  Y --";
+        PixelometerValueText.Text = "PIXEL --";
     }
 
     private async void OnViewportMouseWheel(object sender, MouseWheelEventArgs e)
     {
         var origin = e.GetPosition(ViewportHost);
+        _hoverPointerPosition = origin;
+        UpdatePixelometer(origin);
         var scaleDelta = e.Delta > 0 ? 1.15 : 1 / 1.15;
         if (_camera.Zoom(scaleDelta, new ScreenPoint(origin.X, origin.Y)))
         {
+            ClampCameraToScene();
             await RequestRenderAsync();
         }
     }
@@ -290,6 +370,7 @@ public partial class MainWindow : Window
         _resizeTimer.Stop();
         try
         {
+            ClampCameraToScene();
             await RequestRenderAsync();
         }
         catch (OperationCanceledException)
@@ -303,8 +384,47 @@ public partial class MainWindow : Window
         _lifetime.Cancel();
 
         await _renderAction.DisposeAsync();
-        CanvasImage.Source = null;
-        _bitmapFactory?.Dispose();
+        FramePresenter.Child = null;
+        _frontBitmapFactory?.Dispose();
+        _backBitmapFactory?.Dispose();
         _lifetime.Dispose();
+    }
+
+    private void UpdatePixelometer(Point screenPoint)
+    {
+        if (_tiles.Count == 0)
+        {
+            return;
+        }
+
+        var camera = _camera.Capture();
+        var worldX = (screenPoint.X - camera.OffsetX) / camera.ScaleX;
+        var worldY = (screenPoint.Y - camera.OffsetY) / camera.ScaleY;
+
+        PixelometerWorldText.Text = $"WORLD X {worldX:F1}  Y {worldY:F1}";
+
+        if (TryReadPixelValue(worldX, worldY, out var pixelValue, out var tileId))
+        {
+            PixelometerValueText.Text = $"PIXEL {pixelValue}  ({tileId})";
+            return;
+        }
+
+        PixelometerValueText.Text = "PIXEL --";
+    }
+
+    private bool TryReadPixelValue(double worldX, double worldY, out byte value, out string tileId)
+    {
+        foreach (var tile in _tiles)
+        {
+            if (tile.TryGetPixelValue(worldX, worldY, out value))
+            {
+                tileId = tile.Id;
+                return true;
+            }
+        }
+
+        value = default;
+        tileId = string.Empty;
+        return false;
     }
 }
