@@ -219,18 +219,20 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
                 }
 
                 var offset = _layout.GetPixelOffset(x, y);
-                var blended = BlendDefect(destination[offset], defectValue);
-                destination[offset] = blended;
-                destination[offset + 1] = blended;
-                destination[offset + 2] = blended;
+                var blendWeight = defectValue / 255d;
+                destination[offset] = BlendChannel(destination[offset], annotation.Color.Blue, blendWeight);
+                destination[offset + 1] = BlendChannel(destination[offset + 1], annotation.Color.Green, blendWeight);
+                destination[offset + 2] = BlendChannel(destination[offset + 2], annotation.Color.Red, blendWeight);
                 destination[offset + 3] = byte.MaxValue;
             }
         }
     }
 
-    private static byte BlendDefect(byte baseValue, byte defectValue)
+    private static byte BlendChannel(byte baseValue, byte overlayValue, double blendWeight)
     {
-        return (byte)Math.Clamp(baseValue - (defectValue / 2), byte.MinValue, byte.MaxValue);
+        var weighted = (0.48 * baseValue) + (0.52 * overlayValue);
+        var blended = baseValue + ((weighted - baseValue) * blendWeight);
+        return (byte)Math.Clamp((int)Math.Round(blended), byte.MinValue, byte.MaxValue);
     }
 
     public void Dispose()

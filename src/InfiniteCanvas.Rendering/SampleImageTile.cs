@@ -8,9 +8,12 @@ namespace InfiniteCanvas.Rendering;
 
 public sealed class SampleImageTile
 {
-    private readonly Lazy<byte[]> _pixels;
+    private readonly object _cacheGate = new();
+    private readonly Func<byte[]> _pixelFactory;
+    private byte[]? _pixels;
 #if WINDOWS
-    private readonly Lazy<Bitmap>? _backgroundBitmap;
+    private readonly Func<Bitmap>? _backgroundBitmapFactory;
+    private int _backgroundFetched;
 #endif
 
     public SampleImageTile(
@@ -34,9 +37,7 @@ public sealed class SampleImageTile
         Bounds = bounds;
         PixelWidth = pixelWidth;
         PixelHeight = pixelHeight;
-        _pixels = new Lazy<byte[]>(
-            () => ValidatePixels(pixelFactory(), pixelWidth, pixelHeight),
-            LazyThreadSafetyMode.ExecutionAndPublication);
+        _pixelFactory = () => ValidatePixels(pixelFactory(), pixelWidth, pixelHeight);
         Annotations = annotations;
     }
 
@@ -62,23 +63,13 @@ public sealed class SampleImageTile
         Bounds = bounds;
         PixelWidth = pixelWidth;
         PixelHeight = pixelHeight;
-        _backgroundBitmap = new Lazy<Bitmap>(
-            () => backgroundBitmapFactory(),
-            LazyThreadSafetyMode.ExecutionAndPublication);
-        _pixels = new Lazy<byte[]>(
-            () =>
-            {
-                var bitmap = _backgroundBitmap.Value;
-                try
-                {
-                    return ConvertBitmapToGray8(bitmap, pixelWidth, pixelHeight);
-                }
-                finally
-                {
-                    bitmap.Dispose();
-                }
-            },
-            LazyThreadSafetyMode.ExecutionAndPublication);
+        _backgroundBitmapFactory = backgroundBitmapFactory;
+        _pixelFactory = () =>
+        {
+            using var bitmap = _backgroundBitmapFactory();
+            Interlocked.Exchange(ref _backgroundFetched, 1);
+            return ConvertBitmapToGray8(bitmap, pixelWidth, pixelHeight);
+        };
         Annotations = annotations;
     }
 #endif
@@ -91,15 +82,46 @@ public sealed class SampleImageTile
 
     public int PixelHeight { get; }
 
-    public bool IsImageGenerated => _pixels.IsValueCreated;
+    public bool IsImageGenerated => Volatile.Read(ref _pixels) is not null;
 
 #if WINDOWS
-    public bool IsBackgroundFetched => _backgroundBitmap?.IsValueCreated ?? _pixels.IsValueCreated;
+    public bool IsBackgroundFetched => Volatile.Read(ref _backgroundFetched) == 1;
 #else
-    public bool IsBackgroundFetched => _pixels.IsValueCreated;
+    public bool IsBackgroundFetched => IsImageGenerated;
 #endif
 
-    public byte[] Pixels => _pixels.Value;
+    public byte[] Pixels
+    {
+        get
+        {
+            var cached = Volatile.Read(ref _pixels);
+            if (cached is not null)
+            {
+                return cached;
+            }
+
+            lock (_cacheGate)
+            {
+                if (_pixels is null)
+                {
+                    _pixels = _pixelFactory();
+                }
+
+                return _pixels;
+            }
+        }
+    }
+
+    public void ResetImageCache()
+    {
+        lock (_cacheGate)
+        {
+            _pixels = null;
+#if WINDOWS
+            Interlocked.Exchange(ref _backgroundFetched, 0);
+#endif
+        }
+    }
 
     public IReadOnlyList<SampleAnnotation> Annotations { get; }
 

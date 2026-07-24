@@ -3,6 +3,7 @@ using InfiniteCanvas.Rendering;
 using InfiniteCanvas.Spatial;
 using InfiniteCanvas.ViewModels;
 using System.Diagnostics;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -15,10 +16,6 @@ namespace InfiniteCanvas.App;
 
 public partial class MainWindow : Window
 {
-    private static readonly Color AnnotationOutlineColor = Color.FromRgb(230, 58, 58);
-    private static readonly Color AnnotationFillColor = Color.FromArgb(220, 230, 58, 58);
-    private static readonly Color AnnotationFillOverlayColor = Color.FromArgb(64, 230, 58, 58);
-
     private LiveSpatialIndexService<SampleAnnotation> _spatialIndex = null!;
     private CanvasViewportViewModel<SampleAnnotation> _viewModel = null!;
     private CameraTransform _camera = new(0.01, 50);
@@ -43,6 +40,7 @@ public partial class MainWindow : Window
     private int _tileRows = 32;
     private int _objectsPerTile = 16;
     private int _generationSeed = 1729;
+    private int _busyOperationCount;
 
     public MainWindow()
     {
@@ -104,6 +102,7 @@ public partial class MainWindow : Window
     private async Task RegenerateSceneAsync(bool fitToWidth)
     {
         await _generationGate.WaitAsync(_lifetime.Token);
+        BeginBusyOperation();
         try
         {
             LoadingOverlay.Text = "GENERATING TILE MATERIAL";
@@ -149,12 +148,14 @@ public partial class MainWindow : Window
         finally
         {
             RegenerateButton.IsEnabled = true;
+            EndBusyOperation();
             _generationGate.Release();
         }
     }
 
     private async Task RequestRenderAsync()
     {
+        BeginBusyOperation();
         try
         {
             await _renderAction.RequestAsync();
@@ -164,6 +165,10 @@ public partial class MainWindow : Window
         }
         catch (ObjectDisposedException) when (_lifetime.IsCancellationRequested)
         {
+        }
+        finally
+        {
+            EndBusyOperation();
         }
     }
 
@@ -207,7 +212,7 @@ public partial class MainWindow : Window
 
         stopwatch.Stop();
         var generatedTileCount = _tiles.Count(tile => tile.IsBackgroundFetched);
-        StatusText.Text = $"Frame {width}x{height}  |  {stopwatch.Elapsed.TotalMilliseconds:F1} ms  |  Zoom X {camera.ScaleX:F3} Y {camera.ScaleY:F3}  |  Images {generatedTileCount}/{_tiles.Count}";
+        StatusText.Text = $"Frame {width}x{height}  |  {stopwatch.Elapsed.TotalMilliseconds:F1} ms  |  Zoom {camera.ScaleX:F3}x  |  Images {generatedTileCount}/{_tiles.Count}";
 
         if (_hoverPointerPosition is Point hoverPointer)
         {
@@ -251,15 +256,8 @@ public partial class MainWindow : Window
 
     private void FitSceneToWidth()
     {
-        var width = Math.Max(1, ViewportHost.ActualWidth);
-        var targetScale = width / _sceneBounds.Width;
-        var scaleDelta = targetScale / _camera.ScaleX;
-
-        if (scaleDelta > 0
-            && _camera.Zoom(scaleDelta, scaleDelta, new ScreenPoint(0, 0)))
-        {
-            ClampCameraToScene();
-        }
+        ApplyFitToWidthZoom();
+        ClampCameraToScene();
     }
 
     private Grid BuildFrameVisual(
@@ -296,8 +294,8 @@ public partial class MainWindow : Window
                 continue;
             }
 
-            var outlineBrush = new SolidColorBrush(AnnotationOutlineColor);
-            var fillBrush = CreateFillBrush(_annotationDisplayOptions.Mode);
+            var outlineBrush = new SolidColorBrush(ToMediaColor(annotation.Color));
+            var fillBrush = CreateFillBrush(_annotationDisplayOptions.Mode, annotation.Color);
             var outline = new Rectangle
             {
                 Stroke = outlineBrush,
@@ -307,26 +305,10 @@ public partial class MainWindow : Window
                 StrokeDashCap = PenLineCap.Round,
                 StrokeLineJoin = PenLineJoin.Round
             };
-            var label = new TextBlock
-            {
-                Text = annotation.Id,
-                Foreground = Brushes.White,
-                FontFamily = new FontFamily("Cascadia Mono"),
-                FontWeight = FontWeights.SemiBold,
-                FontSize = _annotationDisplayOptions.LabelSize,
-                TextAlignment = TextAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
-            };
             var annotationVisual = new Grid
             {
                 Children = { outline }
             };
-
-            if (_annotationDisplayOptions.ShowLabels)
-            {
-                annotationVisual.Children.Add(label);
-            }
             var annotationElement = new Border
             {
                 Width = width,
@@ -341,6 +323,12 @@ public partial class MainWindow : Window
             Canvas.SetTop(annotationElement, topLeft.Y);
             annotationLayer.Children.Add(annotationElement);
 
+            if (_annotationDisplayOptions.ShowLabels)
+            {
+                var labelPanel = BuildAnnotationLabel(annotation, topLeft, outlineBrush, _annotationDisplayOptions.LabelSize);
+                annotationLayer.Children.Add(labelPanel);
+            }
+
             if (annotation.Id == _selectedAnnotationId)
             {
                 _selectionOutlineAnimator.Apply(outline);
@@ -350,15 +338,50 @@ public partial class MainWindow : Window
         return frame;
     }
 
-    private static Brush CreateFillBrush(AnnotationDisplayMode mode)
+    private static Border BuildAnnotationLabel(
+        SampleAnnotation annotation,
+        ScreenPoint topLeft,
+        SolidColorBrush outlineBrush,
+        double labelSize)
     {
+        var labelPanel = new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(180, 16, 22, 28)),
+            BorderBrush = outlineBrush,
+            BorderThickness = new Thickness(1),
+            Padding = new Thickness(4, 1, 4, 1),
+            Child = new TextBlock
+            {
+                Text = $"{annotation.Classification} {annotation.ObjectId}",
+                Foreground = Brushes.White,
+                FontFamily = new FontFamily("Cascadia Mono"),
+                FontWeight = FontWeights.SemiBold,
+                FontSize = labelSize,
+                TextAlignment = TextAlignment.Left
+            }
+        };
+
+        Canvas.SetLeft(labelPanel, topLeft.X);
+        Canvas.SetTop(labelPanel, topLeft.Y - 22);
+        return labelPanel;
+    }
+
+    private static Brush CreateFillBrush(AnnotationDisplayMode mode, Bgra32Color classColor)
+    {
+        var fillColor = Color.FromArgb(220, classColor.Red, classColor.Green, classColor.Blue);
+        var overlayColor = Color.FromArgb(64, classColor.Red, classColor.Green, classColor.Blue);
         return mode switch
         {
             AnnotationDisplayMode.Outline => Brushes.Transparent,
-            AnnotationDisplayMode.Fill => new SolidColorBrush(AnnotationFillColor),
-            AnnotationDisplayMode.OutlineAndFill => new SolidColorBrush(AnnotationFillOverlayColor),
+            AnnotationDisplayMode.Fill => new SolidColorBrush(fillColor),
+            AnnotationDisplayMode.OutlineAndFill => new SolidColorBrush(overlayColor),
             _ => Brushes.Transparent
         };
+    }
+
+    private static Color ToMediaColor(Bgra32Color color)
+    {
+        return Color.FromArgb(color.Alpha, color.Red, color.Green, color.Blue);
     }
 
     private static SpatialBounds GetSceneBounds(IReadOnlyList<SampleImageTile> tiles)
@@ -390,6 +413,14 @@ public partial class MainWindow : Window
         var currentScaleY = _camera.ScaleY;
         if (currentScaleX >= minimumScaleX && currentScaleY >= minimumScaleY)
         {
+            return;
+        }
+
+        var minimumUniform = Math.Max(minimumScaleX, minimumScaleY);
+        if (Math.Abs(currentScaleX - currentScaleY) <= 0.0001)
+        {
+            var uniformDelta = minimumUniform / currentScaleX;
+            _camera.Zoom(uniformDelta, uniformDelta, new ScreenPoint(viewportWidth / 2, viewportHeight / 2));
             return;
         }
 
@@ -559,62 +590,159 @@ public partial class MainWindow : Window
         _hoverPointerPosition = origin;
         UpdatePixelometer(origin);
         var requestedScaleDelta = e.Delta > 0 ? 1.15 : 1 / 1.15;
-        var requestedScaleXDelta = requestedScaleDelta;
-        var requestedScaleYDelta = requestedScaleDelta;
-
-        if ((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
-        {
-            requestedScaleYDelta = 1;
-        }
-        else if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
-        {
-            requestedScaleXDelta = 1;
-        }
 
         var width = Math.Max(1, ViewportHost.ActualWidth);
         var height = Math.Max(1, ViewportHost.ActualHeight);
 
-        if (!TryComputeZoomDeltas(width, height, requestedScaleXDelta, requestedScaleYDelta, out var zoomXDelta, out var zoomYDelta))
+        if (!TryComputeUniformZoomDelta(width, height, requestedScaleDelta, out var zoomDelta))
         {
             return;
         }
 
-        if (_camera.Zoom(zoomXDelta, zoomYDelta, new ScreenPoint(origin.X, origin.Y)))
+        if (_camera.Zoom(zoomDelta, zoomDelta, new ScreenPoint(origin.X, origin.Y)))
         {
             ClampCameraToScene();
             await RequestRenderAsync();
         }
     }
 
-    private bool TryComputeZoomDeltas(
+    private bool TryComputeUniformZoomDelta(
         double viewportWidth,
         double viewportHeight,
-        double requestedScaleXDelta,
-        double requestedScaleYDelta,
-        out double scaleXDelta,
-        out double scaleYDelta)
+        double requestedScaleDelta,
+        out double scaleDelta)
     {
-        var currentScaleX = _camera.ScaleX;
-        var currentScaleY = _camera.ScaleY;
+        var currentScale = _camera.ScaleX;
         var (minimumScaleX, minimumScaleY) = ComputeMinimumZoom(viewportWidth, viewportHeight);
+        var minimumUniformScale = Math.Max(minimumScaleX, minimumScaleY);
+        var requestedScale = currentScale * requestedScaleDelta;
+        var targetScale = requestedScaleDelta < 1 && requestedScale < minimumUniformScale
+            ? minimumUniformScale
+            : requestedScale;
 
-        var targetScaleX = currentScaleX * requestedScaleXDelta;
-        var targetScaleY = currentScaleY * requestedScaleYDelta;
+        scaleDelta = targetScale / currentScale;
+        return Math.Abs(scaleDelta - 1) > double.Epsilon;
+    }
 
-        if (requestedScaleXDelta < 1 && targetScaleX < minimumScaleX)
+    private async void OnZoomPresetSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded)
         {
-            targetScaleX = minimumScaleX;
+            return;
         }
 
-        if (requestedScaleYDelta < 1 && targetScaleY < minimumScaleY)
+        var customSelected = ZoomPresetComboBox.SelectedIndex == 7;
+        CustomZoomPercentTextBox.IsEnabled = customSelected;
+        ApplyCustomZoomButton.IsEnabled = customSelected;
+
+        if (customSelected)
         {
-            targetScaleY = minimumScaleY;
+            return;
         }
 
-        scaleXDelta = targetScaleX / currentScaleX;
-        scaleYDelta = targetScaleY / currentScaleY;
+        await ApplyZoomPresetAsync();
+    }
 
-        return Math.Abs(scaleXDelta - 1) > double.Epsilon || Math.Abs(scaleYDelta - 1) > double.Epsilon;
+    private async Task ApplyZoomPresetAsync()
+    {
+        if (_tiles.Count == 0)
+        {
+            return;
+        }
+
+        var mode = ZoomPresetComboBox.SelectedIndex;
+        switch (mode)
+        {
+            case 0:
+                ApplyFitToWidthZoom();
+                break;
+            case 1:
+                ApplyFitToHeightZoom();
+                break;
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+            case 6:
+                var percent = mode switch
+                {
+                    2 => 50,
+                    3 => 75,
+                    4 => 100,
+                    5 => 150,
+                    _ => 200
+                };
+                ApplyPercentZoom(percent);
+                break;
+            default:
+                return;
+        }
+
+        ClampCameraToScene();
+        await RequestRenderAsync();
+    }
+
+    private void ApplyPercentZoom(double percent)
+    {
+        var width = Math.Max(1, ViewportHost.ActualWidth);
+        var height = Math.Max(1, ViewportHost.ActualHeight);
+        var (minimumScaleX, minimumScaleY) = ComputeMinimumZoom(width, height);
+        var baseUniformScale = Math.Max(minimumScaleX, minimumScaleY);
+        var targetScale = baseUniformScale * (percent / 100.0);
+        var delta = targetScale / _camera.ScaleX;
+
+        _camera.Zoom(delta, delta, new ScreenPoint(width / 2, height / 2));
+    }
+
+    private void ApplyFitToWidthZoom()
+    {
+        var width = Math.Max(1, ViewportHost.ActualWidth);
+        var height = Math.Max(1, ViewportHost.ActualHeight);
+        var (minimumScaleX, minimumScaleY) = ComputeMinimumZoom(width, height);
+        ApplyScaleWithUniformFirst(minimumScaleX, minimumScaleY, width, height);
+    }
+
+    private void ApplyFitToHeightZoom()
+    {
+        var width = Math.Max(1, ViewportHost.ActualWidth);
+        var height = Math.Max(1, ViewportHost.ActualHeight);
+        var (minimumScaleX, minimumScaleY) = ComputeMinimumZoom(width, height);
+        ApplyScaleWithUniformFirst(minimumScaleY, minimumScaleY, width, height);
+    }
+
+    private void ApplyScaleWithUniformFirst(double preferredUniformScale, double fallbackScaleY, double viewportWidth, double viewportHeight)
+    {
+        var (minimumScaleX, minimumScaleY) = ComputeMinimumZoom(viewportWidth, viewportHeight);
+        var minimumUniform = Math.Max(minimumScaleX, minimumScaleY);
+
+        if (preferredUniformScale >= minimumUniform)
+        {
+            var uniformDelta = preferredUniformScale / _camera.ScaleX;
+            _camera.Zoom(uniformDelta, uniformDelta, new ScreenPoint(viewportWidth / 2, viewportHeight / 2));
+            return;
+        }
+
+        var targetScaleX = Math.Max(minimumScaleX, preferredUniformScale);
+        var targetScaleY = Math.Max(minimumScaleY, fallbackScaleY);
+        var deltaX = targetScaleX / _camera.ScaleX;
+        var deltaY = targetScaleY / _camera.ScaleY;
+        _camera.Zoom(deltaX, deltaY, new ScreenPoint(viewportWidth / 2, viewportHeight / 2));
+    }
+
+    private async void OnApplyCustomZoomClicked(object sender, RoutedEventArgs e)
+    {
+        if (!double.TryParse(CustomZoomPercentTextBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var percent)
+            || !double.IsFinite(percent)
+            || percent <= 0)
+        {
+            StatusText.Text = "Custom zoom must be a positive percent value.";
+            return;
+        }
+
+        percent = Math.Clamp(percent, 10, 1000);
+        ApplyPercentZoom(percent);
+        ClampCameraToScene();
+        await RequestRenderAsync();
     }
 
     private void OnViewportSizeChanged(object sender, SizeChangedEventArgs e)
@@ -712,6 +840,21 @@ public partial class MainWindow : Window
         await RegenerateSceneAsync(fitToWidth: true);
     }
 
+    private async void OnDebugDumpCacheClicked(object sender, RoutedEventArgs e)
+    {
+        var fetchedTiles = _tiles.Where(tile => tile.IsBackgroundFetched).Select(tile => tile.Id).ToArray();
+        var dump = $"Cache fetched {fetchedTiles.Length}/{_tiles.Count}: {string.Join(", ", fetchedTiles.Take(10))}{(fetchedTiles.Length > 10 ? "..." : string.Empty)}";
+        Debug.WriteLine(dump);
+
+        foreach (var tile in _tiles)
+        {
+            tile.ResetImageCache();
+        }
+
+        StatusText.Text = "Image cache reset. Tiles will regenerate lazily as they come into range.";
+        await RequestRenderAsync();
+    }
+
     private bool TryReadGenerationOptions(out string validationError)
     {
         validationError = string.Empty;
@@ -790,9 +933,11 @@ public partial class MainWindow : Window
             if (tile.TryGetPixelValue(worldX, worldY, out background))
             {
                 defect = 0;
-                for (var index = 0; index < _annotations.Count; index++)
+                var sampleArea = new SpatialBounds(worldX, worldY, 0.01, 0.01);
+                var hitAnnotations = _spatialIndex.Query(sampleArea);
+                for (var index = 0; index < hitAnnotations.Count; index++)
                 {
-                    if (_annotations[index].TryGetDefectValue(worldX, worldY, out var value))
+                    if (hitAnnotations[index].TryGetDefectValue(worldX, worldY, out var value))
                     {
                         defect = Math.Max(defect, value);
                     }
@@ -812,6 +957,23 @@ public partial class MainWindow : Window
     private static byte BlendDefect(byte baseValue, byte defectValue)
     {
         return (byte)Math.Clamp(baseValue - (defectValue / 2), byte.MinValue, byte.MaxValue);
+    }
+
+    private void BeginBusyOperation()
+    {
+        if (Interlocked.Increment(ref _busyOperationCount) == 1)
+        {
+            Dispatcher.Invoke(() => RenderBusyBar.Visibility = Visibility.Visible);
+        }
+    }
+
+    private void EndBusyOperation()
+    {
+        if (Interlocked.Decrement(ref _busyOperationCount) <= 0)
+        {
+            Interlocked.Exchange(ref _busyOperationCount, 0);
+            Dispatcher.Invoke(() => RenderBusyBar.Visibility = Visibility.Collapsed);
+        }
     }
 
     private sealed record AnnotationDisplayOptions(

@@ -9,6 +9,13 @@ namespace InfiniteCanvas.Rendering;
 public static class SampleImageGenerator
 {
     private static readonly string[] Classifications = ["Scratch", "Inclusion", "Stain", "Edge defect"];
+    private static readonly IReadOnlyDictionary<string, Bgra32Color> ClassificationColors = new Dictionary<string, Bgra32Color>
+    {
+        ["Scratch"] = new(60, 90, 245, 255),
+        ["Inclusion"] = new(70, 205, 255, 255),
+        ["Stain"] = new(120, 220, 120, 255),
+        ["Edge defect"] = new(90, 160, 255, 255)
+    };
     private readonly record struct DefectTemplate(int Width, int Height, byte[] Pixels);
 
     public static IReadOnlyList<SampleImageTile> GenerateSet(
@@ -37,7 +44,7 @@ public static class SampleImageGenerator
         var tileCount = rows.HasValue ? checked(columns * rowCount) : imageCount;
         var poolSeed = unchecked(seed + 48611);
         var poolRandom = new Random(poolSeed);
-        var defectTemplatePool = BuildDefectTemplatePool(defectPoolSize, 192, 192, poolRandom);
+        var defectTemplatePool = BuildDefectTemplatePool(defectPoolSize, poolRandom);
 
         var tiles = new SampleImageTile[tileCount];
 
@@ -124,17 +131,17 @@ public static class SampleImageGenerator
 
         for (var index = 0; index < count; index++)
         {
-            var size = random.Next(70, 201);
-            var localX = random.Next(0, Math.Max(1, (int)tileBounds.Width - size));
-            var localY = random.Next(0, Math.Max(1, (int)tileBounds.Height - size));
+            var classification = Classifications[random.Next(Classifications.Length)];
+            var (aspectMin, aspectMax) = GetClassAspectRange(classification);
+            var aspectRatio = aspectMin + (random.NextDouble() * (aspectMax - aspectMin));
+            var width = random.Next(160, 561);
+            var height = Math.Clamp((int)Math.Round(width / aspectRatio), 100, 620);
+            var localX = random.Next(0, Math.Max(1, (int)tileBounds.Width - width));
+            var localY = random.Next(0, Math.Max(1, (int)tileBounds.Height - height));
             var objectId = random.NextInt64(0x100000000L, 0xFFFFFFFFFFFFL).ToString("X12");
-            var color = new Bgra32Color(
-                (byte)random.Next(12, 56),
-                (byte)random.Next(12, 56),
-                (byte)random.Next(210, 256),
-                byte.MaxValue);
-            var defectWidth = checked(size * 2);
-            var defectHeight = checked(size * 2);
+            var color = ClassificationColors[classification];
+            var defectWidth = checked((int)Math.Round(width * (2.4 + (random.NextDouble() * 2.1))));
+            var defectHeight = checked((int)Math.Round(height * (2.4 + (random.NextDouble() * 2.1))));
             var defectTemplate = defectTemplatePool[random.Next(defectTemplatePool.Count)];
             var defectPixels = ResampleTemplate(defectTemplate, defectWidth, defectHeight);
 
@@ -142,9 +149,9 @@ public static class SampleImageGenerator
                 $"{tileId}-{objectId}",
                 tileId,
                 objectId,
-                new SpatialBounds(tileBounds.X + localX, tileBounds.Y + localY, size, size),
+                new SpatialBounds(tileBounds.X + localX, tileBounds.Y + localY, width, height),
                 color,
-                Classifications[random.Next(Classifications.Length)],
+                classification,
                 new Dictionary<string, double>
                 {
                     ["Confidence"] = Math.Round(0.75 + (random.NextDouble() * 0.249), 3),
@@ -158,20 +165,33 @@ public static class SampleImageGenerator
         return annotations;
     }
 
+    private static (double Min, double Max) GetClassAspectRange(string classification)
+    {
+        return classification switch
+        {
+            "Scratch" => (2.0, 4.4),
+            "Inclusion" => (0.7, 1.6),
+            "Stain" => (0.6, 1.8),
+            "Edge defect" => (1.6, 3.2),
+            _ => (0.8, 2.0)
+        };
+    }
+
     private static IReadOnlyList<DefectTemplate> BuildDefectTemplatePool(
         int count,
-        int width,
-        int height,
         Random random)
     {
         var pool = new DefectTemplate[count];
         for (var index = 0; index < count; index++)
         {
+            var aspect = 0.45 + (random.NextDouble() * 1.95);
+            var templateWidth = random.Next(156, 276);
+            var templateHeight = Math.Clamp((int)Math.Round(templateWidth / aspect), 132, 304);
 #if WINDOWS
-            using var bitmap = GenerateCenteredDefectBitmap(width, height, random);
+            using var bitmap = GenerateCenteredDefectBitmap(templateWidth, templateHeight, random);
             pool[index] = CreateTemplateFromBitmap(bitmap);
 #else
-            pool[index] = new DefectTemplate(width, height, GenerateCenteredDefectPixels(width, height, random));
+            pool[index] = new DefectTemplate(templateWidth, templateHeight, GenerateCenteredDefectPixels(templateWidth, templateHeight, random));
 #endif
         }
 
@@ -230,21 +250,21 @@ public static class SampleImageGenerator
         }
 
         var pixels = new byte[checked(width * height)];
-        var blobCount = random.Next(1, 4);
+        var blobCount = random.Next(2, 5);
         var baseCenterX = (width - 1) / 2.0;
         var baseCenterY = (height - 1) / 2.0;
-        var maxJitterX = width * 0.07;
-        var maxJitterY = height * 0.07;
-        var majorRadius = Math.Min(width, height) * 0.28;
+        var maxJitterX = width * 0.12;
+        var maxJitterY = height * 0.12;
+        var majorRadius = Math.Min(width, height) * 0.44;
 
         for (var blobIndex = 0; blobIndex < blobCount; blobIndex++)
         {
             var centerX = baseCenterX + ((random.NextDouble() * 2 - 1) * maxJitterX);
             var centerY = baseCenterY + ((random.NextDouble() * 2 - 1) * maxJitterY);
-            var radiusX = majorRadius * (0.85 + (random.NextDouble() * 0.35));
-            var radiusY = majorRadius * (0.85 + (random.NextDouble() * 0.35));
-            var hardCoreRatio = 0.5 + (random.NextDouble() * 0.15);
-            var peak = random.Next(172, 236);
+            var radiusX = majorRadius * (0.8 + (random.NextDouble() * 1.4));
+            var radiusY = majorRadius * (0.5 + (random.NextDouble() * 1.6));
+            var hardCoreRatio = 0.62 + (random.NextDouble() * 0.16);
+            var peak = random.Next(184, 246);
 
             var left = Math.Max(0, (int)Math.Floor(centerX - radiusX));
             var right = Math.Min(width - 1, (int)Math.Ceiling(centerX + radiusX));
@@ -272,7 +292,7 @@ public static class SampleImageGenerator
                     var distance = Math.Sqrt(normalizedDistance);
                     var intensity = distance <= hardCoreRatio
                         ? 1
-                        : Math.Pow(1 - ((distance - hardCoreRatio) / (1 - hardCoreRatio)), 1.2);
+                        : Math.Pow(1 - ((distance - hardCoreRatio) / (1 - hardCoreRatio)), 0.8);
                     var value = (byte)Math.Clamp((int)Math.Round(peak * intensity), 0, 255);
                     var offset = (y * width) + x;
                     if (value > pixels[offset])

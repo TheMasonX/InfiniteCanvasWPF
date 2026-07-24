@@ -36,8 +36,8 @@ public class SampleImageGeneratorTests
             Assert.That(tiles, Has.All.Property(nameof(SampleImageTile.IsImageGenerated)).False);
             Assert.That(tiles[0].PixelWidth, Is.EqualTo(8192));
             Assert.That(tiles[0].PixelHeight, Is.EqualTo(2048));
-            Assert.That(tiles[0].Annotations[0].DefectPixelWidth, Is.EqualTo(2 * (int)tiles[0].Annotations[0].Bounds.Width));
-            Assert.That(tiles[0].Annotations[0].DefectPixelHeight, Is.EqualTo(2 * (int)tiles[0].Annotations[0].Bounds.Height));
+            Assert.That(tiles[0].Annotations[0].DefectPixelWidth, Is.GreaterThan((int)tiles[0].Annotations[0].Bounds.Width));
+            Assert.That(tiles[0].Annotations[0].DefectPixelHeight, Is.GreaterThan((int)tiles[0].Annotations[0].Bounds.Height));
             Assert.That(tiles[1].Bounds.X, Is.EqualTo(8192));
             Assert.That(tiles[1].Bounds.Y, Is.EqualTo(0));
             Assert.That(tiles[2].Bounds.X, Is.EqualTo(0));
