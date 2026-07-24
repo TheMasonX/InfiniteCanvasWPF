@@ -27,9 +27,14 @@ public partial class CanvasViewportViewModel<T> : ObservableObject where T : ISp
     private DateTimeOffset? lastSnapshotPublishedAtUtc;
 
     [RelayCommand]
-    private void Refresh()
+    private async Task RefreshAsync(CancellationToken cancellationToken)
     {
-        VisibleItemCount = _spatialIndexService.Query(Viewport).Count;
+        var viewport = Viewport;
+        var visibleItemCount = await Task.Run(
+            () => _spatialIndexService.Query(viewport).Count,
+            cancellationToken);
+
+        VisibleItemCount = visibleItemCount;
         TotalItemCount = _spatialIndexService.Count;
 
         if (_spatialIndexService is LiveSpatialIndexService<T> liveSpatialIndexService)

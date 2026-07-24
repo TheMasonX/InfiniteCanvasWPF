@@ -7,9 +7,7 @@ namespace InfiniteCanvas.Spatial;
 public sealed class LiveSpatialIndexService<T> : ISpatialIndexService<T> where T : ISpatialEntity
 {
     private readonly ISpatialIndexBuilder<T> _indexBuilder;
-    private SnapshotState _snapshot = SnapshotState.Empty;
-    private ImmutableArray<T> _pendingItems = ImmutableArray<T>.Empty;
-    private ImmutableArray<T> _publishingItems = ImmutableArray<T>.Empty;
+    private LiveState _state = LiveState.Empty;
     private int _publishInProgress;
 
     public LiveSpatialIndexService(ISpatialIndexBuilder<T> indexBuilder)
@@ -21,18 +19,16 @@ public sealed class LiveSpatialIndexService<T> : ISpatialIndexService<T> where T
     {
         get
         {
-            var snapshot = Volatile.Read(ref _snapshot);
-            var pendingCount = Volatile.Read(ref _pendingItems).Length;
-            var publishingCount = Volatile.Read(ref _publishingItems).Length;
-            return snapshot.Items.Length + pendingCount + publishingCount;
+            var state = Volatile.Read(ref _state);
+            return state.SnapshotItems.Length + state.HotItems.Length + state.PublishingItems.Length;
         }
     }
 
-    public DateTimeOffset? LastPublishedAtUtc => Volatile.Read(ref _snapshot).PublishedAtUtc;
+    public DateTimeOffset? LastPublishedAtUtc => Volatile.Read(ref _state).PublishedAtUtc;
 
     public void Add(T item)
     {
-        ImmutableInterlocked.Update(ref _pendingItems, items => items.Add(item));
+        UpdateState(state => state with { HotItems = state.HotItems.Add(item) });
     }
 
     public void AddRange(IEnumerable<T> items)
@@ -43,19 +39,17 @@ public sealed class LiveSpatialIndexService<T> : ISpatialIndexService<T> where T
             return;
         }
 
-        ImmutableInterlocked.Update(ref _pendingItems, existing => existing.AddRange(buffered));
+        UpdateState(state => state with { HotItems = state.HotItems.AddRange(buffered) });
     }
 
     public IReadOnlyList<T> Query(SpatialBounds viewport)
     {
-        var snapshot = Volatile.Read(ref _snapshot);
-        var pendingItems = Volatile.Read(ref _pendingItems);
-        var publishingItems = Volatile.Read(ref _publishingItems);
+        var state = Volatile.Read(ref _state);
 
-        var results = new List<T>(snapshot.Items.Length + pendingItems.Length + publishingItems.Length);
-        results.AddRange(snapshot.Index.Query(viewport));
-        AppendMatches(results, publishingItems, viewport);
-        AppendMatches(results, pendingItems, viewport);
+        var results = new List<T>();
+        results.AddRange(state.SnapshotIndex.Query(viewport));
+        AppendMatches(results, state.PublishingItems, viewport);
+        AppendMatches(results, state.HotItems, viewport);
         return results;
     }
 
@@ -66,39 +60,56 @@ public sealed class LiveSpatialIndexService<T> : ISpatialIndexService<T> where T
             return;
         }
 
-        ImmutableArray<T> capturedItems = ImmutableArray<T>.Empty;
+        LiveState? publishingState = null;
 
         try
         {
-            capturedItems = ImmutableInterlocked.InterlockedExchange(ref _pendingItems, ImmutableArray<T>.Empty);
-            if (capturedItems.IsDefaultOrEmpty)
+            while (true)
             {
-                return;
+                var current = Volatile.Read(ref _state);
+                if (current.HotItems.IsDefaultOrEmpty)
+                {
+                    return;
+                }
+
+                var next = current with
+                {
+                    HotItems = ImmutableArray<T>.Empty,
+                    PublishingItems = current.HotItems
+                };
+
+                if (ReferenceEquals(Interlocked.CompareExchange(ref _state, next, current), current))
+                {
+                    publishingState = next;
+                    break;
+                }
             }
 
-            Volatile.Write(ref _publishingItems, capturedItems);
-
-            var previousSnapshot = Volatile.Read(ref _snapshot);
-            var mergedItems = previousSnapshot.Items.AddRange(capturedItems);
+            var mergedItems = publishingState.SnapshotItems.AddRange(publishingState.PublishingItems);
             var rebuiltIndex = await Task.Run(() => _indexBuilder.Build(mergedItems), cancellationToken).ConfigureAwait(false);
-
-            var nextSnapshot = new SnapshotState(mergedItems, rebuiltIndex, DateTimeOffset.UtcNow);
-            Volatile.Write(ref _snapshot, nextSnapshot);
-            Volatile.Write(ref _publishingItems, ImmutableArray<T>.Empty);
+            UpdateState(state => state with
+            {
+                SnapshotItems = mergedItems,
+                SnapshotIndex = rebuiltIndex,
+                PublishingItems = ImmutableArray<T>.Empty,
+                PublishedAtUtc = DateTimeOffset.UtcNow
+            });
         }
         catch
         {
-            if (!capturedItems.IsDefaultOrEmpty)
+            if (publishingState is not null)
             {
-                ImmutableInterlocked.Update(ref _pendingItems, items => capturedItems.AddRange(items));
-                Volatile.Write(ref _publishingItems, ImmutableArray<T>.Empty);
+                UpdateState(state => state with
+                {
+                    HotItems = state.PublishingItems.AddRange(state.HotItems),
+                    PublishingItems = ImmutableArray<T>.Empty
+                });
             }
 
             throw;
         }
         finally
         {
-            Volatile.Write(ref _publishingItems, ImmutableArray<T>.Empty);
             Interlocked.Exchange(ref _publishInProgress, 0);
         }
     }
@@ -114,8 +125,32 @@ public sealed class LiveSpatialIndexService<T> : ISpatialIndexService<T> where T
         }
     }
 
-    private sealed record SnapshotState(ImmutableArray<T> Items, ISpatialIndexService<T> Index, DateTimeOffset? PublishedAtUtc)
+    private void UpdateState(Func<LiveState, LiveState> update)
     {
-        public static SnapshotState Empty { get; } = new(ImmutableArray<T>.Empty, new ImmutableSpatialIndexService<T>([]), null);
+        while (true)
+        {
+            var current = Volatile.Read(ref _state);
+            var next = update(current);
+
+            if (ReferenceEquals(Interlocked.CompareExchange(ref _state, next, current), current))
+            {
+                return;
+            }
+        }
+    }
+
+    private sealed record LiveState(
+        ImmutableArray<T> SnapshotItems,
+        ISpatialIndexService<T> SnapshotIndex,
+        ImmutableArray<T> HotItems,
+        ImmutableArray<T> PublishingItems,
+        DateTimeOffset? PublishedAtUtc)
+    {
+        public static LiveState Empty { get; } = new(
+            ImmutableArray<T>.Empty,
+            new ImmutableSpatialIndexService<T>([]),
+            ImmutableArray<T>.Empty,
+            ImmutableArray<T>.Empty,
+            null);
     }
 }
