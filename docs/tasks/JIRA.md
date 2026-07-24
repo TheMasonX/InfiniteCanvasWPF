@@ -41,6 +41,12 @@
 | ICW-037 | To Do | Improvement | Add accessibility baseline to MainWindow controls | Provide automation names, access keys, and primary keyboard bindings for scene controls and core actions without changing visual behavior. |
 | ICW-038 | To Do | Task | Capture the net-new audit findings in a durable follow-up audit artifact | Record the latest follow-up audit findings in docs/audits and ensure they are reflected in the task tracker and ticket files. |
 | ICW-039 | Done | Story | Eliminate startup stalls from defect/tile image generation with non-blocking placeholder rendering | Replace CPU-heavy per-annotation defect resampling with shared sparse template tiles, use simple GDI+ shape templates and solid tile backgrounds for startup responsiveness, and ensure frame rendering never blocks on tile image generation. |
+| ICW-040 | Done | Story | Draw a grid overlay between background image tiles | Dedicated overlay canvas renders unique projected tile boundaries from the captured frame camera without modifying raster pixels. |
+| ICW-041 | Done | Bug | Reduce default label size and show class or ID, never both | Default label size is 8.5 (about 70% of 12); dropdown selects Class or ID, defaults to Class, and labels render only that field. |
+| ICW-042 | Done | Bug | Restore unaltered grayscale bitmap defect imagery on a separate sparse image layer | Windows defect inputs remain pooled `System.Drawing.Bitmap` instances filled with grayscale 150 and populated by 5-10 GDI+ circles. Sparse rendering copies grayscale channels directly over the bitmap extent without class tinting or annotation-bound clipping. |
+| ICW-043 | Done | Story | Persist canvas settings and save them on close | Versioned JSON settings load before initial generation, save atomically on close, and recover to defaults from malformed or invalid files. |
+| ICW-044 | Done | Bug | Preserve independent non-linear axis zoom and show derived zoom percentage | Wheel targets clamp per axis, the free axis continues non-linear scaling, preset selections act as commands, and read-only ComboBox text shows the percentage of the stricter material-fit axis. |
+| ICW-045 | To Do | Improvement | Replace the rejected custom zoom UI with inline entry and Apply action | Rejected standalone controls and Custom item are removed. Future Custom dropdown content provides a textbox, Apply action, and Enter handling. |
 
 ## Activity
 
@@ -89,3 +95,15 @@
 | 2026-07-24 | ICW-039 | Started user-mandated startup responsiveness slice: remove heavy defect resampling path, simplify template generation, and make render path non-blocking on tile image fetch. |
 | 2026-07-24 | ICW-039 | Completed with passing validation: `dotnet test tests/InfiniteCanvas.Tests --configuration Release`, `dotnet test tests/InfiniteCanvas.Windows.Tests --configuration Release`, and `dotnet build src/InfiniteCanvas.App --configuration Release`. |
 | 2026-07-24 | ICW-015 | Advanced easy ROI fix by replacing grouped GenerateSet guards with per-parameter validation and adding targeted parameter-name tests; rows/imageCount semantics follow-up remains open. |
+| 2026-07-24 | ICW-040 | Captured as the highest-priority next task: add a dedicated overlay layer for background image tile boundaries. |
+| 2026-07-24 | ICW-041 | Captured runtime label corrections: reduce default size to about 70% and select either class or ID, defaulting to class. |
+| 2026-07-24 | ICW-042 | Captured defect-layer regression: use grayscale `System.Drawing.Bitmap` inputs with default fill 150 and 5-10 GDI+ circles, rendered unaltered on a separate sparse image layer. |
+| 2026-07-24 | ICW-043 | Captured requirement to restore settings between runs and save current settings on close. |
+| 2026-07-24 | ICW-044 | Captured independent axis clamp, non-linear zoom continuation, preset-command, and calculated zoom display semantics. |
+| 2026-07-24 | ICW-045 | Captured removal of the current custom zoom UI and deferred replacement with textbox, Apply button, and Enter handling inside the Custom dropdown flow. |
+| 2026-07-24 | ICW-040 | Completed dedicated tile-grid overlay using unique world-space edges projected from the captured frame camera. |
+| 2026-07-24 | ICW-041 | Completed smaller default labels and Class/ID-only selector defaulting to Class. |
+| 2026-07-24 | ICW-042 | Completed grayscale GDI+ bitmap templates and direct sparse bitmap rendering without tint or logical-bound clipping; added Windows pixel regression coverage. |
+| 2026-07-24 | ICW-043 | Completed versioned settings load/save with atomic replacement and round-trip/malformed-file tests. |
+| 2026-07-24 | ICW-044 | Completed independent wheel-axis clamping, preset command semantics, and derived largest-axis percentage display with focused tests. |
+| 2026-07-24 | ICW-045 | Removed rejected custom zoom controls; retained the redesigned inline dropdown entry as the remaining task. |

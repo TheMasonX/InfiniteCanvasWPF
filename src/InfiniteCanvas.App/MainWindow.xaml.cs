@@ -3,7 +3,6 @@ using InfiniteCanvas.Rendering;
 using InfiniteCanvas.Spatial;
 using InfiniteCanvas.ViewModels;
 using System.Diagnostics;
-using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -25,6 +24,10 @@ public partial class MainWindow : Window
     private readonly ISelectionOutlineAnimator _selectionOutlineAnimator;
     private readonly CancellationTokenSource _lifetime = new();
     private readonly SemaphoreSlim _generationGate = new(1, 1);
+    private readonly string _settingsPath = System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "InfiniteCanvas",
+        "settings.json");
     private IReadOnlyList<SampleImageTile> _tiles = [];
     private IReadOnlyList<SampleAnnotation> _annotations = [];
     private SpatialBounds _sceneBounds;
@@ -61,6 +64,7 @@ public partial class MainWindow : Window
 
         PixelometerWorldText.Text = "WORLD X --  Y --";
         PixelometerValueText.Text = "PIXEL --";
+        ApplySettingsToUi(CanvasUserSettingsStore.Load(_settingsPath));
 
         Loaded += OnLoaded;
         Closed += OnClosed;
@@ -97,6 +101,19 @@ public partial class MainWindow : Window
         TilesXTextBox.Text = _tileColumns.ToString();
         TilesYTextBox.Text = _tileRows.ToString();
         ObjectsPerTileTextBox.Text = _objectsPerTile.ToString();
+    }
+
+    private void ApplySettingsToUi(CanvasUserSettings settings)
+    {
+        _tileColumns = settings.TileColumns;
+        _tileRows = settings.TileRows;
+        _objectsPerTile = settings.ObjectsPerTile;
+        ApplyGenerationControlsToUi();
+        DisplayModeComboBox.SelectedIndex = settings.AnnotationDisplayMode;
+        OutlineThicknessSlider.Value = settings.OutlineThickness;
+        LabelSizeSlider.Value = settings.LabelSize;
+        LabelDisplayComboBox.SelectedIndex = settings.LabelDisplay;
+        ShowLabelsCheckBox.IsChecked = settings.ShowLabels;
     }
 
     private async Task RegenerateSceneAsync(bool fitToWidth)
@@ -249,6 +266,7 @@ public partial class MainWindow : Window
         stopwatch.Stop();
         var generatedTileCount = _tiles.Count(tile => tile.IsBackgroundFetched);
         StatusText.Text = $"Frame {width}x{height}  |  {stopwatch.Elapsed.TotalMilliseconds:F1} ms  |  Zoom {camera.ScaleX:F3}x  |  Images {generatedTileCount}/{_tiles.Count}";
+        UpdateZoomDisplay(camera, width, height);
 
         if (_hoverPointerPosition is Point hoverPointer)
         {
@@ -317,6 +335,8 @@ public partial class MainWindow : Window
             SnapsToDevicePixels = true
         });
 
+        frame.Children.Add(BuildTileGridLayer(camera, frameWidth, frameHeight));
+
         var annotationLayer = new Canvas { ClipToBounds = true };
         frame.Children.Add(annotationLayer);
 
@@ -361,7 +381,12 @@ public partial class MainWindow : Window
 
             if (_annotationDisplayOptions.ShowLabels)
             {
-                var labelPanel = BuildAnnotationLabel(annotation, topLeft, outlineBrush, _annotationDisplayOptions.LabelSize);
+                var labelPanel = BuildAnnotationLabel(
+                    annotation,
+                    topLeft,
+                    outlineBrush,
+                    _annotationDisplayOptions.LabelSize,
+                    _annotationDisplayOptions.LabelDisplay);
                 annotationLayer.Children.Add(labelPanel);
             }
 
@@ -374,11 +399,55 @@ public partial class MainWindow : Window
         return frame;
     }
 
+    private Canvas BuildTileGridLayer(CameraSnapshot camera, int frameWidth, int frameHeight)
+    {
+        var gridLayer = new Canvas
+        {
+            ClipToBounds = true,
+            IsHitTestVisible = false
+        };
+        var gridBrush = new SolidColorBrush(Color.FromArgb(180, 40, 210, 190));
+        gridBrush.Freeze();
+
+        foreach (var worldX in _tiles.SelectMany(tile => new[] { tile.Bounds.X, tile.Bounds.Right }).Distinct())
+        {
+            var screenX = camera.WorldToScreen(worldX, _sceneBounds.Y).X;
+            gridLayer.Children.Add(new Line
+            {
+                X1 = screenX,
+                X2 = screenX,
+                Y1 = 0,
+                Y2 = frameHeight,
+                Stroke = gridBrush,
+                StrokeThickness = 1,
+                SnapsToDevicePixels = true
+            });
+        }
+
+        foreach (var worldY in _tiles.SelectMany(tile => new[] { tile.Bounds.Y, tile.Bounds.Bottom }).Distinct())
+        {
+            var screenY = camera.WorldToScreen(_sceneBounds.X, worldY).Y;
+            gridLayer.Children.Add(new Line
+            {
+                X1 = 0,
+                X2 = frameWidth,
+                Y1 = screenY,
+                Y2 = screenY,
+                Stroke = gridBrush,
+                StrokeThickness = 1,
+                SnapsToDevicePixels = true
+            });
+        }
+
+        return gridLayer;
+    }
+
     private static Border BuildAnnotationLabel(
         SampleAnnotation annotation,
         ScreenPoint topLeft,
         SolidColorBrush outlineBrush,
-        double labelSize)
+        double labelSize,
+        AnnotationLabelDisplay labelDisplay)
     {
         var labelPanel = new Border
         {
@@ -388,7 +457,9 @@ public partial class MainWindow : Window
             Padding = new Thickness(4, 1, 4, 1),
             Child = new TextBlock
             {
-                Text = $"{annotation.Classification} {annotation.ObjectId}",
+                Text = labelDisplay == AnnotationLabelDisplay.Id
+                    ? annotation.ObjectId
+                    : annotation.Classification,
                 Foreground = Brushes.White,
                 FontFamily = new FontFamily("Cascadia Mono"),
                 FontWeight = FontWeights.SemiBold,
@@ -630,34 +701,34 @@ public partial class MainWindow : Window
         var width = Math.Max(1, ViewportHost.ActualWidth);
         var height = Math.Max(1, ViewportHost.ActualHeight);
 
-        if (!TryComputeUniformZoomDelta(width, height, requestedScaleDelta, out var zoomDelta))
+        var (minimumScaleX, minimumScaleY) = ComputeMinimumZoom(width, height);
+        var zoomDeltas = ViewportZoomPolicy.ComputeWheelDeltas(
+            _camera.ScaleX,
+            _camera.ScaleY,
+            minimumScaleX,
+            minimumScaleY,
+            requestedScaleDelta);
+        if (!zoomDeltas.HasChange)
         {
             return;
         }
 
-        if (_camera.Zoom(zoomDelta, zoomDelta, new ScreenPoint(origin.X, origin.Y)))
+        if (_camera.Zoom(zoomDeltas.ScaleX, zoomDeltas.ScaleY, new ScreenPoint(origin.X, origin.Y)))
         {
             ClampCameraToScene();
             await RequestRenderAsync();
         }
     }
 
-    private bool TryComputeUniformZoomDelta(
-        double viewportWidth,
-        double viewportHeight,
-        double requestedScaleDelta,
-        out double scaleDelta)
+    private void UpdateZoomDisplay(CameraSnapshot camera, double viewportWidth, double viewportHeight)
     {
-        var currentScale = _camera.ScaleX;
         var (minimumScaleX, minimumScaleY) = ComputeMinimumZoom(viewportWidth, viewportHeight);
-        var minimumUniformScale = Math.Max(minimumScaleX, minimumScaleY);
-        var requestedScale = currentScale * requestedScaleDelta;
-        var targetScale = requestedScaleDelta < 1 && requestedScale < minimumUniformScale
-            ? minimumUniformScale
-            : requestedScale;
-
-        scaleDelta = targetScale / currentScale;
-        return Math.Abs(scaleDelta - 1) > double.Epsilon;
+        var percent = ViewportZoomPolicy.ComputeDisplayPercent(
+            camera.ScaleX,
+            camera.ScaleY,
+            minimumScaleX,
+            minimumScaleY);
+        ZoomPresetComboBox.Text = $"{percent:F0}%";
     }
 
     private async void OnZoomPresetSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -667,26 +738,23 @@ public partial class MainWindow : Window
             return;
         }
 
-        var customSelected = ZoomPresetComboBox.SelectedIndex == 7;
-        CustomZoomPercentTextBox.IsEnabled = customSelected;
-        ApplyCustomZoomButton.IsEnabled = customSelected;
-
-        if (customSelected)
+        var mode = ZoomPresetComboBox.SelectedIndex;
+        if (mode < 0)
         {
             return;
         }
 
-        await ApplyZoomPresetAsync();
+        ZoomPresetComboBox.SelectedIndex = -1;
+        await ApplyZoomPresetAsync(mode);
     }
 
-    private async Task ApplyZoomPresetAsync()
+    private async Task ApplyZoomPresetAsync(int mode)
     {
         if (_tiles.Count == 0)
         {
             return;
         }
 
-        var mode = ZoomPresetComboBox.SelectedIndex;
         switch (mode)
         {
             case 0:
@@ -765,22 +833,6 @@ public partial class MainWindow : Window
         _camera.Zoom(deltaX, deltaY, new ScreenPoint(viewportWidth / 2, viewportHeight / 2));
     }
 
-    private async void OnApplyCustomZoomClicked(object sender, RoutedEventArgs e)
-    {
-        if (!double.TryParse(CustomZoomPercentTextBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var percent)
-            || !double.IsFinite(percent)
-            || percent <= 0)
-        {
-            StatusText.Text = "Custom zoom must be a positive percent value.";
-            return;
-        }
-
-        percent = Math.Clamp(percent, 10, 1000);
-        ApplyPercentZoom(percent);
-        ClampCameraToScene();
-        await RequestRenderAsync();
-    }
-
     private void OnViewportSizeChanged(object sender, SizeChangedEventArgs e)
     {
         if (!IsLoaded || LoadingOverlay.Visibility == Visibility.Visible)
@@ -838,6 +890,17 @@ public partial class MainWindow : Window
         await RequestRenderAsync();
     }
 
+    private async void OnLabelDisplaySelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        ApplyDisplayOptionsFromUi();
+        await RequestRenderAsync();
+    }
+
     private async void OnShowLabelsChanged(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded)
@@ -862,6 +925,7 @@ public partial class MainWindow : Window
             selectedMode,
             Math.Round(OutlineThicknessSlider.Value, 2),
             Math.Round(LabelSizeSlider.Value, 2),
+            LabelDisplayComboBox.SelectedIndex == 1 ? AnnotationLabelDisplay.Id : AnnotationLabelDisplay.Class,
             ShowLabelsCheckBox.IsChecked ?? true);
     }
 
@@ -927,6 +991,7 @@ public partial class MainWindow : Window
 
     private async void OnClosed(object? sender, EventArgs e)
     {
+        SaveSettings();
         _resizeTimer.Stop();
         _anchorPanTimer.Stop();
         UnsubscribeTileGenerationEvents(_tiles);
@@ -938,6 +1003,46 @@ public partial class MainWindow : Window
         _backBitmapFactory?.Dispose();
         _generationGate.Dispose();
         _lifetime.Dispose();
+    }
+
+    private void SaveSettings()
+    {
+        var settings = new CanvasUserSettings
+        {
+            TileColumns = int.TryParse(TilesXTextBox.Text, out var columns) && columns > 0 ? columns : _tileColumns,
+            TileRows = int.TryParse(TilesYTextBox.Text, out var rows) && rows > 0 ? rows : _tileRows,
+            ObjectsPerTile = int.TryParse(ObjectsPerTileTextBox.Text, out var objectsPerTile) && objectsPerTile >= 0
+                ? objectsPerTile
+                : _objectsPerTile,
+            AnnotationDisplayMode = DisplayModeComboBox.SelectedIndex,
+            OutlineThickness = OutlineThicknessSlider.Value,
+            LabelSize = LabelSizeSlider.Value,
+            LabelDisplay = LabelDisplayComboBox.SelectedIndex,
+            ShowLabels = ShowLabelsCheckBox.IsChecked ?? true
+        };
+
+        if (!settings.IsValid)
+        {
+            settings = settings with
+            {
+                TileColumns = _tileColumns,
+                TileRows = _tileRows,
+                ObjectsPerTile = _objectsPerTile
+            };
+        }
+
+        try
+        {
+            CanvasUserSettingsStore.Save(_settingsPath, settings);
+        }
+        catch (System.IO.IOException exception)
+        {
+            Debug.WriteLine($"Unable to save canvas settings: {exception.Message}");
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            Debug.WriteLine($"Unable to save canvas settings: {exception.Message}");
+        }
     }
 
     private void UpdatePixelometer(Point screenPoint)
@@ -1017,14 +1122,22 @@ public partial class MainWindow : Window
         AnnotationDisplayMode Mode,
         double OutlineThickness,
         double LabelSize,
+        AnnotationLabelDisplay LabelDisplay,
         bool ShowLabels)
     {
         public static AnnotationDisplayOptions Default { get; } = new(
             AnnotationDisplayMode.Outline,
             2,
-            12,
+                8.5,
+                AnnotationLabelDisplay.Class,
             true);
     }
+
+            private enum AnnotationLabelDisplay
+            {
+            Class,
+            Id
+            }
 
     private enum AnnotationDisplayMode
     {

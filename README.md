@@ -1,8 +1,9 @@
 # InfiniteCanvasWPF
 
 A WPF inspection canvas for large monochrome image tiles and spatially indexed defect annotations.
-The sample scene generates eight deterministic `8192x2048` Gray8 images, each with configurable colored
-objects, bounding boxes, centered identifiers, metadata tooltips, and animated selection outlines.
+The sample scene generates a configurable grid of deterministic `8192x2048` Gray8 images with separate
+grayscale bitmap defects, class-colored bounding boxes, selectable class-or-ID labels, metadata tooltips,
+tile-grid overlay, and animated selection outlines.
 
 Architecture baseline for a high-scale infinite canvas engine targeting .NET 10 and WPF.
 

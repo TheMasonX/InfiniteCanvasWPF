@@ -16,7 +16,14 @@ public static class SampleImageGenerator
         ["Stain"] = new(120, 220, 120, 255),
         ["Edge defect"] = new(90, 160, 255, 255)
     };
-    private readonly record struct DefectTemplate(int Width, int Height, byte[] Pixels);
+    private sealed record DefectTemplate(
+        int Width,
+        int Height,
+        byte[] Pixels
+#if WINDOWS
+        , Bitmap Bitmap
+#endif
+    );
 
     public static IReadOnlyList<SampleImageTile> GenerateSet(
         int imageCount = 64,
@@ -177,7 +184,14 @@ public static class SampleImageGenerator
                 },
                 defectTemplate.Width,
                 defectTemplate.Height,
-                defectTemplate.Pixels);
+                defectTemplate.Pixels)
+#if WINDOWS
+            {
+                DefectBitmap = defectTemplate.Bitmap
+            };
+#else
+            ;
+#endif
         }
 
         return annotations;
@@ -206,7 +220,7 @@ public static class SampleImageGenerator
             var templateWidth = random.Next(156, 276);
             var templateHeight = Math.Clamp((int)Math.Round(templateWidth / aspect), 132, 304);
 #if WINDOWS
-            using var bitmap = GenerateCenteredDefectBitmap(templateWidth, templateHeight, random);
+            var bitmap = GenerateCenteredDefectBitmap(templateWidth, templateHeight, random);
             pool[index] = CreateTemplateFromBitmap(bitmap);
 #else
             pool[index] = new DefectTemplate(templateWidth, templateHeight, GenerateCenteredDefectPixels(templateWidth, templateHeight, random));
@@ -224,7 +238,8 @@ public static class SampleImageGenerator
         }
 
         var pixels = new byte[checked(width * height)];
-        var blobCount = random.Next(2, 5);
+        Array.Fill(pixels, (byte)150);
+        var blobCount = random.Next(5, 11);
         var baseCenterX = (width - 1) / 2.0;
         var baseCenterY = (height - 1) / 2.0;
         var maxJitterX = width * 0.12;
@@ -238,7 +253,7 @@ public static class SampleImageGenerator
             var radiusX = majorRadius * (0.8 + (random.NextDouble() * 1.4));
             var radiusY = majorRadius * (0.5 + (random.NextDouble() * 1.6));
             var hardCoreRatio = 0.62 + (random.NextDouble() * 0.16);
-            var peak = random.Next(184, 246);
+            var peak = random.Next(24, 121);
 
             var left = Math.Max(0, (int)Math.Floor(centerX - radiusX));
             var right = Math.Min(width - 1, (int)Math.Ceiling(centerX + radiusX));
@@ -269,7 +284,7 @@ public static class SampleImageGenerator
                         : Math.Pow(1 - ((distance - hardCoreRatio) / (1 - hardCoreRatio)), 0.8);
                     var value = (byte)Math.Clamp((int)Math.Round(peak * intensity), 0, 255);
                     var offset = (y * width) + x;
-                    if (value > pixels[offset])
+                    if (value < pixels[offset])
                     {
                         pixels[offset] = value;
                     }
@@ -301,12 +316,12 @@ public static class SampleImageGenerator
     {
         var bitmap = new Bitmap(width, height, PixelFormat.Format24bppRgb);
         using var graphics = Graphics.FromImage(bitmap);
-        graphics.Clear(Color.Black);
+        graphics.Clear(Color.FromArgb(150, 150, 150));
         graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
         var centerX = width / 2f;
         var centerY = height / 2f;
-        var shapeCount = random.Next(2, 5);
+        var shapeCount = random.Next(5, 11);
         for (var i = 0; i < shapeCount; i++)
         {
             var blobWidth = width * (0.28f + ((float)random.NextDouble() * 0.52f));
@@ -315,7 +330,7 @@ public static class SampleImageGenerator
             var jitterY = (float)((random.NextDouble() * 2 - 1) * height * 0.14);
             var left = centerX - (blobWidth / 2f) + jitterX;
             var top = centerY - (blobHeight / 2f) + jitterY;
-            var intensity = random.Next(168, 242);
+            var intensity = random.Next(24, 121);
             using var brush = new SolidBrush(Color.FromArgb(intensity, intensity, intensity));
             graphics.FillEllipse(brush, left, top, blobWidth, blobHeight);
         }
@@ -348,7 +363,7 @@ public static class SampleImageGenerator
             bitmap.UnlockBits(data);
         }
 
-        return new DefectTemplate(width, height, pixels);
+        return new DefectTemplate(width, height, pixels, bitmap);
     }
 #endif
 }

@@ -1,5 +1,7 @@
 using InfiniteCanvas.Core;
 using InfiniteCanvas.Rendering;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.Threading;
 
 namespace InfiniteCanvas.Windows.Tests;
@@ -65,6 +67,45 @@ public class ZeroCopyBitmapFactoryTests
         {
             Assert.That(tiles[0].IsImageGenerated, Is.True);
             Assert.That(tiles[1].IsImageGenerated, Is.False);
+        });
+    }
+
+    [Test]
+    public void GenerateFrozenBitmap_RendersDefectBitmapUnalteredOutsideLogicalBounds()
+    {
+        using var defectBitmap = new Bitmap(4, 4, PixelFormat.Format24bppRgb);
+        using (var graphics = Graphics.FromImage(defectBitmap))
+        {
+            graphics.Clear(Color.FromArgb(150, 150, 150));
+        }
+
+        var annotation = new SampleAnnotation(
+            "annotation",
+            "tile",
+            "object",
+            new SpatialBounds(10, 10, 2, 2),
+            new Bgra32Color(0, 0, 255, 255),
+            "Scratch",
+            new Dictionary<string, double>(),
+            4,
+            4,
+            Enumerable.Repeat((byte)150, 16).ToArray())
+        {
+            DefectBitmap = defectBitmap
+        };
+        using var factory = new ZeroCopyBitmapFactory(24, 24);
+
+        var bitmap = factory.GenerateFrozenBitmap([], [annotation], new CameraTransform().Capture());
+        var pixels = new byte[24 * 24 * 4];
+        bitmap.CopyPixels(pixels, 24 * 4, 0);
+        var outsideLogicalBoundsOffset = ((9 * 24) + 9) * 4;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pixels[outsideLogicalBoundsOffset], Is.EqualTo(150));
+            Assert.That(pixels[outsideLogicalBoundsOffset + 1], Is.EqualTo(150));
+            Assert.That(pixels[outsideLogicalBoundsOffset + 2], Is.EqualTo(150));
+            Assert.That(pixels[outsideLogicalBoundsOffset + 3], Is.EqualTo(255));
         });
     }
 }

@@ -283,15 +283,14 @@ public sealed record SampleAnnotation(
     int DefectPixelHeight,
     byte[] DefectPixels) : ISpatialEntity
 {
+#if WINDOWS
+    public Bitmap? DefectBitmap { get; init; }
+#endif
+
     public bool TryGetDefectValue(double worldX, double worldY, out byte value)
     {
         value = default;
         if (!double.IsFinite(worldX) || !double.IsFinite(worldY))
-        {
-            return false;
-        }
-
-        if (worldX < Bounds.X || worldX >= Bounds.Right || worldY < Bounds.Y || worldY >= Bounds.Bottom)
         {
             return false;
         }

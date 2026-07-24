@@ -188,8 +188,18 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
 
     private unsafe void DrawDefectPatch(byte* destination, SampleAnnotation annotation, CameraSnapshot camera)
     {
-        var topLeft = camera.WorldToScreen(annotation.Bounds.X, annotation.Bounds.Y);
-        var bottomRight = camera.WorldToScreen(annotation.Bounds.Right, annotation.Bounds.Bottom);
+        var bitmap = annotation.DefectBitmap;
+        if (bitmap is null)
+        {
+            return;
+        }
+
+        var imageLeftWorld = annotation.Bounds.X + ((annotation.Bounds.Width - bitmap.Width) / 2.0);
+        var imageTopWorld = annotation.Bounds.Y + ((annotation.Bounds.Height - bitmap.Height) / 2.0);
+        var imageRightWorld = imageLeftWorld + bitmap.Width;
+        var imageBottomWorld = imageTopWorld + bitmap.Height;
+        var topLeft = camera.WorldToScreen(imageLeftWorld, imageTopWorld);
+        var bottomRight = camera.WorldToScreen(imageRightWorld, imageBottomWorld);
         var left = Math.Clamp((int)Math.Floor(topLeft.X), 0, _layout.Width);
         var top = Math.Clamp((int)Math.Floor(topLeft.Y), 0, _layout.Height);
         var right = Math.Clamp((int)Math.Ceiling(bottomRight.X), 0, _layout.Width);
@@ -199,51 +209,35 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
             return;
         }
 
-        var imageLeftWorld = annotation.Bounds.X + ((annotation.Bounds.Width - annotation.DefectPixelWidth) / 2.0);
-        var imageTopWorld = annotation.Bounds.Y + ((annotation.Bounds.Height - annotation.DefectPixelHeight) / 2.0);
-        var imageRightWorld = imageLeftWorld + annotation.DefectPixelWidth;
-        var imageBottomWorld = imageTopWorld + annotation.DefectPixelHeight;
-        var patchPixels = annotation.DefectPixels;
-        for (var y = top; y < bottom; y++)
+        var bitmapBounds = new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height);
+        var bitmapData = bitmap.LockBits(bitmapBounds, System.Drawing.Imaging.ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+        try
         {
-            var worldY = (y - camera.OffsetY) / camera.ScaleY;
-            if (worldY < imageTopWorld || worldY >= imageBottomWorld)
+            var source = (byte*)bitmapData.Scan0;
+            for (var y = top; y < bottom; y++)
             {
-                continue;
-            }
+                var worldY = (y - camera.OffsetY) / camera.ScaleY;
+                var sourceY = Math.Clamp((int)(worldY - imageTopWorld), 0, bitmap.Height - 1);
+                var sourceRow = source + (sourceY * bitmapData.Stride);
 
-            var sourceY = Math.Clamp((int)(worldY - imageTopWorld), 0, annotation.DefectPixelHeight - 1);
-
-            for (var x = left; x < right; x++)
-            {
-                var worldX = (x - camera.OffsetX) / camera.ScaleX;
-                if (worldX < imageLeftWorld || worldX >= imageRightWorld)
+                for (var x = left; x < right; x++)
                 {
-                    continue;
-                }
+                    var worldX = (x - camera.OffsetX) / camera.ScaleX;
+                    var sourceX = Math.Clamp((int)(worldX - imageLeftWorld), 0, bitmap.Width - 1);
+                    var value = sourceRow[sourceX * 3];
 
-                var sourceX = Math.Clamp((int)(worldX - imageLeftWorld), 0, annotation.DefectPixelWidth - 1);
-                var defectValue = patchPixels[(sourceY * annotation.DefectPixelWidth) + sourceX];
-                if (defectValue == 0)
-                {
-                    continue;
+                    var offset = _layout.GetPixelOffset(x, y);
+                    destination[offset] = value;
+                    destination[offset + 1] = value;
+                    destination[offset + 2] = value;
+                    destination[offset + 3] = byte.MaxValue;
                 }
-
-                var offset = _layout.GetPixelOffset(x, y);
-                var blendWeight = defectValue / 255d;
-                destination[offset] = BlendChannel(destination[offset], annotation.Color.Blue, blendWeight);
-                destination[offset + 1] = BlendChannel(destination[offset + 1], annotation.Color.Green, blendWeight);
-                destination[offset + 2] = BlendChannel(destination[offset + 2], annotation.Color.Red, blendWeight);
-                destination[offset + 3] = byte.MaxValue;
             }
         }
-    }
-
-    private static byte BlendChannel(byte baseValue, byte overlayValue, double blendWeight)
-    {
-        var weighted = (0.48 * baseValue) + (0.52 * overlayValue);
-        var blended = baseValue + ((weighted - baseValue) * blendWeight);
-        return (byte)Math.Clamp((int)Math.Round(blended), byte.MinValue, byte.MaxValue);
+        finally
+        {
+            bitmap.UnlockBits(bitmapData);
+        }
     }
 
     public void Dispose()

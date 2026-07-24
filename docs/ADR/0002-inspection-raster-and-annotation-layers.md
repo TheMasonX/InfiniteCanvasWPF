@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-23
+- Amended: 2026-07-24
 
 ## Context
 
@@ -18,7 +19,9 @@ surface overhead. Annotation labels, tooltips, and animated selection also requi
 - Generate deterministic sample tiles as Gray8 arrays in `InfiniteCanvas.Rendering`, with configurable
   target value, noise, object count, layout, and seed.
 - Store annotation metadata independently and index annotation bounds in the existing STR tree.
-- Compose visible source pixels and filled defect samples into the unmanaged BGRA32 viewport surface.
+- Use `System.Drawing.Bitmap` as the Windows sparse defect image input. Generate grayscale templates with
+  a default background value of 150 and 5-10 GDI+ circles, then copy those grayscale pixels unaltered into
+  the unmanaged BGRA32 viewport surface independently from annotation shapes.
 - Present bounding boxes and centered IDs as a retained WPF overlay so hover, selection, and animation
   do not require raster hit testing.
 - Capture one immutable camera snapshot per frame and use one spatial query for raster composition,
