@@ -5,16 +5,40 @@
 | ICW-001 | Done | Story | Add repeatable performance benchmark harness | BenchmarkDotNet covers STR query selectivity, live snapshot/hot/publishing queries, snapshot rebuild allocation, and Windows projection plus bitmap generation. |
 | ICW-002 | Done | Story | Capture an immutable camera state per frame | Viewport query and every projection use the same transform state. |
 | ICW-003 | Done | Improvement | Remove duplicate spatial query per rendered frame | Render statistics reuse the viewport query result. |
-| ICW-004 | To Do | Spike | Measure zoomed-out pixel overdraw | Results guide deduplication, accumulation, heatmap, or GPU rendering decisions. |
-| ICW-005 | To Do | Story | Define DPI-aware resize and maximum surface policy | 4K/5K and per-monitor DPI behavior are explicit and tested. |
+| ICW-004 | To Do | Spike | Measure zoomed-out pixel overdraw | Results guide deduplication, accumulation, heatmap, or GPU rendering decisions; include benchmark of inner-loop division versus incremented world-coordinate stepping in DrawTile and DrawDefectPatch. |
+| ICW-005 | To Do | Story | Define DPI-aware resize and maximum surface policy | 4K/5K and per-monitor DPI behavior are explicit and tested; consolidate duplicated max-dimension clamp literal to one named policy constant as part of this work. |
 | ICW-006 | Done | Story | Model web inspection imagery and annotations | Generate eight configurable monochrome tiles with colored defects, indexed bounding boxes, labels, tooltips, and animated selection. |
-| ICW-007 | To Do | Improvement | Pool retained annotation overlay elements | Reuse WPF elements if visible annotation density makes overlay rebuilds measurable. |
+| ICW-007 | To Do | Improvement | Pool retained annotation overlay elements | Reuse WPF elements if visible annotation density makes overlay rebuilds measurable, preserve selection outline animation continuity, and deliver together with frame-shell retention follow-ups to avoid fragmented overlay rewrites. |
 | ICW-008 | Done | Story | Correct scene layout to 2x16 and add viewport pixelometer readout | Default tile generation now builds a 2-column by 16-row scene, and viewport overlay reports mouse world coordinates with source pixel value. |
 | ICW-009 | Done | Improvement | Keep overlay and raster synchronized during resize debounce | Frame presentation now scales a complete image+overlay visual together while waiting for debounced rerender updates. |
 | ICW-010 | Done | Story | Add red annotation modes, defect-detail layer, RMB anchor-pan, and viewport-safe zoom clamp | Added swappable selection animation strategy, per-annotation render mode options, sparse 2x defect raster composition, right-button anchor panning, and zoom-out clamp that keeps viewport coverage within scene bounds. |
 | ICW-011 | Done | Story | Use sparse object image patches, global annotation display options, and axis-clamped non-uniform zoom | Moved defect imagery to per-object sparse patches, applied one global annotation display option set (mode, outline width, label sizing/visibility), reversed anchor-scroll direction, and clamped zoom-out per axis while allowing the other axis to continue. |
 | ICW-012 | Done | Story | Add side-panel controls, configurable 2x32+ material, regenerate flow, and bitmap-backed generation pools | Added runtime display/generation side panel with regenerate button, moved startup to fit-to-width, defaulted material to 2x32 tiles, generated sparse defect patches from a deterministic 64-template bitmap pool, and switched tile backgrounds to lazy bitmap-backed fetch on Windows. |
 | ICW-013 | Done | Story | Add zoom presets/custom input, class-colored larger defects, busy indicator, top-left labels, and cache debug reset | Added zoom presets (`Fit To Width`, `Fit To Height`, percentages, custom), removed independent user axis zoom, enforced uniform-first zoom floor policy, added bottom indeterminate render indicator, moved labels above top-left with class/object text, enlarged and diversified defects with class color tinting, and added cache dump/reset debug control for lazy re-fetch verification. |
+| ICW-014 | To Do | Story | Add global crash-safety handlers for async UI event pipeline | Register application-level exception hooks and define logging plus user-safe failure behavior so unhandled async-void exceptions do not terminate silently, including close-time cancellation/disposal paths and render-coalescer surfaced faults. |
+| ICW-015 | To Do | Bug | Correct GenerateSet parameter validation attribution and semantics | Validate each input independently with accurate parameter names and document/test the imageCount versus rows behavior to avoid misleading exceptions. |
+| ICW-016 | To Do | Docs | Update README MVP behavior to current inspection-scene implementation | Replace deprecated live-ingestion narrative with actual tile and annotation generation flow, controls, and interaction model. |
+| ICW-017 | To Do | Improvement | Remove or rewire dead RefreshCommand path | Eliminate redundant CanvasViewportViewModel RefreshCommand flow or wire it as canonical UI path and remove duplicate logic/tests. |
+| ICW-018 | To Do | Improvement | Resolve dormant rendering abstractions and point-overload ownership | Decide whether to remove unconsumed IRenderer and ViewportRenderRequest plus point-render overload, or explicitly document benchmark-only ownership and guard against divergence. |
+| ICW-019 | To Do | Improvement | Maintain selection animation continuity across rerenders | Ensure selected overlay animation does not restart every frame during pan/zoom and align solution with retained overlay strategy. |
+| ICW-020 | To Do | Story | Optimize pixelometer tile hit lookup to O(1) | Replace linear tile scan per mouse move with direct grid index arithmetic while keeping defect sampling behavior correct. |
+| ICW-021 | To Do | Spike | Validate compositor-safe back-buffer recycling policy | Confirm or disprove tearing risk from reused memory sections and adopt minimal buffering synchronization only if evidence warrants it. |
+| ICW-022 | To Do | Story | Decompose MainWindow logic into testable components | Extract pure zoom, generation validation, and pixelometer math from code-behind into unit-tested classes while preserving UI threading boundaries. |
+| ICW-023 | To Do | Task | Batch low-priority deep-dive cleanup items | Address approved low-risk findings: helper/formula deduplication, default-value source of truth, epsilon constant naming, finalizer lock pattern cleanup, interop disposal return-value checks, consistent culture-invariant numeric parsing, and defensive degenerate-bounds guards. |
+| ICW-024 | Done | Task | Reconcile DesignDoc architecture coverage against ADRs and task backlog | Durable gap mapping completed and uncovered architecture work captured as ICW-025, ICW-026, and ICW-027. |
+| ICW-025 | In Review | Story | Record live hybrid spatial index architecture as an ADR | Proposed draft published as ADR-0003; pending review and approval. |
+| ICW-026 | In Review | Story | Record zero-copy buffer lifecycle and compositor safety policy as an ADR | Proposed draft published as ADR-0004; pending review and final acceptance after ICW-021 evidence. |
+| ICW-027 | To Do | Spike | Define GPU pivot trigger criteria for rendering pipeline | Establish measurable thresholds and a minimal proof strategy for escalating from InteropBitmap CPU rasterization to GPU-backed rendering. |
+| ICW-028 | To Do | Improvement | Retain frame visual shell to reduce per-frame UI allocation churn | Replace per-frame root visual reconstruction with a persistent frame shell and validate interaction smoothness plus allocation improvements. |
+| ICW-029 | To Do | Bug | Harden shutdown lifecycle to prevent render/regenerate disposal races | Coordinate close-time cancellation, render/generation completion, and resource disposal so shutdown cannot fault under active operations, including busy-indicator dispatcher updates during teardown. |
+| ICW-030 | To Do | Story | Define generation input bounds policy | Establish and enforce safe limits for scene-generation controls (especially objects-per-tile) with clear validation behavior and tests, reflecting enlarged defect-raster multipliers in generation cost. |
+| ICW-031 | To Do | Improvement | Replace string-keyed annotation feature map with typed metrics | Move confidence/severity metadata to strong types to remove runtime key-risk and improve refactor safety. |
+| ICW-032 | To Do | Improvement | Strengthen spatial query abstraction for count-oriented paths | Extend query contracts to avoid forced list materialization where only counts are required, while preserving compatibility. |
+| ICW-033 | To Do | Task | Unify boundary semantics and annotation placement consistency | Define one coordinate-boundary policy and remove placement edge bias; add tests covering edge coordinates and intersections. |
+| ICW-034 | To Do | Bug | Harden coalesced render scheduler fault handling and queued follow-up preservation | Ensure `CoalescingAsyncAction` does not fault-leak through shared task state and does not discard coalesced follow-up requests when the wrapped action throws; align disposal-time behavior and tests. |
+| ICW-035 | To Do | Bug | Unify renderer and pixelometer defect blend contract | Remove formula divergence between render path and pixelometer readout by centralizing blend/sampling helper usage and validating parity. |
+| ICW-036 | To Do | Story | Establish CI and nullable-enforcement baseline | Add repository CI workflow for build/tests and central warning policy so nullable and analyzer regressions fail fast instead of relying on manual validation only. |
+| ICW-037 | To Do | Improvement | Add accessibility baseline to MainWindow controls | Provide automation names, access keys, and primary keyboard bindings for scene controls and core actions without changing visual behavior. |
 
 ## Activity
 
@@ -34,3 +58,29 @@
 | 2026-07-24 | ICW-012 | Completed with passing validation: `dotnet test tests/InfiniteCanvas.Tests --configuration Release`, `dotnet test tests/InfiniteCanvas.Windows.Tests --configuration Release`, and `dotnet build src/InfiniteCanvas.App --configuration Release`. |
 | 2026-07-24 | ICW-013 | Started follow-up for zoom preset controls, uniform-first zoom policy, class-colored larger defects, render progress indication, top-left labels, and debug cache reset/regeneration behavior. |
 | 2026-07-24 | ICW-013 | Completed with passing validation: `dotnet build src/InfiniteCanvas.App --configuration Release`, `dotnet test tests/InfiniteCanvas.Tests --configuration Release`, and `dotnet test tests/InfiniteCanvas.Windows.Tests --configuration Release`. |
+| 2026-07-24 | ICW-014 | Logged from deep-dive audit cross-validation: no global exception handlers despite async-void event surface. |
+| 2026-07-24 | ICW-015 | Logged from deep-dive audit cross-validation: GenerateSet validation misattributes invalid parameters to imageCount. |
+| 2026-07-24 | ICW-016 | Logged from deep-dive audit cross-validation: README MVP section no longer matches shipped behavior. |
+| 2026-07-24 | ICW-017 | Logged from deep-dive audit cross-validation: RefreshCommand path is test-only and redundant with ApplyFrame usage. |
+| 2026-07-24 | ICW-018 | Logged from deep-dive audit cross-validation: unreferenced rendering abstractions and benchmark-only point overload need explicit ownership decision. |
+| 2026-07-24 | ICW-019 | Logged from deep-dive audit cross-validation: selected outline animation restarts due to frame-level element recreation. |
+| 2026-07-24 | ICW-020 | Logged from deep-dive audit cross-validation: pixelometer tile lookup is linear and scales with tile count cap. |
+| 2026-07-24 | ICW-021 | Logged from deep-dive audit cross-validation: theoretical compositor handoff risk when recycling front/back memory mappings. |
+| 2026-07-24 | ICW-022 | Logged from deep-dive audit cross-validation: MainWindow code-behind is large and under-tested relative to pure logic volume. |
+| 2026-07-24 | ICW-023 | Logged from deep-dive audit cross-validation: low-priority DRY/constants/finalizer/defaults cleanup batch prepared. |
+| 2026-07-24 | ICW-024 | Completed DesignDoc versus ADR/task reconciliation and recorded durable gap artifacts plus follow-up backlog entries. |
+| 2026-07-24 | ICW-025 | Logged from reconciliation: live snapshot plus hot-buffer indexing strategy exists in code but lacks explicit ADR coverage. |
+| 2026-07-24 | ICW-026 | Logged from reconciliation: zero-copy front/back buffer lifecycle and handoff policy exists in code but lacks explicit ADR coverage. |
+| 2026-07-24 | ICW-027 | Logged from reconciliation: design open question for GPU acceleration lacked dedicated spike/task for measurable trigger criteria. |
+| 2026-07-24 | ICW-025 | Drafted ADR-0003 as Proposed and moved task to In Review pending approval. |
+| 2026-07-24 | ICW-026 | Drafted ADR-0004 as Proposed and moved task to In Review pending approval. |
+| 2026-07-24 | ICW-028 | Added follow-up improvement task for per-frame root visual allocation churn beyond annotation pooling scope. |
+| 2026-07-24 | ICW-029 | Logged from follow-up audit: shutdown race between generation semaphore lifecycle and close-time disposal under active operations. |
+| 2026-07-24 | ICW-030 | Logged from follow-up audit: objects-per-tile input is effectively unbounded and can trigger extreme allocation/latency behavior. |
+| 2026-07-24 | ICW-031 | Logged from follow-up audit: annotation metadata uses brittle string-key dictionary contract in generator and UI tooltip pipeline. |
+| 2026-07-24 | ICW-032 | Logged from follow-up audit: spatial index interface forces materialized list queries even for count-only consumers. |
+| 2026-07-24 | ICW-033 | Logged from follow-up audit: closed-vs-half-open boundary inconsistency and annotation placement edge bias require explicit policy. |
+| 2026-07-24 | ICW-034 | Logged from audit reconciliation: coalesced render scheduler can fault-leak and drop queued follow-up intent when wrapped action throws. |
+| 2026-07-24 | ICW-035 | Logged from audit reconciliation: pixelometer blend formula diverges from renderer class-tinted defect blending behavior. |
+| 2026-07-24 | ICW-036 | Logged from audit reconciliation: repository lacks CI workflow and centralized warnings-as-errors policy despite nullable enablement. |
+| 2026-07-24 | ICW-037 | Logged from audit reconciliation: MainWindow controls lack automation metadata and keyboard accessibility affordances. |

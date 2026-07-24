@@ -26,6 +26,13 @@ Keep these core project notes in mind:
 - camera and projection logic should be deterministic and testable
 - changes should preserve benchmark and test coverage where possible
 
+## Documentation change policy
+
+- Treat any changes under `docs/` as safe, intentional non-code work by default.
+- Always include `docs/` changes in commits when they are part of the requested task output.
+- Do not stop work because of unrelated or pre-existing `docs/` diffs; continue and isolate your own edits instead.
+- Only pause for user confirmation if unexpected changes affect source code outside `docs/` and conflict with the current task.
+
 ## Durable capture rule
 
 If the user gives a requirement, bug report, task note, or implementation hint, capture it immediately as a durable record so it is not lost:
