@@ -40,44 +40,111 @@
             </Grid>
         </Border>
 
-        <Border x:Name="ViewportHost" Grid.Row="1" Margin="20"
-                Background="#080B0D" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                ClipToBounds="True"
-                MouseLeftButtonDown="OnViewportMouseLeftButtonDown"
-                MouseLeftButtonUp="OnViewportMouseLeftButtonUp"
-                MouseMove="OnViewportMouseMove"
-                MouseLeave="OnViewportMouseLeave"
-                MouseWheel="OnViewportMouseWheel"
-                SizeChanged="OnViewportSizeChanged">
-            <Grid>
-                <Viewbox x:Name="FramePresenter" Stretch="Fill" StretchDirection="Both" />
-                <TextBlock x:Name="LoadingOverlay" Text="BUILDING INITIAL SNAPSHOT"
-                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                           FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold"
-                           Foreground="{StaticResource AccentBrush}" />
-                <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="14"
-                        Padding="10,7" Background="#DD1A2026"
-                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+        <Grid Grid.Row="1" Margin="20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="272" />
+            </Grid.ColumnDefinitions>
+
+            <Border x:Name="ViewportHost" Grid.Column="0" Margin="0,0,16,0"
+                    Background="#080B0D" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                    ClipToBounds="True"
+                    MouseLeftButtonDown="OnViewportMouseLeftButtonDown"
+                    MouseLeftButtonUp="OnViewportMouseLeftButtonUp"
+                    MouseRightButtonDown="OnViewportMouseRightButtonDown"
+                    MouseRightButtonUp="OnViewportMouseRightButtonUp"
+                    MouseMove="OnViewportMouseMove"
+                    MouseLeave="OnViewportMouseLeave"
+                    MouseWheel="OnViewportMouseWheel"
+                    SizeChanged="OnViewportSizeChanged">
+                <Grid>
+                    <Viewbox x:Name="FramePresenter" Stretch="Fill" StretchDirection="Both" />
+                    <Canvas IsHitTestVisible="False">
+                        <Ellipse x:Name="PanAnchorVisual"
+                                 Width="16" Height="16"
+                                 Stroke="#D7FF3D3D" StrokeThickness="2"
+                                 Fill="#40FF3D3D"
+                                 Visibility="Collapsed" />
+                    </Canvas>
+                    <TextBlock x:Name="LoadingOverlay" Text="BUILDING INITIAL SNAPSHOT"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold"
+                               Foreground="{StaticResource AccentBrush}" />
+                    <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="14"
+                            Padding="10,7" Background="#DD1A2026"
+                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock x:Name="PixelometerWorldText" Text="WORLD X --  Y --"
+                                       FontFamily="Cascadia Mono" FontSize="11"
+                                       Foreground="{StaticResource SecondaryTextBrush}" />
+                            <TextBlock x:Name="PixelometerValueText" Text="PIXEL --"
+                                       FontFamily="Cascadia Mono" FontSize="11"
+                                       Foreground="{StaticResource SecondaryTextBrush}" />
+                            <TextBlock Text="LMB drag pan  |  RMB anchor pan  |  Wheel zoom (Shift=X, Ctrl=Y)  |  Select annotation" FontFamily="Cascadia Mono"
+                                       FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Background="{StaticResource PanelBackgroundBrush}"
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                    Padding="12,10">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
-                        <TextBlock x:Name="PixelometerWorldText" Text="WORLD X --  Y --"
-                                   FontFamily="Cascadia Mono" FontSize="11"
+                        <TextBlock Text="DISPLAY OPTIONS" FontFamily="Cascadia Mono" FontSize="12"
+                                   FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                        <TextBlock Text="Annotation mode" Margin="0,10,0,4" FontSize="12"
                                    Foreground="{StaticResource SecondaryTextBrush}" />
-                        <TextBlock x:Name="PixelometerValueText" Text="PIXEL --"
-                                   FontFamily="Cascadia Mono" FontSize="11"
+                        <ComboBox x:Name="DisplayModeComboBox" SelectedIndex="0"
+                                  SelectionChanged="OnDisplayModeSelectionChanged">
+                            <ComboBoxItem Content="Outline" />
+                            <ComboBoxItem Content="Fill" />
+                            <ComboBoxItem Content="OutlineAndFill" />
+                        </ComboBox>
+
+                        <TextBlock Text="Outline thickness" Margin="0,10,0,4" FontSize="12"
                                    Foreground="{StaticResource SecondaryTextBrush}" />
-                        <TextBlock Text="Drag to pan  |  Wheel to zoom  |  Select an annotation" FontFamily="Cascadia Mono"
-                                   FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                        <Slider x:Name="OutlineThicknessSlider" Minimum="1" Maximum="6" Value="2" TickFrequency="0.5"
+                                IsSnapToTickEnabled="True" ValueChanged="OnOutlineThicknessChanged" />
+
+                        <TextBlock Text="Label size" Margin="0,10,0,4" FontSize="12"
+                                   Foreground="{StaticResource SecondaryTextBrush}" />
+                        <Slider x:Name="LabelSizeSlider" Minimum="8" Maximum="20" Value="12" TickFrequency="1"
+                                IsSnapToTickEnabled="True" ValueChanged="OnLabelSizeChanged" />
+
+                        <CheckBox x:Name="ShowLabelsCheckBox" Content="Show labels" IsChecked="True"
+                                  Margin="0,8,0,0" Checked="OnShowLabelsChanged" Unchecked="OnShowLabelsChanged" />
+
+                        <Border Height="1" Margin="0,14,0,12" Background="{StaticResource BorderBrush}" />
+
+                        <TextBlock Text="SCENE MATERIAL" FontFamily="Cascadia Mono" FontSize="12"
+                                   FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                        <TextBlock Text="Tiles X" Margin="0,10,0,4" FontSize="12"
+                                   Foreground="{StaticResource SecondaryTextBrush}" />
+                        <TextBox x:Name="TilesXTextBox" Text="2" />
+
+                        <TextBlock Text="Tiles Y" Margin="0,8,0,4" FontSize="12"
+                                   Foreground="{StaticResource SecondaryTextBrush}" />
+                        <TextBox x:Name="TilesYTextBox" Text="32" />
+
+                        <TextBlock Text="Objects per tile" Margin="0,8,0,4" FontSize="12"
+                                   Foreground="{StaticResource SecondaryTextBrush}" />
+                        <TextBox x:Name="ObjectsPerTileTextBox" Text="16" />
+
+                        <Button x:Name="RegenerateButton" Content="Regenerate" Margin="0,12,0,0"
+                                Height="30" Click="OnRegenerateClicked" />
                     </StackPanel>
-                </Border>
-            </Grid>
-        </Border>
+                </ScrollViewer>
+            </Border>
+        </Grid>
 
         <Border Grid.Row="2" Background="{StaticResource PanelBackgroundBrush}"
                 BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
             <Grid Margin="20,0">
                 <TextBlock x:Name="StatusText" VerticalAlignment="Center" FontFamily="Cascadia Mono"
                            FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
-                <TextBlock Text="32 TILE INSPECTION SCENE (2 x 16)" HorizontalAlignment="Right" VerticalAlignment="Center"
+                <TextBlock x:Name="SceneSummaryText" Text="64 TILE INSPECTION SCENE (2 x 32)" HorizontalAlignment="Right" VerticalAlignment="Center"
                            FontFamily="Cascadia Mono" FontSize="11" FontWeight="SemiBold"
                            Foreground="{StaticResource AccentBrush}" />
             </Grid>

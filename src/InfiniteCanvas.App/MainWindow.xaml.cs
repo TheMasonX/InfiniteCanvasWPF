@@ -8,37 +8,55 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace InfiniteCanvas.App;
 
 public partial class MainWindow : Window
 {
-    private readonly LiveSpatialIndexService<SampleAnnotation> _spatialIndex;
-    private readonly CanvasViewportViewModel<SampleAnnotation> _viewModel;
-    private readonly CameraTransform _camera = new(0.01, 50);
+    private static readonly Color AnnotationOutlineColor = Color.FromRgb(230, 58, 58);
+    private static readonly Color AnnotationFillColor = Color.FromArgb(220, 230, 58, 58);
+    private static readonly Color AnnotationFillOverlayColor = Color.FromArgb(64, 230, 58, 58);
+
+    private LiveSpatialIndexService<SampleAnnotation> _spatialIndex = null!;
+    private CanvasViewportViewModel<SampleAnnotation> _viewModel = null!;
+    private CameraTransform _camera = new(0.01, 50);
     private readonly CoalescingAsyncAction _renderAction;
     private readonly DispatcherTimer _resizeTimer;
+    private readonly DispatcherTimer _anchorPanTimer;
+    private readonly ISelectionOutlineAnimator _selectionOutlineAnimator;
     private readonly CancellationTokenSource _lifetime = new();
+    private readonly SemaphoreSlim _generationGate = new(1, 1);
     private IReadOnlyList<SampleImageTile> _tiles = [];
+    private IReadOnlyList<SampleAnnotation> _annotations = [];
     private SpatialBounds _sceneBounds;
     private ZeroCopyBitmapFactory? _frontBitmapFactory;
     private ZeroCopyBitmapFactory? _backBitmapFactory;
     private Point? _lastPointerPosition;
+    private Point? _anchorPanOrigin;
+    private Point _anchorPanPointer;
     private Point? _hoverPointerPosition;
     private string? _selectedAnnotationId;
+    private AnnotationDisplayOptions _annotationDisplayOptions = AnnotationDisplayOptions.Default;
+    private int _tileColumns = 2;
+    private int _tileRows = 32;
+    private int _objectsPerTile = 16;
+    private int _generationSeed = 1729;
 
     public MainWindow()
     {
         InitializeComponent();
 
-        _spatialIndex = new LiveSpatialIndexService<SampleAnnotation>(
-            new StrTreeSpatialIndexBuilder<SampleAnnotation>());
-        _viewModel = new CanvasViewportViewModel<SampleAnnotation>(_spatialIndex);
-        DataContext = _viewModel;
+        InitializeSpatialState();
         _renderAction = new CoalescingAsyncAction(DispatchRenderFrameAsync);
+        _selectionOutlineAnimator = SelectionOutlineAnimatorFactory.Create(SelectionOutlineAnimationMode.MarchingDash);
 
         _resizeTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(150), DispatcherPriority.Background, OnResizeElapsed, Dispatcher)
+        {
+            IsEnabled = false
+        };
+        _anchorPanTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(16), DispatcherPriority.Input, OnAnchorPanTick, Dispatcher)
         {
             IsEnabled = false
         };
@@ -50,24 +68,21 @@ public partial class MainWindow : Window
         Closed += OnClosed;
     }
 
+    private void InitializeSpatialState()
+    {
+        _spatialIndex = new LiveSpatialIndexService<SampleAnnotation>(new StrTreeSpatialIndexBuilder<SampleAnnotation>());
+        _viewModel = new CanvasViewportViewModel<SampleAnnotation>(_spatialIndex);
+        DataContext = _viewModel;
+    }
+
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
+        Loaded -= OnLoaded;
         try
         {
-            StatusText.Text = "Generating metadata for 32 inspection tiles";
-            _tiles = await Task.Run(
-                () => SampleImageGenerator.GenerateSet(),
-                _lifetime.Token);
-            _sceneBounds = GetSceneBounds(_tiles);
-
-            var annotations = _tiles.SelectMany(tile => tile.Annotations).ToArray();
-            _spatialIndex.AddRange(annotations);
-            StatusText.Text = $"Publishing {annotations.Length:N0} classified annotations";
-            await _spatialIndex.PublishSnapshotAsync(_lifetime.Token);
-
-            FitSceneToViewport();
-            LoadingOverlay.Visibility = Visibility.Collapsed;
-            await RequestRenderAsync();
+            ApplyGenerationControlsToUi();
+            ApplyDisplayOptionsFromUi();
+            await RegenerateSceneAsync(fitToWidth: true);
         }
         catch (OperationCanceledException)
         {
@@ -76,6 +91,65 @@ public partial class MainWindow : Window
         {
             LoadingOverlay.Text = "INITIALIZATION FAILED";
             StatusText.Text = exception.Message;
+        }
+    }
+
+    private void ApplyGenerationControlsToUi()
+    {
+        TilesXTextBox.Text = _tileColumns.ToString();
+        TilesYTextBox.Text = _tileRows.ToString();
+        ObjectsPerTileTextBox.Text = _objectsPerTile.ToString();
+    }
+
+    private async Task RegenerateSceneAsync(bool fitToWidth)
+    {
+        await _generationGate.WaitAsync(_lifetime.Token);
+        try
+        {
+            LoadingOverlay.Text = "GENERATING TILE MATERIAL";
+            LoadingOverlay.Visibility = Visibility.Visible;
+            RegenerateButton.IsEnabled = false;
+
+            InitializeSpatialState();
+            _selectedAnnotationId = null;
+            _camera = new CameraTransform(0.01, 50);
+
+            var tileCount = checked(_tileColumns * _tileRows);
+            StatusText.Text = $"Generating metadata for {tileCount:N0} inspection tiles";
+            SceneSummaryText.Text = $"{tileCount:N0} TILE INSPECTION SCENE ({_tileColumns} x {_tileRows})";
+
+            _tiles = await Task.Run(
+                () => SampleImageGenerator.GenerateSet(
+                    imageCount: tileCount,
+                    objectsPerTile: _objectsPerTile,
+                    columns: _tileColumns,
+                    rows: _tileRows,
+                    seed: _generationSeed++,
+                    defectPoolSize: 64),
+                _lifetime.Token);
+            _sceneBounds = GetSceneBounds(_tiles);
+
+            _annotations = _tiles.SelectMany(tile => tile.Annotations).ToArray();
+            _spatialIndex.AddRange(_annotations);
+            StatusText.Text = $"Publishing {_annotations.Count:N0} classified annotations";
+            await _spatialIndex.PublishSnapshotAsync(_lifetime.Token);
+
+            if (fitToWidth)
+            {
+                FitSceneToWidth();
+            }
+            else
+            {
+                ClampCameraToScene();
+            }
+
+            LoadingOverlay.Visibility = Visibility.Collapsed;
+            await RequestRenderAsync();
+        }
+        finally
+        {
+            RegenerateButton.IsEnabled = true;
+            _generationGate.Release();
         }
     }
 
@@ -112,6 +186,7 @@ public partial class MainWindow : Window
 
         var width = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualWidth), 1, 4096);
         var height = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualHeight), 1, 4096);
+        EnforceZoomFloor(width, height);
         _camera.ClampToBounds(_sceneBounds, width, height);
         var camera = _camera.Capture();
         var viewport = camera.GetViewportBounds(width, height);
@@ -131,8 +206,8 @@ public partial class MainWindow : Window
         _viewModel.ApplyFrame(viewport, frame.VisibleItems.Count);
 
         stopwatch.Stop();
-        var generatedTileCount = _tiles.Count(tile => tile.IsImageGenerated);
-        StatusText.Text = $"Frame {width}x{height}  |  {stopwatch.Elapsed.TotalMilliseconds:F1} ms  |  Zoom {camera.ScaleX:F2}x  |  Images {generatedTileCount}/32";
+        var generatedTileCount = _tiles.Count(tile => tile.IsBackgroundFetched);
+        StatusText.Text = $"Frame {width}x{height}  |  {stopwatch.Elapsed.TotalMilliseconds:F1} ms  |  Zoom X {camera.ScaleX:F3} Y {camera.ScaleY:F3}  |  Images {generatedTileCount}/{_tiles.Count}";
 
         if (_hoverPointerPosition is Point hoverPointer)
         {
@@ -174,11 +249,14 @@ public partial class MainWindow : Window
         }
     }
 
-    private void FitSceneToViewport()
+    private void FitSceneToWidth()
     {
-        var scale = (ViewportHost.ActualHeight / _sceneBounds.Height) * 0.92;
+        var width = Math.Max(1, ViewportHost.ActualWidth);
+        var targetScale = width / _sceneBounds.Width;
+        var scaleDelta = targetScale / _camera.ScaleX;
 
-        if (_camera.Zoom(scale, new ScreenPoint(0, 0)))
+        if (scaleDelta > 0
+            && _camera.Zoom(scaleDelta, scaleDelta, new ScreenPoint(0, 0)))
         {
             ClampCameraToScene();
         }
@@ -218,30 +296,43 @@ public partial class MainWindow : Window
                 continue;
             }
 
-            var color = Color.FromArgb(
-                annotation.Color.Alpha,
-                annotation.Color.Red,
-                annotation.Color.Green,
-                annotation.Color.Blue);
-            var borderBrush = new SolidColorBrush(color);
+            var outlineBrush = new SolidColorBrush(AnnotationOutlineColor);
+            var fillBrush = CreateFillBrush(_annotationDisplayOptions.Mode);
+            var outline = new Rectangle
+            {
+                Stroke = outlineBrush,
+                Fill = fillBrush,
+                StrokeThickness = _annotationDisplayOptions.OutlineThickness,
+                SnapsToDevicePixels = true,
+                StrokeDashCap = PenLineCap.Round,
+                StrokeLineJoin = PenLineJoin.Round
+            };
             var label = new TextBlock
             {
                 Text = annotation.Id,
                 Foreground = Brushes.White,
                 FontFamily = new FontFamily("Cascadia Mono"),
                 FontWeight = FontWeights.SemiBold,
+                FontSize = _annotationDisplayOptions.LabelSize,
                 TextAlignment = TextAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center
             };
+            var annotationVisual = new Grid
+            {
+                Children = { outline }
+            };
+
+            if (_annotationDisplayOptions.ShowLabels)
+            {
+                annotationVisual.Children.Add(label);
+            }
             var annotationElement = new Border
             {
                 Width = width,
                 Height = height,
-                BorderThickness = new Thickness(2),
-                BorderBrush = borderBrush,
                 Background = Brushes.Transparent,
-                Child = new Viewbox { Child = label, Margin = new Thickness(3) },
+                Child = annotationVisual,
                 Tag = annotation,
                 ToolTip = CreateAnnotationToolTip(annotation)
             };
@@ -252,19 +343,22 @@ public partial class MainWindow : Window
 
             if (annotation.Id == _selectedAnnotationId)
             {
-                var animation = new ColorAnimation(
-                    color,
-                    Colors.White,
-                    TimeSpan.FromMilliseconds(450))
-                {
-                    AutoReverse = true,
-                    RepeatBehavior = RepeatBehavior.Forever
-                };
-                borderBrush.BeginAnimation(SolidColorBrush.ColorProperty, animation);
+                _selectionOutlineAnimator.Apply(outline);
             }
         }
 
         return frame;
+    }
+
+    private static Brush CreateFillBrush(AnnotationDisplayMode mode)
+    {
+        return mode switch
+        {
+            AnnotationDisplayMode.Outline => Brushes.Transparent,
+            AnnotationDisplayMode.Fill => new SolidColorBrush(AnnotationFillColor),
+            AnnotationDisplayMode.OutlineAndFill => new SolidColorBrush(AnnotationFillOverlayColor),
+            _ => Brushes.Transparent
+        };
     }
 
     private static SpatialBounds GetSceneBounds(IReadOnlyList<SampleImageTile> tiles)
@@ -280,7 +374,36 @@ public partial class MainWindow : Window
     {
         var width = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualWidth), 1, 4096);
         var height = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualHeight), 1, 4096);
+        EnforceZoomFloor(width, height);
         _camera.ClampToBounds(_sceneBounds, width, height);
+    }
+
+    private void EnforceZoomFloor(double viewportWidth, double viewportHeight)
+    {
+        if (_tiles.Count == 0)
+        {
+            return;
+        }
+
+        var (minimumScaleX, minimumScaleY) = ComputeMinimumZoom(viewportWidth, viewportHeight);
+        var currentScaleX = _camera.ScaleX;
+        var currentScaleY = _camera.ScaleY;
+        if (currentScaleX >= minimumScaleX && currentScaleY >= minimumScaleY)
+        {
+            return;
+        }
+
+        var origin = new ScreenPoint(viewportWidth / 2, viewportHeight / 2);
+        var scaleXDelta = currentScaleX < minimumScaleX ? minimumScaleX / currentScaleX : 1;
+        var scaleYDelta = currentScaleY < minimumScaleY ? minimumScaleY / currentScaleY : 1;
+        _camera.Zoom(scaleXDelta, scaleYDelta, origin);
+    }
+
+    private (double ScaleX, double ScaleY) ComputeMinimumZoom(double viewportWidth, double viewportHeight)
+    {
+        return (
+            viewportWidth / _sceneBounds.Width,
+            viewportHeight / _sceneBounds.Height);
     }
 
     private static ToolTip CreateAnnotationToolTip(SampleAnnotation annotation)
@@ -305,6 +428,11 @@ public partial class MainWindow : Window
 
     private void OnViewportMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        if (_anchorPanOrigin is not null)
+        {
+            return;
+        }
+
         _lastPointerPosition = e.GetPosition(ViewportHost);
         ViewportHost.CaptureMouse();
         Mouse.OverrideCursor = Cursors.SizeAll;
@@ -312,6 +440,11 @@ public partial class MainWindow : Window
 
     private void OnViewportMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
+        if (_anchorPanOrigin is not null)
+        {
+            return;
+        }
+
         _lastPointerPosition = null;
         ViewportHost.ReleaseMouseCapture();
         Mouse.OverrideCursor = null;
@@ -323,6 +456,11 @@ public partial class MainWindow : Window
         _hoverPointerPosition = current;
         UpdatePixelometer(current);
 
+        if (_anchorPanOrigin is not null)
+        {
+            _anchorPanPointer = current;
+        }
+
         if (_lastPointerPosition is not Point previous || e.LeftButton != MouseButtonState.Pressed)
         {
             return;
@@ -332,6 +470,80 @@ public partial class MainWindow : Window
         _camera.Pan(current.X - previous.X, current.Y - previous.Y);
         ClampCameraToScene();
         await RequestRenderAsync();
+    }
+
+    private void OnViewportMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _anchorPanOrigin = e.GetPosition(ViewportHost);
+        _anchorPanPointer = _anchorPanOrigin.Value;
+        _lastPointerPosition = null;
+        ViewportHost.CaptureMouse();
+        Mouse.OverrideCursor = Cursors.ScrollAll;
+        ShowPanAnchor(_anchorPanOrigin.Value);
+        _anchorPanTimer.Start();
+        e.Handled = true;
+    }
+
+    private void OnViewportMouseRightButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_anchorPanOrigin is null)
+        {
+            return;
+        }
+
+        StopAnchorPan();
+        e.Handled = true;
+    }
+
+    private async void OnAnchorPanTick(object? sender, EventArgs e)
+    {
+        if (_anchorPanOrigin is not Point anchor)
+        {
+            return;
+        }
+
+        const double deadZone = 6;
+        const double gain = 0.12;
+
+        var deltaX = _anchorPanPointer.X - anchor.X;
+        var deltaY = _anchorPanPointer.Y - anchor.Y;
+        var adjustedX = ApplyDeadZone(deltaX, deadZone);
+        var adjustedY = ApplyDeadZone(deltaY, deadZone);
+        if (adjustedX == 0 && adjustedY == 0)
+        {
+            return;
+        }
+
+        _camera.Pan(-(adjustedX * gain), -(adjustedY * gain));
+        ClampCameraToScene();
+        await RequestRenderAsync();
+    }
+
+    private static double ApplyDeadZone(double value, double deadZone)
+    {
+        var magnitude = Math.Abs(value);
+        if (magnitude <= deadZone)
+        {
+            return 0;
+        }
+
+        return Math.Sign(value) * (magnitude - deadZone);
+    }
+
+    private void ShowPanAnchor(Point anchor)
+    {
+        Canvas.SetLeft(PanAnchorVisual, anchor.X - (PanAnchorVisual.Width / 2));
+        Canvas.SetTop(PanAnchorVisual, anchor.Y - (PanAnchorVisual.Height / 2));
+        PanAnchorVisual.Visibility = Visibility.Visible;
+    }
+
+    private void StopAnchorPan()
+    {
+        _anchorPanTimer.Stop();
+        _anchorPanOrigin = null;
+        PanAnchorVisual.Visibility = Visibility.Collapsed;
+        ViewportHost.ReleaseMouseCapture();
+        Mouse.OverrideCursor = null;
     }
 
     private void OnViewportMouseLeave(object sender, MouseEventArgs e)
@@ -346,12 +558,63 @@ public partial class MainWindow : Window
         var origin = e.GetPosition(ViewportHost);
         _hoverPointerPosition = origin;
         UpdatePixelometer(origin);
-        var scaleDelta = e.Delta > 0 ? 1.15 : 1 / 1.15;
-        if (_camera.Zoom(scaleDelta, new ScreenPoint(origin.X, origin.Y)))
+        var requestedScaleDelta = e.Delta > 0 ? 1.15 : 1 / 1.15;
+        var requestedScaleXDelta = requestedScaleDelta;
+        var requestedScaleYDelta = requestedScaleDelta;
+
+        if ((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
+        {
+            requestedScaleYDelta = 1;
+        }
+        else if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+        {
+            requestedScaleXDelta = 1;
+        }
+
+        var width = Math.Max(1, ViewportHost.ActualWidth);
+        var height = Math.Max(1, ViewportHost.ActualHeight);
+
+        if (!TryComputeZoomDeltas(width, height, requestedScaleXDelta, requestedScaleYDelta, out var zoomXDelta, out var zoomYDelta))
+        {
+            return;
+        }
+
+        if (_camera.Zoom(zoomXDelta, zoomYDelta, new ScreenPoint(origin.X, origin.Y)))
         {
             ClampCameraToScene();
             await RequestRenderAsync();
         }
+    }
+
+    private bool TryComputeZoomDeltas(
+        double viewportWidth,
+        double viewportHeight,
+        double requestedScaleXDelta,
+        double requestedScaleYDelta,
+        out double scaleXDelta,
+        out double scaleYDelta)
+    {
+        var currentScaleX = _camera.ScaleX;
+        var currentScaleY = _camera.ScaleY;
+        var (minimumScaleX, minimumScaleY) = ComputeMinimumZoom(viewportWidth, viewportHeight);
+
+        var targetScaleX = currentScaleX * requestedScaleXDelta;
+        var targetScaleY = currentScaleY * requestedScaleYDelta;
+
+        if (requestedScaleXDelta < 1 && targetScaleX < minimumScaleX)
+        {
+            targetScaleX = minimumScaleX;
+        }
+
+        if (requestedScaleYDelta < 1 && targetScaleY < minimumScaleY)
+        {
+            targetScaleY = minimumScaleY;
+        }
+
+        scaleXDelta = targetScaleX / currentScaleX;
+        scaleYDelta = targetScaleY / currentScaleY;
+
+        return Math.Abs(scaleXDelta - 1) > double.Epsilon || Math.Abs(scaleYDelta - 1) > double.Epsilon;
     }
 
     private void OnViewportSizeChanged(object sender, SizeChangedEventArgs e)
@@ -378,15 +641,122 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void OnDisplayModeSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        ApplyDisplayOptionsFromUi();
+        await RequestRenderAsync();
+    }
+
+    private async void OnOutlineThicknessChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        ApplyDisplayOptionsFromUi();
+        await RequestRenderAsync();
+    }
+
+    private async void OnLabelSizeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        ApplyDisplayOptionsFromUi();
+        await RequestRenderAsync();
+    }
+
+    private async void OnShowLabelsChanged(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        ApplyDisplayOptionsFromUi();
+        await RequestRenderAsync();
+    }
+
+    private void ApplyDisplayOptionsFromUi()
+    {
+        var selectedMode = DisplayModeComboBox.SelectedIndex switch
+        {
+            1 => AnnotationDisplayMode.Fill,
+            2 => AnnotationDisplayMode.OutlineAndFill,
+            _ => AnnotationDisplayMode.Outline
+        };
+
+        _annotationDisplayOptions = new AnnotationDisplayOptions(
+            selectedMode,
+            Math.Round(OutlineThicknessSlider.Value, 2),
+            Math.Round(LabelSizeSlider.Value, 2),
+            ShowLabelsCheckBox.IsChecked ?? true);
+    }
+
+    private async void OnRegenerateClicked(object sender, RoutedEventArgs e)
+    {
+        if (!TryReadGenerationOptions(out var validationError))
+        {
+            StatusText.Text = validationError;
+            return;
+        }
+
+        await RegenerateSceneAsync(fitToWidth: true);
+    }
+
+    private bool TryReadGenerationOptions(out string validationError)
+    {
+        validationError = string.Empty;
+
+        if (!int.TryParse(TilesXTextBox.Text, out var columns) || columns <= 0)
+        {
+            validationError = "Tiles X must be a positive integer.";
+            return false;
+        }
+
+        if (!int.TryParse(TilesYTextBox.Text, out var rows) || rows <= 0)
+        {
+            validationError = "Tiles Y must be a positive integer.";
+            return false;
+        }
+
+        if (!int.TryParse(ObjectsPerTileTextBox.Text, out var objectsPerTile) || objectsPerTile < 0)
+        {
+            validationError = "Objects per tile must be zero or greater.";
+            return false;
+        }
+
+        if ((long)columns * rows > 2000)
+        {
+            validationError = "Tile count must be 2000 or less for this demo.";
+            return false;
+        }
+
+        _tileColumns = columns;
+        _tileRows = rows;
+        _objectsPerTile = objectsPerTile;
+        return true;
+    }
+
     private async void OnClosed(object? sender, EventArgs e)
     {
         _resizeTimer.Stop();
+        _anchorPanTimer.Stop();
         _lifetime.Cancel();
 
         await _renderAction.DisposeAsync();
         FramePresenter.Child = null;
         _frontBitmapFactory?.Dispose();
         _backBitmapFactory?.Dispose();
+        _generationGate.Dispose();
         _lifetime.Dispose();
     }
 
@@ -403,28 +773,113 @@ public partial class MainWindow : Window
 
         PixelometerWorldText.Text = $"WORLD X {worldX:F1}  Y {worldY:F1}";
 
-        if (TryReadPixelValue(worldX, worldY, out var pixelValue, out var tileId))
+        if (TryReadPixelValue(worldX, worldY, out var backgroundValue, out var defectValue, out var tileId))
         {
-            PixelometerValueText.Text = $"PIXEL {pixelValue}  ({tileId})";
+            var finalValue = BlendDefect(backgroundValue, defectValue);
+            PixelometerValueText.Text = $"PIXEL {finalValue}  ({tileId}) bg {backgroundValue} + defect {defectValue}";
             return;
         }
 
         PixelometerValueText.Text = "PIXEL --";
     }
 
-    private bool TryReadPixelValue(double worldX, double worldY, out byte value, out string tileId)
+    private bool TryReadPixelValue(double worldX, double worldY, out byte background, out byte defect, out string tileId)
     {
         foreach (var tile in _tiles)
         {
-            if (tile.TryGetPixelValue(worldX, worldY, out value))
+            if (tile.TryGetPixelValue(worldX, worldY, out background))
             {
+                defect = 0;
+                for (var index = 0; index < _annotations.Count; index++)
+                {
+                    if (_annotations[index].TryGetDefectValue(worldX, worldY, out var value))
+                    {
+                        defect = Math.Max(defect, value);
+                    }
+                }
+
                 tileId = tile.Id;
                 return true;
             }
         }
 
-        value = default;
+        background = default;
+        defect = default;
         tileId = string.Empty;
         return false;
+    }
+
+    private static byte BlendDefect(byte baseValue, byte defectValue)
+    {
+        return (byte)Math.Clamp(baseValue - (defectValue / 2), byte.MinValue, byte.MaxValue);
+    }
+
+    private sealed record AnnotationDisplayOptions(
+        AnnotationDisplayMode Mode,
+        double OutlineThickness,
+        double LabelSize,
+        bool ShowLabels)
+    {
+        public static AnnotationDisplayOptions Default { get; } = new(
+            AnnotationDisplayMode.Outline,
+            2,
+            12,
+            true);
+    }
+
+    private enum AnnotationDisplayMode
+    {
+        Outline,
+        Fill,
+        OutlineAndFill
+    }
+
+    private interface ISelectionOutlineAnimator
+    {
+        void Apply(Shape outline);
+    }
+
+    private sealed class MarchingDashSelectionOutlineAnimator : ISelectionOutlineAnimator
+    {
+        public void Apply(Shape outline)
+        {
+            outline.StrokeDashArray = [4, 3];
+            var animation = new DoubleAnimation(0, -14, TimeSpan.FromMilliseconds(420))
+            {
+                RepeatBehavior = RepeatBehavior.Forever
+            };
+            outline.BeginAnimation(Shape.StrokeDashOffsetProperty, animation);
+        }
+    }
+
+    private sealed class PulseOpacitySelectionOutlineAnimator : ISelectionOutlineAnimator
+    {
+        public void Apply(Shape outline)
+        {
+            var animation = new DoubleAnimation(1, 0.35, TimeSpan.FromMilliseconds(360))
+            {
+                AutoReverse = true,
+                RepeatBehavior = RepeatBehavior.Forever
+            };
+            outline.BeginAnimation(OpacityProperty, animation);
+        }
+    }
+
+    private enum SelectionOutlineAnimationMode
+    {
+        MarchingDash,
+        PulseOpacity
+    }
+
+    private static class SelectionOutlineAnimatorFactory
+    {
+        public static ISelectionOutlineAnimator Create(SelectionOutlineAnimationMode mode)
+        {
+            return mode switch
+            {
+                SelectionOutlineAnimationMode.PulseOpacity => new PulseOpacitySelectionOutlineAnimator(),
+                _ => new MarchingDashSelectionOutlineAnimator()
+            };
+        }
     }
 }

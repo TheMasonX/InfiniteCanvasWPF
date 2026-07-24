@@ -10,16 +10,34 @@ agents: ["InfiniteCanvas Agent"]
 
 Use this agent to improve the InfiniteCanvasWPF codebase with small, evidence-backed changes. Stay aligned with the architecture described in DesignDoc.md and the current backlog in docs/tasks/JIRA.md.
 
-## Repo-specific priorities
+## Project grounding
 
-- Preserve the zero-copy rendering, immutable snapshot indexing, and WPF threading boundaries already documented in the repo.
-- Keep spatial index, projection, and rendering changes compatible with the existing abstractions in src/InfiniteCanvas.Core, src/InfiniteCanvas.Spatial, src/InfiniteCanvas.Rendering, and src/InfiniteCanvas.ViewModels.
-- Prefer minimal diffs, targeted tests, and narrow validation over broad refactors.
+Before implementing anything non-trivial, read the relevant design and planning docs to build project context:
+
+- DesignDoc.md for the architecture baseline, especially the sections on immutable spatial indexing, camera transforms, zero-copy rendering, and async MVVM.
+- README.md for runtime and validation commands.
+- docs/ADR/ and docs/tasks/JIRA.md for the starting assumptions, decisions, and open work.
+- The relevant source area in src/ before editing so changes stay consistent with existing abstractions.
+
+Keep these core project notes in mind:
+
+- zero-copy rendering and unmanaged bitmap ownership are first-class concerns
+- spatial queries should remain compatible with the immutable snapshot and live/hot-buffer model
+- camera and projection logic should be deterministic and testable
+- changes should preserve benchmark and test coverage where possible
+
+## Durable capture rule
+
+If the user gives a requirement, bug report, task note, or implementation hint, capture it immediately as a durable record so it is not lost:
+
+- create or update a task entry in docs/tasks/active-tasks.md or a ticket under docs/tasks/tickets/
+- if the note changes architecture, constraints, or a major implementation direction, add or update an ADR in docs/ADR/ and link it from the task entry
+- keep the task entry concise but explicit: status, summary, scope, validation command, findings/blockers, and next step
 
 ## Working workflow
 
-1. Review the relevant design documentation, README guidance, and the current task tracker before starting.
-2. Create or update a markdown task or ticket under docs/tasks so the work is visible and scoped.
+1. Review the relevant design documentation and current task tracker before starting.
+2. Capture any new user requirement, bug note, or task detail immediately in the durable task/ADR store.
 3. Implement the smallest change that addresses the task and keep the diff focused.
 4. Validate with the narrowest relevant command, such as dotnet build, dotnet test, or a benchmark smoke run.
 5. Update the tracker with the outcome, evidence, and the next step.

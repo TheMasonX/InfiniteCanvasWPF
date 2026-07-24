@@ -127,7 +127,7 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
 
             foreach (var annotation in annotations)
             {
-                FillBounds(pixels, annotation.Bounds, annotation.Color, camera);
+                DrawDefectPatch(pixels, annotation, camera);
             }
 
             var bitmap = (InteropBitmap)Imaging.CreateBitmapSourceFromMemorySection(
@@ -183,30 +183,54 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
         }
     }
 
-    private unsafe void FillBounds(
-        byte* destination,
-        SpatialBounds bounds,
-        Bgra32Color color,
-        CameraSnapshot camera)
+    private unsafe void DrawDefectPatch(byte* destination, SampleAnnotation annotation, CameraSnapshot camera)
     {
-        var topLeft = camera.WorldToScreen(bounds.X, bounds.Y);
-        var bottomRight = camera.WorldToScreen(bounds.Right, bounds.Bottom);
+        var topLeft = camera.WorldToScreen(annotation.Bounds.X, annotation.Bounds.Y);
+        var bottomRight = camera.WorldToScreen(annotation.Bounds.Right, annotation.Bounds.Bottom);
         var left = Math.Clamp((int)Math.Floor(topLeft.X), 0, _layout.Width);
         var top = Math.Clamp((int)Math.Floor(topLeft.Y), 0, _layout.Height);
         var right = Math.Clamp((int)Math.Ceiling(bottomRight.X), 0, _layout.Width);
         var bottom = Math.Clamp((int)Math.Ceiling(bottomRight.Y), 0, _layout.Height);
+        if (left >= right || top >= bottom)
+        {
+            return;
+        }
 
+        var patchPixels = annotation.DefectPixels;
         for (var y = top; y < bottom; y++)
         {
+            var worldY = (y - camera.OffsetY) / camera.ScaleY;
+            var sourceY = Math.Clamp(
+                (int)((worldY - annotation.Bounds.Y) * annotation.DefectPixelHeight / annotation.Bounds.Height),
+                0,
+                annotation.DefectPixelHeight - 1);
+
             for (var x = left; x < right; x++)
             {
+                var worldX = (x - camera.OffsetX) / camera.ScaleX;
+                var sourceX = Math.Clamp(
+                    (int)((worldX - annotation.Bounds.X) * annotation.DefectPixelWidth / annotation.Bounds.Width),
+                    0,
+                    annotation.DefectPixelWidth - 1);
+                var defectValue = patchPixels[(sourceY * annotation.DefectPixelWidth) + sourceX];
+                if (defectValue == 0)
+                {
+                    continue;
+                }
+
                 var offset = _layout.GetPixelOffset(x, y);
-                destination[offset] = color.Blue;
-                destination[offset + 1] = color.Green;
-                destination[offset + 2] = color.Red;
-                destination[offset + 3] = color.Alpha;
+                var blended = BlendDefect(destination[offset], defectValue);
+                destination[offset] = blended;
+                destination[offset + 1] = blended;
+                destination[offset + 2] = blended;
+                destination[offset + 3] = byte.MaxValue;
             }
         }
+    }
+
+    private static byte BlendDefect(byte baseValue, byte defectValue)
+    {
+        return (byte)Math.Clamp(baseValue - (defectValue / 2), byte.MinValue, byte.MaxValue);
     }
 
     public void Dispose()
