@@ -33,6 +33,10 @@ public class LiveSpatialIndexServiceTests
         var publishTask = service.PublishSnapshotAsync();
         await builder.BuildStarted.Task;
         service.Add(second);
+
+        var duringPublication = service.Query(new SpatialBounds(-5, -5, 30, 30));
+        Assert.That(duringPublication.Select(item => item.Id), Is.EquivalentTo(new[] { "first", "second" }));
+
         builder.ReleaseBuild();
         await publishTask;
 
@@ -41,6 +45,34 @@ public class LiveSpatialIndexServiceTests
         Assert.That(results.Select(item => item.Id), Is.EquivalentTo(new[] { "first", "second" }));
         Assert.That(service.Count, Is.EqualTo(2));
         Assert.That(service.LastPublishedAtUtc, Is.Not.Null);
+    }
+
+    [Test]
+    public async Task ConcurrentQueriesAndPublications_DoNotLoseOrDuplicateItems()
+    {
+        var service = CreateService();
+        var items = Enumerable.Range(0, 500)
+            .Select(index => new SpatialRecord<string>(
+                index.ToString(),
+                new SpatialBounds(index, index, 1, 1),
+                index.ToString()))
+            .ToArray();
+
+        service.AddRange(items);
+
+        var queryTask = Task.Run(() =>
+        {
+            for (var iteration = 0; iteration < 250; iteration++)
+            {
+                var results = service.Query(new SpatialBounds(0, 0, 501, 501));
+                Assert.That(results.Select(item => item.Id).Distinct().Count(), Is.EqualTo(results.Count));
+            }
+        });
+
+        var publishTask = service.PublishSnapshotAsync();
+        await Task.WhenAll(queryTask, publishTask);
+
+        Assert.That(service.Query(new SpatialBounds(0, 0, 501, 501)), Has.Count.EqualTo(items.Length));
     }
 
     [Test]
