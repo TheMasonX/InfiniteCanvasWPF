@@ -72,7 +72,7 @@ public class CameraTransformTests
     [Test]
     public void ClampToBounds_StopsAtEdgesAndCentersContentSmallerThanViewport()
     {
-        var camera = new CameraTransform(0.01);
+        var camera = new CameraTransform(0.001);
         var bounds = new SpatialBounds(0, 0, 100, 50);
 
         camera.Pan(500, 500);

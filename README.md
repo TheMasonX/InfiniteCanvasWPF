@@ -20,9 +20,11 @@ Architecture baseline for a high-scale infinite canvas engine targeting .NET 10 
 
 ## Run the MVP
 
-The demo starts with 100,000 deterministic spatial records, ingests 250 more every 500 ms,
-and publishes the hot buffer into a packed STR snapshot every two seconds. Drag to pan and
-use the mouse wheel to zoom.
+The demo starts with a deterministic 2-by-32 inspection scene containing 64 lazily generated
+monochrome image tiles and indexed defect annotations. Use the side panel to regenerate the
+scene, tune tile and defect generation, choose annotation display options, and inspect the
+selected annotation's feature values. Drag with the left mouse button to pan, use the right
+mouse button for anchored panning, and use the mouse wheel or zoom presets to navigate.
 
 ```shell
 dotnet run --project src/InfiniteCanvas.App/InfiniteCanvas.App.csproj
@@ -36,7 +38,8 @@ dotnet run --project src/InfiniteCanvas.App/InfiniteCanvas.App.csproj
 `StrTreeSpatialIndexService<T>` uses NetTopologySuite's immutable packed STR-tree, while
 `LinearSpatialIndexBuilder<T>` remains available as a simple fallback and testing implementation.
 
-`LiveSpatialIndexService<T>` decorates any builder with the requested hybrid model:
+`LiveSpatialIndexService<T>` decorates any builder with the hybrid model used by the spatial
+contracts and view-model tests:
 
 - immutable published snapshot for stable reads
 - hot buffer for incoming items
@@ -44,8 +47,10 @@ dotnet run --project src/InfiniteCanvas.App/InfiniteCanvas.App.csproj
 - non-blocking queries that merge those sources without losing or duplicating items
 - asynchronous snapshot publication through a pluggable `ISpatialIndexBuilder<T>`
 
-This permits dynamic R-tree, uniform-grid, directionally weighted binning, or GPU-backed
-implementations without changing consumers.
+The shipped inspection scene builds its annotation index once per regeneration and uses the
+same query contracts for viewport culling and selection. This keeps dynamic R-tree,
+uniform-grid, directionally weighted binning, or GPU-backed implementations replaceable
+without changing consumers.
 
 ### Projection
 

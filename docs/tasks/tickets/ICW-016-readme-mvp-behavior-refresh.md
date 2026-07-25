@@ -22,6 +22,9 @@ updated: 2026-07-25
 
 ## Summary
 
+- Status: Done
+- README now describes the current deterministic inspection-tile MVP and its controls.
+
 - Status: To Do
 
 ## Scope
@@ -38,11 +41,12 @@ updated: 2026-07-25
 ## Validation
 
 - Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
-- Result: To be completed when implemented.
+- Result: README reviewed against `MainWindow` startup and interaction paths.
 
 ## Notes
 
-- Add implementation details, blockers, or follow-up questions here.
+- Removed the obsolete periodic point-ingestion narrative and documented lazy tile generation,
+  annotation inspection, pan, and zoom behavior.
 
 ## Related Tasks
 

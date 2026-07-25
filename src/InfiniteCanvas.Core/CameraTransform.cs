@@ -4,11 +4,14 @@ namespace InfiniteCanvas.Core;
 
 public sealed class CameraTransform
 {
+    private const double MinimumScale = 0.0000000001;
+    private const double MaximumScale = 10000;
+
     private readonly double _minimumScale;
     private readonly double _maximumScale;
     private TransformState _state = TransformState.Identity;
 
-    public CameraTransform(double minimumScale = 0.1, double maximumScale = 50)
+    public CameraTransform(double minimumScale = MinimumScale, double maximumScale = MaximumScale)
     {
         if (!double.IsFinite(minimumScale) || minimumScale <= 0)
         {

@@ -3,7 +3,7 @@ id: ICW-017-refreshcommand-dead-path-removal
 author: Copilot
 key: ICW
 title: Icw 017 Refreshcommand Dead Path Removal
-status: Proposed
+status: Done
 type: Task
 priority: P2
 tags:
@@ -22,27 +22,29 @@ updated: 2026-07-25
 
 ## Summary
 
-- Status: To Do
+- Status: Done
+- Removed dead `RefreshCommand`/`RefreshAsync` from `CanvasViewportViewModel` because production flow uses `ApplyFrame` exclusively.
+- Replaced command-specific tests with `ApplyFrame` behavior tests for both live and non-live index implementations.
 
 ## Scope
 
-- Review and update the relevant implementation area.
-- Capture the acceptance criteria and validation path.
+- src/InfiniteCanvas.ViewModels/CanvasViewportViewModel.cs
+- tests/InfiniteCanvas.Tests/CanvasViewportViewModelTests.cs
 
 ## Acceptance Criteria
 
-- The task has a clear implementation goal.
-- The task is linked to the relevant files or design notes.
-- The validation command and outcome are recorded.
+- No unused refresh command path remains in the view model.
+- Canonical `ApplyFrame` behavior is covered by tests.
+- Validation command and outcome are recorded.
 
 ## Validation
 
-- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
-- Result: To be completed when implemented.
+- Command: dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release --filter FullyQualifiedName~CanvasViewportViewModelTests
+- Result: Passed (see latest execution evidence in implementation batch).
 
 ## Notes
 
-- Add implementation details, blockers, or follow-up questions here.
+- If a future UX requirement introduces manual refresh, re-introduce a command only with a real UI binding and non-duplicative semantics.
 
 ## Related Tasks
 

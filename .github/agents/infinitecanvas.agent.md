@@ -63,6 +63,10 @@ If the user gives a requirement, bug report, task note, implementation hint, use
 
 ## Task tracking
 
+Use the [task-tracker](../skills/task-tracker/SKILL.md) skill to create or update durable task entries.
+**ALL** work must be captured in the task tracker, even if it is a small change or a single-file edit. The tracker is the canonical record of work and progress.
+**ALL** potential tasks from user prompts must be captured to prevent any reports from being lost.
+
 - Use docs/tasks/active-tasks.md as the live checklist for in-progress work.
 - Create or update a ticket file under docs/tasks/tickets/ for non-trivial work items.
 - Normalize task files into the shared ICW task format so the full backlog uses the same fields and section order.
@@ -85,3 +89,15 @@ Before committing and pushing a sprint-sized batch of work, the agent should:
 - Verify claims and sources for accuracy before acting on them.
 - Do not claim completion until the relevant validation command has been run and the tracker has been updated.
 - Before any commit/push for a sprint batch, ensure a current handoff note exists in docs/handoffs/ and reflects the latest state.
+
+## Chat Response Footer
+
+At the end of your response, include a footer with the following format:
+
+```
+=== {Status update - less than 100 chars} ===
+Description: {summary of the work done, findings, and next step. 1-3 sentences, no prose.}
+Progress: {percent complete, e.g., 0%, 25%, 50%, 75%, 100%}
+Next Steps: {next step or question for the user to clarify the task or requirement.} - note: this is optional if none.
+Status: {Continue, Blocked, Waiting for user input, or Complete}
+```

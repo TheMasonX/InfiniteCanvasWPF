@@ -63,15 +63,30 @@ public class SampleImageGeneratorTests
     [Test]
     public void TileCacheBudget_DefaultCapacity_AcceptsDefaultTileCost()
     {
-        var cacheBudget = new TileCacheBudget(TileCacheBudget.DefaultMaxPixels);
+        var cacheBudget = new TileCacheBudget(TileCacheBudget.DefaultMaxBytes);
         var defaultTileCost = checked(SampleImageGenerator.DefaultPixelWidth * SampleImageGenerator.DefaultPixelHeight);
-        var defaultBudget = TileCacheBudget.DefaultMaxPixels;
+        var defaultBudget = TileCacheBudget.DefaultMaxBytes;
 
         Assert.Multiple(() =>
         {
-            Assert.That(TileCacheBudget.DefaultRetainedTileCount, Is.EqualTo(32));
             Assert.That(defaultBudget, Is.GreaterThanOrEqualTo((long)defaultTileCost));
-            Assert.That(cacheBudget.CanAccept(defaultTileCost), Is.True);
+            Assert.That(cacheBudget.TryReserve(SampleImageGenerator.GenerateSet(1, 64, 32, objectsPerTile: 0)[0]), Is.True);
+        });
+    }
+
+    [Test]
+    public void TileCacheBudget_RejectsNewTileWhenCapacityIsReservedByPinnedTiles()
+    {
+        var tiles = SampleImageGenerator.GenerateSet(2, 64, 32, objectsPerTile: 0);
+        var cacheBudget = new TileCacheBudget(tiles[0].PixelCost);
+        cacheBudget.SetPinnedTiles([tiles[0]]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(cacheBudget.TryReserve(tiles[0]), Is.True);
+            Assert.That(cacheBudget.TryReserve(tiles[1]), Is.False);
+            Assert.That(cacheBudget.ResidentTileCount, Is.EqualTo(1));
+            Assert.That(cacheBudget.UsedBytes, Is.EqualTo(tiles[0].PixelCost));
         });
     }
 
@@ -140,7 +155,27 @@ public class SampleImageGeneratorTests
             Assert.That(
                 () => SampleImageGenerator.GenerateSet(defectPoolSize: 0),
                 Throws.TypeOf<ArgumentOutOfRangeException>().With.Property(nameof(ArgumentOutOfRangeException.ParamName)).EqualTo("defectPoolSize"));
+            Assert.That(
+                () => SampleImageGenerator.GenerateSet(objectsPerTile: SampleImageGenerator.MaxObjectsPerTile + 1),
+                Throws.TypeOf<ArgumentOutOfRangeException>().With.Property(nameof(ArgumentOutOfRangeException.ParamName)).EqualTo("objectsPerTile"));
         });
+    }
+
+    [Test]
+    public void GenerateSet_RequiresImageCountToMatchExplicitRows()
+    {
+        var exception = Assert.Throws<ArgumentException>(
+            () => SampleImageGenerator.GenerateSet(imageCount: 3, columns: 2, rows: 2, objectsPerTile: 0));
+
+        Assert.That(exception!.ParamName, Is.EqualTo("imageCount"));
+    }
+
+    [Test]
+    public void GenerateSet_UsesExplicitRowsAndColumnsForTileCount()
+    {
+        var tiles = SampleImageGenerator.GenerateSet(imageCount: 6, columns: 2, rows: 3, objectsPerTile: 0);
+
+        Assert.That(tiles, Has.Count.EqualTo(6));
     }
 
     [Test]

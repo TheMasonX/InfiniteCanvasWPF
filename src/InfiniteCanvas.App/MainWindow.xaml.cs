@@ -17,7 +17,7 @@ public partial class MainWindow : Window
 {
     private LiveSpatialIndexService<SampleAnnotation> _spatialIndex = null!;
     private CanvasViewportViewModel<SampleAnnotation> _viewModel = null!;
-    private CameraTransform _camera = new(0.01, 50);
+    private CameraTransform _camera = new();
     private readonly CoalescingAsyncAction _renderAction;
     private readonly DispatcherTimer _resizeTimer;
     private readonly DispatcherTimer _anchorPanTimer;
@@ -44,7 +44,7 @@ public partial class MainWindow : Window
     private int _objectsPerTile = 16;
     private int _generationSeed = 1729;
     private int _busyOperationCount;
-    private TileCacheBudget _tileCacheBudget = new(TileCacheBudget.DefaultMaxPixels);
+    private TileCacheBudget _tileCacheBudget = new(TileCacheBudget.DefaultMaxBytes);
     private byte _backgroundNoise = 8;
     private int _backgroundCircleCount = 3;
     private bool _showImageTiles = true;
@@ -140,8 +140,8 @@ public partial class MainWindow : Window
 
             InitializeSpatialState();
             _selectedAnnotationId = null;
-            _camera = new CameraTransform(0.01, 50);
-            _tileCacheBudget = new TileCacheBudget(_tileCacheBudget.MaxPixels);
+            _camera = new CameraTransform();
+            _tileCacheBudget = new TileCacheBudget(_tileCacheBudget.MaxBytes);
             UnsubscribeTileGenerationEvents(_tiles);
 
             var tileCount = checked(_tileColumns * _tileRows);
@@ -193,6 +193,7 @@ public partial class MainWindow : Window
         for (var i = 0; i < tiles.Count; i++)
         {
             tiles[i].PixelsGenerated += OnTilePixelsGenerated;
+            tiles[i].PixelsGenerationFailed += OnTilePixelsGenerationFailed;
         }
     }
 
@@ -201,6 +202,7 @@ public partial class MainWindow : Window
         for (var i = 0; i < tiles.Count; i++)
         {
             tiles[i].PixelsGenerated -= OnTilePixelsGenerated;
+            tiles[i].PixelsGenerationFailed -= OnTilePixelsGenerationFailed;
         }
     }
 
@@ -209,11 +211,6 @@ public partial class MainWindow : Window
         if (_lifetime.IsCancellationRequested)
         {
             return;
-        }
-
-        if (sender is SampleImageTile tile)
-        {
-            _tileCacheBudget.TrackTile(tile);
         }
 
         _ = Dispatcher.InvokeAsync(async () =>
@@ -225,6 +222,14 @@ public partial class MainWindow : Window
 
             await RequestRenderAsync();
         });
+    }
+
+    private void OnTilePixelsGenerationFailed(object? sender, EventArgs e)
+    {
+        if (sender is SampleImageTile tile)
+        {
+            _tileCacheBudget.Release(tile);
+        }
     }
 
     private async Task RequestRenderAsync()
@@ -281,7 +286,12 @@ public partial class MainWindow : Window
         {
             var visibleItems = _spatialIndex.Query(viewport);
             var visibleTiles = _tiles.Where(tile => tile.Bounds.Intersects(viewport)).ToArray();
-            var bitmap = factory.GenerateFrozenBitmap(visibleTiles, visibleItems, camera);
+            _tileCacheBudget.SetPinnedTiles(visibleTiles);
+            var bitmap = factory.GenerateFrozenBitmap(
+                visibleTiles,
+                visibleItems,
+                camera,
+                _tileCacheBudget.TryReserve);
             return (Bitmap: bitmap, VisibleItems: visibleItems, VisibleTiles: visibleTiles);
         }, cancellationToken);
 
@@ -291,7 +301,8 @@ public partial class MainWindow : Window
 
         stopwatch.Stop();
         var generatedTileCount = _tiles.Count(tile => tile.IsBackgroundFetched);
-        UpdateCacheStatus(generatedTileCount);
+        var visibleBackgroundTileCount = frame.VisibleTiles.Count(tile => tile.IsImageGenerated);
+        UpdateCacheStatus(visibleBackgroundTileCount);
         var queuedTileCount = _tiles.Count(tile => tile.IsGenerationQueued);
         var completedTiles = _tiles.Where(tile => tile.GenerationDuration.HasValue).ToArray();
         var averageGenerationMilliseconds = completedTiles.Length == 0
@@ -300,7 +311,7 @@ public partial class MainWindow : Window
         var averageConversionMilliseconds = completedTiles.Length == 0
             ? 0
             : completedTiles.Average(tile => tile.BitmapConversionDuration!.Value.TotalMilliseconds);
-        StatusText.Text = $"Frame {width}x{height}  |  {stopwatch.Elapsed.TotalMilliseconds:F1} ms  |  Zoom {camera.ScaleX:F3}x  |  Images {generatedTileCount}/{_tiles.Count}  |  Queue {queuedTileCount}  |  Gen {averageGenerationMilliseconds:F1} ms  |  Gray8 {averageConversionMilliseconds:F1} ms";
+        StatusText.Text = $"Frame {width}x{height}  |  {stopwatch.Elapsed.TotalMilliseconds:F1} ms  |  Zoom {camera.ScaleX:F3}x  |  Backgrounds {visibleBackgroundTileCount}/{frame.VisibleTiles.Length} visible, {generatedTileCount} total  |  Queue {queuedTileCount}  |  Gen {averageGenerationMilliseconds:F1} ms  |  Gray8 {averageConversionMilliseconds:F1} ms";
         UpdateZoomDisplay(camera, width, height);
 
         if (_hoverPointerPosition is Point hoverPointer)
@@ -1067,19 +1078,18 @@ public partial class MainWindow : Window
             tile.ResetImageCache();
         }
 
-        _tileCacheBudget = new TileCacheBudget(_tileCacheBudget.MaxPixels);
+        _tileCacheBudget = new TileCacheBudget(_tileCacheBudget.MaxBytes);
         UpdateCacheStatus();
         StatusText.Text = "Image cache reset. Tiles will regenerate lazily as they come into range.";
         await RequestRenderAsync();
     }
 
-    private void UpdateCacheStatus(int? generatedTileCount = null)
+    private void UpdateCacheStatus(int? visibleBackgroundTileCount = null)
     {
-        var generatedCount = generatedTileCount ?? _tiles.Count(tile => tile.IsBackgroundFetched);
-        var cacheSummary = _tileCacheBudget.DescribeStatus(_tiles);
+        var visibleCount = visibleBackgroundTileCount ?? 0;
+        var cacheSummary = _tileCacheBudget.DescribeStatus();
         CacheStatusText.Text = cacheSummary;
-        StatusText.Text = $"Frame {Math.Max(1, _tiles.Count)} tiles  |  Cache {cacheSummary}";
-        Serilog.Log.Debug("Cache summary: {Summary} (generated {Generated}/{Total})", cacheSummary, generatedCount, _tiles.Count);
+        Serilog.Log.Debug("Cache summary: {Summary} (visible backgrounds {Visible})", cacheSummary, visibleCount);
     }
 
     private void UpdateSelectedAnnotationFeatures(SampleAnnotation? annotation = null)
@@ -1112,9 +1122,11 @@ public partial class MainWindow : Window
             return false;
         }
 
-        if (!int.TryParse(ObjectsPerTileTextBox.Text, out var objectsPerTile) || objectsPerTile < 0)
+        if (!int.TryParse(ObjectsPerTileTextBox.Text, out var objectsPerTile)
+            || objectsPerTile < 0
+            || objectsPerTile > SampleImageGenerator.MaxObjectsPerTile)
         {
-            validationError = "Objects per tile must be zero or greater.";
+            validationError = $"Objects per tile must be between 0 and {SampleImageGenerator.MaxObjectsPerTile:N0}.";
             return false;
         }
 
@@ -1213,24 +1225,31 @@ public partial class MainWindow : Window
 
     private bool TryReadPixelValue(double worldX, double worldY, out byte background, out byte defect, out string tileId)
     {
-        foreach (var tile in _tiles)
+        if (_tiles.Count > 0
+            && TileGridIndexLookup.TryGetTileIndex(
+                worldX,
+                worldY,
+                _sceneBounds,
+                _tiles[0].Bounds.Width,
+                _tiles[0].Bounds.Height,
+                _tileColumns,
+                _tiles.Count,
+                out var tileIndex)
+            && _tiles[tileIndex].TryGetPixelValue(worldX, worldY, out background))
         {
-            if (tile.TryGetPixelValue(worldX, worldY, out background))
+            defect = 0;
+            var sampleArea = new SpatialBounds(worldX, worldY, 0.01, 0.01);
+            var hitAnnotations = _spatialIndex.Query(sampleArea);
+            for (var index = 0; index < hitAnnotations.Count; index++)
             {
-                defect = 0;
-                var sampleArea = new SpatialBounds(worldX, worldY, 0.01, 0.01);
-                var hitAnnotations = _spatialIndex.Query(sampleArea);
-                for (var index = 0; index < hitAnnotations.Count; index++)
+                if (hitAnnotations[index].TryGetDefectValue(worldX, worldY, out var value))
                 {
-                    if (hitAnnotations[index].TryGetDefectValue(worldX, worldY, out var value))
-                    {
-                        defect = Math.Max(defect, value);
-                    }
+                    defect = Math.Max(defect, value);
                 }
-
-                tileId = tile.Id;
-                return true;
             }
+
+            tileId = _tiles[tileIndex].Id;
+            return true;
         }
 
         background = default;

@@ -10,6 +10,7 @@ public static class SampleImageGenerator
 {
     public const int DefaultPixelWidth = 8192;
     public const int DefaultPixelHeight = 4096;
+    public const int MaxObjectsPerTile = 256;
 
     private static readonly string[] Classifications = ["Scratch", "Inclusion", "Stain", "Edge defect"];
     private static readonly IReadOnlyDictionary<string, Bgra32Color> ClassificationColors = new Dictionary<string, Bgra32Color>
@@ -56,7 +57,7 @@ public static class SampleImageGenerator
             throw new ArgumentOutOfRangeException(nameof(pixelHeight));
         }
 
-        if (objectsPerTile < 0)
+        if (objectsPerTile is < 0 or > MaxObjectsPerTile)
         {
             throw new ArgumentOutOfRangeException(nameof(objectsPerTile));
         }
@@ -77,7 +78,13 @@ public static class SampleImageGenerator
         }
 
         var rowCount = rows ?? Math.Max(1, (int)Math.Ceiling(imageCount / (double)columns));
-        var tileCount = rows.HasValue ? checked(columns * rowCount) : imageCount;
+        var tileCount = checked(columns * rowCount);
+        if (rows.HasValue && imageCount != tileCount)
+        {
+            throw new ArgumentException(
+                "imageCount must equal columns multiplied by rows when rows is specified.",
+                nameof(imageCount));
+        }
         var poolSeed = unchecked(seed + 48611);
         var poolRandom = new DeterministicRandom(poolSeed);
         var defectTemplatePool = BuildDefectTemplatePool(defectPoolSize, poolRandom);

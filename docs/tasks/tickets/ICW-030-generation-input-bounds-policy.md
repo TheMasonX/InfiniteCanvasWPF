@@ -22,7 +22,8 @@ updated: 2026-07-25
 
 ## Summary
 
-- Status: To Do
+- Status: Done
+- Generation now rejects `objectsPerTile` values above the explicit safety cap of 256.
 
 ## Scope
 
@@ -34,15 +35,17 @@ updated: 2026-07-25
 - The task has a clear implementation goal.
 - The task is linked to the relevant files or design notes.
 - The validation command and outcome are recorded.
+- The same bound is enforced by both the generator and the runtime input validator.
 
 ## Validation
 
 - Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
-- Result: To be completed when implemented.
+- Result: `runTests` on `SampleImageGeneratorTests.cs`: 13/13 passed.
 
 ## Notes
 
-- Add implementation details, blockers, or follow-up questions here.
+- The cap limits defect metadata and sparse image work while preserving zero as a valid
+  no-annotation setting.
 
 ## Related Tasks
 

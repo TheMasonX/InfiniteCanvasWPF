@@ -22,7 +22,9 @@ updated: 2026-07-25
 
 ## Summary
 
-- Status: In Progress
+- Status: Done
+- `GenerateSet` validates `objectsPerTile` against the shared safety cap.
+- Explicit `rows` layouts require `imageCount == columns * rows`.
 
 ## Scope
 
@@ -34,15 +36,18 @@ updated: 2026-07-25
 - The task has a clear implementation goal.
 - The task is linked to the relevant files or design notes.
 - The validation command and outcome are recorded.
+- Invalid generation values identify the responsible parameter.
+- Explicit row semantics cannot silently discard `imageCount`.
 
 ## Validation
 
 - Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
-- Result: To be completed when implemented.
+- Result: `runTests` on `SampleImageGeneratorTests.cs`: 13/13 passed.
 
 ## Notes
 
-- Add implementation details, blockers, or follow-up questions here.
+- `SampleImageGenerator.MaxObjectsPerTile` is the single policy constant used by the
+  generator and mirrored by the MainWindow input validator.
 
 ## Related Tasks
 

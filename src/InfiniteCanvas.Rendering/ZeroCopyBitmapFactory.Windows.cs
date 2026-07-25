@@ -109,7 +109,8 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
     public unsafe InteropBitmap GenerateFrozenBitmap(
         IReadOnlyList<SampleImageTile> tiles,
         IReadOnlyList<SampleAnnotation> annotations,
-        CameraSnapshot camera)
+        CameraSnapshot camera,
+        Func<SampleImageTile, bool>? tryReserveCacheEntry = null)
     {
         ArgumentNullException.ThrowIfNull(tiles);
         ArgumentNullException.ThrowIfNull(annotations);
@@ -122,7 +123,7 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
             var pixels = (byte*)_view;
             foreach (var tile in tiles)
             {
-                DrawTile(pixels, tile, camera);
+                DrawTile(pixels, tile, camera, tryReserveCacheEntry);
             }
 
             foreach (var annotation in annotations)
@@ -143,7 +144,11 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
         }
     }
 
-    private unsafe void DrawTile(byte* destination, SampleImageTile tile, CameraSnapshot camera)
+    private unsafe void DrawTile(
+        byte* destination,
+        SampleImageTile tile,
+        CameraSnapshot camera,
+        Func<SampleImageTile, bool>? tryReserveCacheEntry)
     {
         var topLeft = camera.WorldToScreen(tile.Bounds.X, tile.Bounds.Y);
         var bottomRight = camera.WorldToScreen(tile.Bounds.Right, tile.Bounds.Bottom);
@@ -156,7 +161,9 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
             return;
         }
 
-        var hasSourcePixels = tile.TryGetPixelsNonBlocking(out var sourcePixels);
+        var hasSourcePixels = tile.TryGetPixelsNonBlocking(
+            out var sourcePixels,
+            tryReserveCacheEntry is null ? null : () => tryReserveCacheEntry(tile));
         var placeholder = tile.PlaceholderValue;
 
         for (var y = top; y < bottom; y++)

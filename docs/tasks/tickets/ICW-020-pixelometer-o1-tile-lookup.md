@@ -3,7 +3,7 @@ id: ICW-020-pixelometer-o1-tile-lookup
 author: Copilot
 key: ICW
 title: Icw 020 Pixelometer O1 Tile Lookup
-status: Proposed
+status: Done
 type: Task
 priority: P2
 tags:
@@ -22,27 +22,32 @@ updated: 2026-07-25
 
 ## Summary
 
-- Status: To Do
+- Status: Done
+- Replaced linear scan in `TryReadPixelValue` with direct tile-index arithmetic based on scene bounds, tile dimensions, and column count.
+- Preserved existing defect-sampling query semantics and pixel readout text behavior.
 
 ## Scope
 
-- Review and update the relevant implementation area.
-- Capture the acceptance criteria and validation path.
+- src/InfiniteCanvas.App/MainWindow.xaml.cs
+- src/InfiniteCanvas.Core/TileGridIndexLookup.cs
+- tests/InfiniteCanvas.Tests/TileGridIndexLookupTests.cs
+- tests/InfiniteCanvas.Tests/CanvasViewportViewModelTests.cs
 
 ## Acceptance Criteria
 
-- The task has a clear implementation goal.
-- The task is linked to the relevant files or design notes.
-- The validation command and outcome are recorded.
+- Pixelometer tile lookup no longer performs an O(n) tile scan per mouse move.
+- Lookup handles out-of-bounds and half-open edge conditions safely.
+- Validation command and outcome are recorded.
 
 ## Validation
 
-- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
-- Result: To be completed when implemented.
+- Command: dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release --filter FullyQualifiedName~TileGridIndexLookupTests
+- Result: Passed (see latest execution evidence in implementation batch).
 
 ## Notes
 
-- Add implementation details, blockers, or follow-up questions here.
+- Direct index lookup uses existing scene invariants: uniformly sized tile grid with row-major ordering.
+- If tile dimensions become non-uniform in future work, this helper should be adapted or guarded by invariant checks.
 
 ## Related Tasks
 
