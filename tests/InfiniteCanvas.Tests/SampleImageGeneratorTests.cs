@@ -270,4 +270,80 @@ public class SampleImageGeneratorTests
             Assert.That(outside, Is.False);
         });
     }
+
+    [Test]
+    public void BackgroundTileMipPolicy_UsesCanonicalCeilingDimensionsAcrossEightLevels()
+    {
+        var dimensions = Enumerable.Range(0, BackgroundTileMipPolicy.MaxMipLevel + 1)
+            .Select(level => BackgroundTileMipPolicy.GetDimensions(9, 5, level))
+            .ToArray();
+
+        Assert.That(dimensions, Is.EqualTo(new[]
+        {
+            (9, 5),
+            (5, 3),
+            (3, 2),
+            (2, 1),
+            (1, 1),
+            (1, 1),
+            (1, 1),
+            (1, 1)
+        }));
+    }
+
+    [Test]
+    public void BackgroundTilePayload_RejectsNonCanonicalPixelCount()
+    {
+        var descriptor = new BackgroundTileDescriptor(
+            "synthetic",
+            "tile-1",
+            4,
+            new SpatialBounds(0, 0, 9, 5),
+            9,
+            5);
+        var request = new BackgroundTileRequest(descriptor, 1);
+
+        Assert.That(
+            () => new BackgroundTilePayload(request, new byte[9 * 5]),
+            Throws.ArgumentException);
+    }
+
+    [Test]
+    public void BackgroundTileRequest_CacheKeyIncludesSourceRevisionAndMip()
+    {
+        var descriptor = new BackgroundTileDescriptor(
+            "source-a",
+            "tile-1",
+            8,
+            new SpatialBounds(0, 0, 4, 4),
+            4,
+            4);
+        var request = new BackgroundTileRequest(descriptor, 2);
+
+        Assert.That(request.CacheKey, Is.EqualTo(new BackgroundTileCacheKey("source-a", "tile-1", 8, 2)));
+    }
+
+    [Test]
+    public void GenerateMonochromeMipPixels_IsDeterministicAndUsesCanonicalDimensions()
+    {
+        var first = SampleImageGenerator.GenerateMonochromeMipPixels(17, 9, 128, 8, 3, seed: 1729, circleCount: 2);
+        var second = SampleImageGenerator.GenerateMonochromeMipPixels(17, 9, 128, 8, 3, seed: 1729, circleCount: 2);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first, Is.EqualTo(second));
+            Assert.That(first, Has.Length.EqualTo(3 * 2));
+        });
+    }
+
+    [Test]
+    public void ReduceGray8Box_AveragesCoveredTexelsInsteadOfFloorSampling()
+    {
+        var reduced = SampleImageGenerator.ReduceGray8Box(
+            [0, 255, 255, 0],
+            (4, 1),
+            (2, 1));
+
+        Assert.That(reduced, Is.EqualTo(new byte[] { 128, 128 }));
+    }
 }

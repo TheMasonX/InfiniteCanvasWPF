@@ -11,8 +11,11 @@ public sealed class SampleImageTile
 {
     private readonly object _cacheGate = new();
     private readonly Func<byte[]> _pixelFactory;
+    private readonly Func<int, byte[]>? _mipPixelFactory;
     private readonly byte _placeholderValue;
     private readonly int _pixelCost;
+    private readonly Dictionary<int, byte[]> _mipPixels = new();
+    private readonly HashSet<int> _mipGenerationQueued = new();
     private byte[]? _pixels;
     private int _generationQueued;
     private int _generationEpoch;
@@ -33,7 +36,8 @@ public sealed class SampleImageTile
         int pixelHeight,
         Func<byte[]> pixelFactory,
         IReadOnlyList<SampleAnnotation> annotations,
-        byte placeholderValue = 128)
+        byte placeholderValue = 128,
+        Func<int, byte[]>? mipPixelFactory = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentNullException.ThrowIfNull(pixelFactory);
@@ -50,6 +54,9 @@ public sealed class SampleImageTile
         PixelHeight = pixelHeight;
         _placeholderValue = placeholderValue;
         _pixelFactory = () => ValidatePixels(pixelFactory(), pixelWidth, pixelHeight);
+        _mipPixelFactory = mipPixelFactory is null
+            ? null
+            : mipLevel => ValidateMipPixels(mipPixelFactory(mipLevel), pixelWidth, pixelHeight, mipLevel);
         _pixelCost = checked(pixelWidth * pixelHeight);
         Annotations = annotations;
     }
@@ -62,7 +69,8 @@ public sealed class SampleImageTile
         int pixelHeight,
         Func<Bitmap> backgroundBitmapFactory,
         IReadOnlyList<SampleAnnotation> annotations,
-        byte placeholderValue = 128)
+        byte placeholderValue = 128,
+        Func<int, byte[]>? mipPixelFactory = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentNullException.ThrowIfNull(backgroundBitmapFactory);
@@ -80,6 +88,9 @@ public sealed class SampleImageTile
         _placeholderValue = placeholderValue;
         _backgroundBitmapFactory = backgroundBitmapFactory;
         _pixelCost = checked(pixelWidth * pixelHeight);
+        _mipPixelFactory = mipPixelFactory is null
+            ? null
+            : mipLevel => ValidateMipPixels(mipPixelFactory(mipLevel), pixelWidth, pixelHeight, mipLevel);
         _pixelFactory = () =>
         {
             var bitmapGenerationStarted = Stopwatch.GetTimestamp();
@@ -107,6 +118,15 @@ public sealed class SampleImageTile
     public int PixelCost => _pixelCost;
 
     public bool IsImageGenerated => Volatile.Read(ref _pixels) is not null;
+
+    public bool IsMipGenerated(int mipLevel)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(mipLevel);
+        lock (_cacheGate)
+        {
+            return mipLevel == 0 ? _pixels is not null : _mipPixels.ContainsKey(mipLevel);
+        }
+    }
 
     public bool IsGenerationQueued => Volatile.Read(ref _generationQueued) == 1 && !IsImageGenerated;
 
@@ -168,11 +188,38 @@ public sealed class SampleImageTile
         return false;
     }
 
+    public bool TryGetPixelsNonBlocking(
+        int mipLevel,
+        out byte[] pixels,
+        Func<bool>? tryReserveCacheEntry = null)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(mipLevel);
+        lock (_cacheGate)
+        {
+            if (_mipPixels.TryGetValue(mipLevel, out pixels!))
+            {
+                return true;
+            }
+        }
+
+        if (_mipPixelFactory is null)
+        {
+            pixels = Array.Empty<byte>();
+            return false;
+        }
+
+        EnsureMipPixelsGenerationStarted(mipLevel, tryReserveCacheEntry);
+        pixels = Array.Empty<byte>();
+        return false;
+    }
+
     public void ResetImageCache()
     {
         lock (_cacheGate)
         {
             _pixels = null;
+            _mipPixels.Clear();
+            _mipGenerationQueued.Clear();
             Interlocked.Increment(ref _generationEpoch);
             Interlocked.Exchange(ref _generationQueued, 0);
 #if WINDOWS
@@ -290,12 +337,79 @@ public sealed class SampleImageTile
         });
     }
 
+    private void EnsureMipPixelsGenerationStarted(int mipLevel, Func<bool>? tryReserveCacheEntry)
+    {
+        lock (_cacheGate)
+        {
+            if (!_mipGenerationQueued.Add(mipLevel))
+            {
+                return;
+            }
+        }
+
+        if (tryReserveCacheEntry is not null && !tryReserveCacheEntry())
+        {
+            lock (_cacheGate)
+            {
+                _mipGenerationQueued.Remove(mipLevel);
+            }
+
+            return;
+        }
+
+        _ = Task.Run(() =>
+        {
+            var generationEpoch = Volatile.Read(ref _generationEpoch);
+            try
+            {
+                var generated = _mipPixelFactory!(mipLevel);
+                var shouldRaiseEvent = false;
+                lock (_cacheGate)
+                {
+                    if (generationEpoch == Volatile.Read(ref _generationEpoch))
+                    {
+                        _mipPixels[mipLevel] = generated;
+                        shouldRaiseEvent = true;
+                    }
+
+                    _mipGenerationQueued.Remove(mipLevel);
+                }
+
+                if (shouldRaiseEvent)
+                {
+                    PixelsGenerated?.Invoke(this, EventArgs.Empty);
+                }
+            }
+            catch
+            {
+                lock (_cacheGate)
+                {
+                    _mipGenerationQueued.Remove(mipLevel);
+                }
+
+                PixelsGenerationFailed?.Invoke(this, EventArgs.Empty);
+            }
+        });
+    }
+
     private static byte[] ValidatePixels(byte[] pixels, int width, int height)
     {
         ArgumentNullException.ThrowIfNull(pixels);
         if (pixels.Length != checked(width * height))
         {
             throw new InvalidOperationException("Generated pixel data length must match the image dimensions.");
+        }
+
+        return pixels;
+    }
+
+    private static byte[] ValidateMipPixels(byte[] pixels, int nativeWidth, int nativeHeight, int mipLevel)
+    {
+        ArgumentNullException.ThrowIfNull(pixels);
+        var dimensions = BackgroundTileMipPolicy.GetDimensions(nativeWidth, nativeHeight, mipLevel);
+        if (pixels.Length != checked(dimensions.Width * dimensions.Height))
+        {
+            throw new InvalidOperationException("Generated mip pixel data length must match canonical dimensions.");
         }
 
         return pixels;

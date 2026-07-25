@@ -114,7 +114,8 @@ public static class SampleImageGenerator
                 pixelHeight,
                 () => GenerateMonochromeBitmap(pixelWidth, pixelHeight, targetValue, noise, pixelSeed, circleCount),
                 annotations,
-                targetValue);
+                targetValue,
+                mipLevel => GenerateMonochromeMipPixels(pixelWidth, pixelHeight, targetValue, noise, mipLevel, pixelSeed, circleCount));
 #else
             tiles[tileIndex] = new SampleImageTile(
                 tileId,
@@ -123,7 +124,8 @@ public static class SampleImageGenerator
                 pixelHeight,
                 () => GenerateMonochromePixels(pixelWidth, pixelHeight, targetValue, noise, pixelSeed, circleCount),
                 annotations,
-                targetValue);
+                targetValue,
+                mipLevel => GenerateMonochromeMipPixels(pixelWidth, pixelHeight, targetValue, noise, mipLevel, pixelSeed, circleCount));
 #endif
         }
 
@@ -146,6 +148,67 @@ public static class SampleImageGenerator
             new DeterministicRandom(seed),
             new DeterministicRandom(unchecked(seed + 0x2F6E2B1)),
             circleCount);
+    }
+
+    public static byte[] GenerateMonochromeMipPixels(
+        int nativeWidth,
+        int nativeHeight,
+        byte targetValue,
+        byte noise,
+        int mipLevel,
+        int seed = 1729,
+        int circleCount = 3)
+    {
+        var pixels = GenerateMonochromePixels(
+            nativeWidth,
+            nativeHeight,
+            targetValue,
+            noise,
+            seed,
+            circleCount);
+        for (var level = 0; level < mipLevel; level++)
+        {
+            var sourceDimensions = BackgroundTileMipPolicy.GetDimensions(nativeWidth, nativeHeight, level);
+            var destinationDimensions = BackgroundTileMipPolicy.GetDimensions(nativeWidth, nativeHeight, level + 1);
+            pixels = ReduceGray8Box(pixels, sourceDimensions, destinationDimensions);
+        }
+
+        return pixels;
+    }
+
+    public static byte[] ReduceGray8Box(
+        ReadOnlySpan<byte> source,
+        (int Width, int Height) sourceDimensions,
+        (int Width, int Height) destinationDimensions)
+    {
+        if (source.Length != checked(sourceDimensions.Width * sourceDimensions.Height))
+        {
+            throw new ArgumentException("Source length does not match its dimensions.", nameof(source));
+        }
+
+        var destination = new byte[checked(destinationDimensions.Width * destinationDimensions.Height)];
+        for (var y = 0; y < destinationDimensions.Height; y++)
+        {
+            var sourceTop = y * 2;
+            for (var x = 0; x < destinationDimensions.Width; x++)
+            {
+                var sourceLeft = x * 2;
+                var sum = 0;
+                var count = 0;
+                for (var sourceY = sourceTop; sourceY < Math.Min(sourceTop + 2, sourceDimensions.Height); sourceY++)
+                {
+                    for (var sourceX = sourceLeft; sourceX < Math.Min(sourceLeft + 2, sourceDimensions.Width); sourceX++)
+                    {
+                        sum += source[(sourceY * sourceDimensions.Width) + sourceX];
+                        count++;
+                    }
+                }
+
+                destination[(y * destinationDimensions.Width) + x] = (byte)((sum + (count / 2)) / count);
+            }
+        }
+
+        return destination;
     }
 
     private static byte[] GenerateMonochromePixels(

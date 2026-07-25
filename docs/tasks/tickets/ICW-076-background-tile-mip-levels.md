@@ -50,7 +50,7 @@ Add zoom-dependent mip selection to the background tile path so zoomed-out views
 ## Validation
 
 - Command: `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release --filter "FullyQualifiedName~BackgroundTile"`; `dotnet test tests/InfiniteCanvas.Windows.Tests/InfiniteCanvas.Windows.Tests.csproj --configuration Release --filter "FullyQualifiedName~ZeroCopyBitmapFactory"`; `dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release`; `pwsh -File scripts/Validate-TaskTracker.ps1 -Path docs/tasks`
-- Result: Design recorded. `pwsh -File scripts/Validate-TaskTracker.ps1 -Path docs/tasks` was run on 2026-07-25 and is blocked by the pre-existing invalid `Reverted` status in ICW-072; implementation validation is pending.
+- Result: Contracts, canonical mip policy, deterministic low-pass synthetic generation, per-mip tile storage, and camera-selected Windows raster sampling are implemented. Focused core tests 25/25 and Windows raster tests 5/5 passed. Full materializer/cache migration remains pending. Task validation remains blocked by the pre-existing invalid `Reverted` status in ICW-072.
 
 ## Notes
 
@@ -68,7 +68,7 @@ Add zoom-dependent mip selection to the background tile path so zoomed-out views
 
 ## Next Step
 
-Implement source-neutral contracts, canonical mip policy, and materializer/cache tests first; migrate generation, pixelometer, and raster sampling only after that boundary is proven.
+Implement the source-neutral materializer/cache boundary for nonzero variants. It must own coalescing, byte reservations, variant-key pinning, completion notification, and scene-epoch suppression before external providers or pixelometer mip-zero requests are migrated.
 
 ## Related Tasks
 

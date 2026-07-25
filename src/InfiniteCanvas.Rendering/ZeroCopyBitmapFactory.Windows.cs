@@ -171,31 +171,36 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
             return;
         }
 
+        var mipLevel = BackgroundTileMipPolicy.SelectMipLevel(camera);
         byte[]? sourcePixels = null;
-        var shouldGeneratePixels = tile.IsImageGenerated || tile.ShouldGenerateForPixelSize(camera, minimumSparseTilePixelSize);
+        var shouldGeneratePixels = tile.IsMipGenerated(mipLevel)
+            || tile.ShouldGenerateForPixelSize(camera, minimumSparseTilePixelSize);
         var hasSourcePixels = shouldGeneratePixels
-            && tile.TryGetPixelsNonBlocking(
-                out sourcePixels,
-                tryReserveCacheEntry is null ? null : () => tryReserveCacheEntry(tile));
+            && (mipLevel == 0
+                ? tile.TryGetPixelsNonBlocking(
+                    out sourcePixels,
+                    tryReserveCacheEntry is null ? null : () => tryReserveCacheEntry(tile))
+                : tile.TryGetPixelsNonBlocking(mipLevel, out sourcePixels));
+        var sourceDimensions = BackgroundTileMipPolicy.GetDimensions(tile.PixelWidth, tile.PixelHeight, mipLevel);
         var placeholder = tile.PlaceholderValue;
 
         for (var y = top; y < bottom; y++)
         {
             var worldY = (y - camera.OffsetY) / camera.ScaleY;
             var sourceY = Math.Clamp(
-                (int)((worldY - tile.Bounds.Y) * tile.PixelHeight / tile.Bounds.Height),
+                (int)((worldY - tile.Bounds.Y) * sourceDimensions.Height / tile.Bounds.Height),
                 0,
-                tile.PixelHeight - 1);
+                sourceDimensions.Height - 1);
 
             for (var x = left; x < right; x++)
             {
                 var worldX = (x - camera.OffsetX) / camera.ScaleX;
                 var sourceX = Math.Clamp(
-                    (int)((worldX - tile.Bounds.X) * tile.PixelWidth / tile.Bounds.Width),
+                    (int)((worldX - tile.Bounds.X) * sourceDimensions.Width / tile.Bounds.Width),
                     0,
-                    tile.PixelWidth - 1);
+                    sourceDimensions.Width - 1);
                 var value = hasSourcePixels
-                    ? sourcePixels[(sourceY * tile.PixelWidth) + sourceX]
+                    ? sourcePixels![(sourceY * sourceDimensions.Width) + sourceX]
                     : placeholder;
                 var offset = _layout.GetPixelOffset(x, y);
                 destination[offset] = value;
