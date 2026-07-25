@@ -41,7 +41,7 @@ Implemented
 ## Validation
 
 - Command: dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release
-- Result: Succeeded with 10 warnings.
+- Result: Release app build succeeded with one pre-existing nullable warning in `ZeroCopyBitmapFactory.Windows.cs`; the restored About button compiles and is wired to `OnAboutButtonClicked`.
 
 ## Notes
 

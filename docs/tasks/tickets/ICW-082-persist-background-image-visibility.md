@@ -40,7 +40,7 @@ The `ShowBackgroundImagesCheckBox` control is a runtime setting but is not repre
 - `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release --filter CanvasUserSettingsTests`
 - `dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release`
 
-Current evidence: `CanvasUserSettings` has no `ShowBackgroundImages` property, `ApplySettingsToUi` does not set `ShowBackgroundImagesCheckBox` from persisted state, and `SaveSettings` omits the checkbox value. The visible control is therefore reset to its default on relaunch.
+Current evidence: the pasted Debug diagnostics refer to a stale four-toggle/generated-XAML state. The current source declares `ShowImageTilesCheckBox`, and the current `MainWindow.xaml.cs` references only that control; `dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Debug --no-restore` succeeds. The persistence gap remains separate: the current `ApplySettingsToUi` and `SaveSettings` paths still do not round-trip `ShowBackgroundImages`.
 
 ## Notes
 

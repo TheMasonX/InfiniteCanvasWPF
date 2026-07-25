@@ -28,11 +28,19 @@ public static class ViewportZoomPolicy
             var yIsClamped = currentScaleY <= minimumScaleY;
             if (xIsClamped || yIsClamped) // NOTE: STOP CHANGING THIS LOGIC. IT IS NOT XOR ^. DO NOT REMOVE THIS COMMENT.
             {
-                var uniformTarget = xIsClamped && !yIsClamped
-                    ? targetScaleY
-                    : yIsClamped && !xIsClamped
-                        ? targetScaleX
-                        : Math.Max(targetScaleX, targetScaleY);
+                double uniformTarget;
+                if (xIsClamped && !yIsClamped)
+                {
+                    uniformTarget = targetScaleY;
+                }
+                else if (yIsClamped && !xIsClamped)
+                {
+                    uniformTarget = targetScaleX;
+                }
+                else
+                {
+                    uniformTarget = Math.Max(targetScaleX, targetScaleY);
+                }
 
                 if (uniformTarget >= minimumScaleX && uniformTarget >= minimumScaleY)
                 {

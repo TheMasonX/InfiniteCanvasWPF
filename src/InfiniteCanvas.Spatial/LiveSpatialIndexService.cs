@@ -116,13 +116,7 @@ public sealed class LiveSpatialIndexService<T> : ISpatialIndexService<T> where T
 
     private static void AppendMatches(List<T> results, ImmutableArray<T> source, SpatialBounds viewport)
     {
-        foreach (var item in source)
-        {
-            if (item.Bounds.Intersects(viewport))
-            {
-                results.Add(item);
-            }
-        }
+        results.AddRange(source.Where(item => item.Bounds.Intersects(viewport)));
     }
 
     private void UpdateState(Func<LiveState, LiveState> update)

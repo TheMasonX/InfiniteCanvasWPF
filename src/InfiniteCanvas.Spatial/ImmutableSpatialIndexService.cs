@@ -21,16 +21,6 @@ public sealed class ImmutableSpatialIndexService<T> : ISpatialIndexService<T> wh
             return System.Array.Empty<T>();
         }
 
-        var results = new List<T>();
-
-        foreach (var item in _items)
-        {
-            if (item.Bounds.Intersects(viewport))
-            {
-                results.Add(item);
-            }
-        }
-
-        return results;
+        return _items.Where(item => item.Bounds.Intersects(viewport)).ToArray();
     }
 }

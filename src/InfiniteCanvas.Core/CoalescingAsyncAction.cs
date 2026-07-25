@@ -101,8 +101,16 @@ public sealed class CoalescingAsyncAction : IAsyncDisposable
         {
             _onActionFault?.Invoke(exception);
         }
-        catch
+        catch (Exception ex)
         {
+            // Swallow intentionally but log to aid diagnostics in case the fault handler throws.
+            try
+            {
+                Serilog.Log.Error(ex, "Exception thrown from CoalescingAsyncAction fault handler");
+            }
+            catch
+            {
+            }
         }
     }
 }

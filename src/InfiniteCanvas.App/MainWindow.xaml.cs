@@ -47,7 +47,7 @@ public partial class MainWindow : Window
     private TileCacheBudget _tileCacheBudget = new(TileCacheBudget.DefaultMaxBytes);
     private byte _backgroundNoise = 8;
     private int _backgroundCircleCount = 3;
-    private double _minimumSparseTilePixelSize = 96;
+    private bool _showImageTiles = true;
     private ViewportScrollbarAxis? _scrollbarDragAxis;
     private double _scrollbarDragPointerOffset;
     private Canvas? _viewportScrollbarOverlay;
@@ -97,6 +97,15 @@ public partial class MainWindow : Window
         DataContext = _viewModel;
     }
 
+    private void OnAboutButtonClicked(object sender, RoutedEventArgs e)
+    {
+        var dialog = new AboutDialog
+        {
+            Owner = this
+        };
+        dialog.ShowDialog();
+    }
+
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         Loaded -= OnLoaded;
@@ -123,15 +132,6 @@ public partial class MainWindow : Window
         ObjectsPerTileTextBox.Text = _objectsPerTile.ToString();
     }
 
-    private void OnAboutButtonClicked(object sender, RoutedEventArgs e)
-    {
-        var dialog = new AboutDialog
-        {
-            Owner = this
-        };
-        dialog.ShowDialog();
-    }
-
     private void ApplySettingsToUi(CanvasUserSettings settings)
     {
         _tileColumns = settings.TileColumns;
@@ -143,15 +143,11 @@ public partial class MainWindow : Window
         LabelSizeSlider.Value = settings.LabelSize;
         LabelDisplayComboBox.SelectedIndex = settings.LabelDisplay;
         ShowLabelsCheckBox.IsChecked = settings.ShowLabels;
-        ShowBoxesCheckBox.IsChecked = settings.ShowBoxes;
-        ShowSparseImageTilesCheckBox.IsChecked = settings.ShowSparseImageTiles;
-        ShowBackgroundImagesCheckBox.IsChecked = settings.ShowBackgroundImages;
+        ShowImageTilesCheckBox.IsChecked = true;
         _backgroundNoise = settings.BackgroundNoise;
         _backgroundCircleCount = settings.BackgroundCircleCount;
-        _minimumSparseTilePixelSize = settings.MinimumSparseTilePixelSize;
         BackgroundNoiseSlider.Value = settings.BackgroundNoise;
         BackgroundCircleCountSlider.Value = settings.BackgroundCircleCount;
-        MinimumSparseTilePixelSizeSlider.Value = settings.MinimumSparseTilePixelSize;
     }
 
     private async Task RegenerateSceneAsync(bool fitToWidth)
@@ -317,10 +313,7 @@ public partial class MainWindow : Window
                 visibleTiles,
                 visibleItems,
                 camera,
-                _tileCacheBudget.TryReserve,
-                _minimumSparseTilePixelSize,
-                _annotationDisplayOptions.ShowBackgroundImages,
-                _annotationDisplayOptions.ShowSparseImageTiles);
+                _tileCacheBudget.TryReserve);
             return (Bitmap: bitmap, VisibleItems: visibleItems, VisibleTiles: visibleTiles);
         }, cancellationToken);
 
@@ -404,7 +397,7 @@ public partial class MainWindow : Window
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Top
         };
-        if (_annotationDisplayOptions.ShowBackgroundImages)
+        if (_showImageTiles)
         {
             frame.Children.Add(new Image
             {
@@ -431,41 +424,32 @@ public partial class MainWindow : Window
 
             var outlineBrush = new SolidColorBrush(ToMediaColor(annotation.Color));
             var fillBrush = CreateFillBrush(_annotationDisplayOptions.Mode, annotation.Color);
-
-            if (_annotationDisplayOptions.ShowBoxes)
+            var outline = new Rectangle
             {
-                var outline = new Rectangle
-                {
-                    Stroke = outlineBrush,
-                    Fill = fillBrush,
-                    StrokeThickness = _annotationDisplayOptions.OutlineThickness,
-                    SnapsToDevicePixels = true,
-                    StrokeDashCap = PenLineCap.Round,
-                    StrokeLineJoin = PenLineJoin.Round
-                };
-                var annotationVisual = new Grid
-                {
-                    Children = { outline }
-                };
-                var annotationElement = new Border
-                {
-                    Width = width,
-                    Height = height,
-                    Background = Brushes.Transparent,
-                    Child = annotationVisual,
-                    Tag = annotation,
-                    ToolTip = CreateAnnotationToolTip(annotation)
-                };
-                annotationElement.MouseLeftButtonDown += OnAnnotationMouseLeftButtonDown;
-                Canvas.SetLeft(annotationElement, topLeft.X);
-                Canvas.SetTop(annotationElement, topLeft.Y);
-                annotationLayer.Children.Add(annotationElement);
-
-                if (annotation.Id == _selectedAnnotationId)
-                {
-                    _selectionOutlineAnimator.Apply(outline);
-                }
-            }
+                Stroke = outlineBrush,
+                Fill = fillBrush,
+                StrokeThickness = _annotationDisplayOptions.OutlineThickness,
+                SnapsToDevicePixels = true,
+                StrokeDashCap = PenLineCap.Round,
+                StrokeLineJoin = PenLineJoin.Round
+            };
+            var annotationVisual = new Grid
+            {
+                Children = { outline }
+            };
+            var annotationElement = new Border
+            {
+                Width = width,
+                Height = height,
+                Background = Brushes.Transparent,
+                Child = annotationVisual,
+                Tag = annotation,
+                ToolTip = CreateAnnotationToolTip(annotation)
+            };
+            annotationElement.MouseLeftButtonDown += OnAnnotationMouseLeftButtonDown;
+            Canvas.SetLeft(annotationElement, topLeft.X);
+            Canvas.SetTop(annotationElement, topLeft.Y);
+            annotationLayer.Children.Add(annotationElement);
 
             if (_annotationDisplayOptions.ShowLabels)
             {
@@ -476,6 +460,11 @@ public partial class MainWindow : Window
                     _annotationDisplayOptions.LabelSize,
                     _annotationDisplayOptions.LabelDisplay);
                 annotationLayer.Children.Add(labelPanel);
+            }
+
+            if (annotation.Id == _selectedAnnotationId)
+            {
+                _selectionOutlineAnimator.Apply(outline);
             }
         }
 
@@ -778,9 +767,19 @@ public partial class MainWindow : Window
         var axis = track == _horizontalScrollbarTrack
             ? ViewportScrollbarAxis.Horizontal
             : ViewportScrollbarAxis.Vertical;
+        if (_viewportScrollbarOverlay is null)
+        {
+            return;
+        }
+
         var pointer = e.GetPosition(_viewportScrollbarOverlay);
         var trackLength = axis == ViewportScrollbarAxis.Horizontal ? track.ActualWidth : track.ActualHeight;
         var thumb = axis == ViewportScrollbarAxis.Horizontal ? _horizontalScrollbarThumb : _verticalScrollbarThumb;
+        if (thumb is null)
+        {
+            return;
+        }
+
         var thumbLength = axis == ViewportScrollbarAxis.Horizontal ? thumb.ActualWidth : thumb.ActualHeight;
         var pointerPosition = axis == ViewportScrollbarAxis.Horizontal ? pointer.X : pointer.Y;
         var trackPosition = axis == ViewportScrollbarAxis.Horizontal
@@ -805,6 +804,11 @@ public partial class MainWindow : Window
         var track = _scrollbarDragAxis == ViewportScrollbarAxis.Horizontal
             ? _horizontalScrollbarTrack
             : _verticalScrollbarTrack;
+        if (track is null)
+        {
+            return;
+        }
+
         var pointer = e.GetPosition(track);
         var thumbPosition = _scrollbarDragAxis == ViewportScrollbarAxis.Horizontal
             ? Canvas.GetLeft(thumb)
@@ -823,6 +827,11 @@ public partial class MainWindow : Window
 
         var track = axis == ViewportScrollbarAxis.Horizontal ? _horizontalScrollbarTrack : _verticalScrollbarTrack;
         var thumb = axis == ViewportScrollbarAxis.Horizontal ? _horizontalScrollbarThumb : _verticalScrollbarThumb;
+        if (track is null || thumb is null)
+        {
+            return;
+        }
+
         var pointer = e.GetPosition(track);
         var pointerPosition = axis == ViewportScrollbarAxis.Horizontal ? pointer.X : pointer.Y;
         var trackLength = axis == ViewportScrollbarAxis.Horizontal ? track.ActualWidth : track.ActualHeight;
@@ -873,8 +882,8 @@ public partial class MainWindow : Window
         UpdateScrollbar(
             ViewportScrollbarAxis.Horizontal,
             ViewportScrollbarPolicy.ComputeMetrics(camera, _sceneBounds, viewportWidth, viewportHeight, ViewportScrollbarAxis.Horizontal),
-            _horizontalScrollbarTrack,
-            _horizontalScrollbarThumb,
+            _horizontalScrollbarTrack!,
+            _horizontalScrollbarThumb!,
             margin,
             viewportHeight - margin - trackThickness,
             horizontalTrackLength,
@@ -882,8 +891,8 @@ public partial class MainWindow : Window
         UpdateScrollbar(
             ViewportScrollbarAxis.Vertical,
             ViewportScrollbarPolicy.ComputeMetrics(camera, _sceneBounds, viewportWidth, viewportHeight, ViewportScrollbarAxis.Vertical),
-            _verticalScrollbarTrack,
-            _verticalScrollbarThumb,
+            _verticalScrollbarTrack!,
+            _verticalScrollbarThumb!,
             viewportWidth - margin - trackThickness,
             margin,
             verticalTrackLength,
@@ -913,7 +922,6 @@ public partial class MainWindow : Window
         var thumbPosition = (trackLength - thumbLength) * metrics.PositionFraction;
         Canvas.SetLeft(track, left);
         Canvas.SetTop(track, top);
-        // Position the thumb relative to the track's origin so it appears on the correct side
         Canvas.SetLeft(thumb, axis == ViewportScrollbarAxis.Horizontal ? left + thumbPosition : left);
         Canvas.SetTop(thumb, axis == ViewportScrollbarAxis.Vertical ? top + thumbPosition : top);
         if (axis == ViewportScrollbarAxis.Horizontal)
@@ -935,36 +943,14 @@ public partial class MainWindow : Window
         PixelometerValueText.Text = "PIXEL --";
     }
 
-    private async void OnShowBoxesChanged(object sender, RoutedEventArgs e)
+    private async void OnShowImageTilesChanged(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded)
         {
             return;
         }
 
-        ApplyDisplayOptionsFromUi();
-        await RequestRenderAsync();
-    }
-
-    private async void OnShowSparseImageTilesChanged(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded)
-        {
-            return;
-        }
-
-        ApplyDisplayOptionsFromUi();
-        await RequestRenderAsync();
-    }
-
-    private async void OnShowBackgroundImagesChanged(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded)
-        {
-            return;
-        }
-
-        ApplyDisplayOptionsFromUi();
+        _showImageTiles = ShowImageTilesCheckBox.IsChecked ?? true;
         await RequestRenderAsync();
     }
 
@@ -988,17 +974,6 @@ public partial class MainWindow : Window
 
         _backgroundCircleCount = (int)Math.Round(BackgroundCircleCountSlider.Value);
         await RegenerateSceneAsync(fitToWidth: false);
-    }
-
-    private async void OnMinimumSparseTilePixelSizeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (!IsLoaded)
-        {
-            return;
-        }
-
-        _minimumSparseTilePixelSize = Math.Round(MinimumSparseTilePixelSizeSlider.Value, 2);
-        await RequestRenderAsync();
     }
 
     private async void OnViewportMouseWheel(object sender, MouseWheelEventArgs e)
@@ -1278,10 +1253,7 @@ public partial class MainWindow : Window
             Math.Round(OutlineThicknessSlider.Value, 2),
             Math.Round(LabelSizeSlider.Value, 2),
             LabelDisplayComboBox.SelectedIndex == 1 ? AnnotationLabelDisplay.Id : AnnotationLabelDisplay.Class,
-            ShowLabelsCheckBox.IsChecked ?? true,
-            ShowBoxesCheckBox.IsChecked ?? true,
-            ShowSparseImageTilesCheckBox.IsChecked ?? true,
-            ShowBackgroundImagesCheckBox.IsChecked ?? true);
+            ShowLabelsCheckBox.IsChecked ?? true);
     }
 
     private async void OnRegenerateClicked(object sender, RoutedEventArgs e)
@@ -1402,12 +1374,8 @@ public partial class MainWindow : Window
             LabelSize = LabelSizeSlider.Value,
             LabelDisplay = LabelDisplayComboBox.SelectedIndex,
             ShowLabels = ShowLabelsCheckBox.IsChecked ?? true,
-            ShowBoxes = ShowBoxesCheckBox.IsChecked ?? true,
-            ShowSparseImageTiles = ShowSparseImageTilesCheckBox.IsChecked ?? true,
-            ShowBackgroundImages = ShowBackgroundImagesCheckBox.IsChecked ?? true,
             BackgroundNoise = _backgroundNoise,
-            BackgroundCircleCount = _backgroundCircleCount,
-            MinimumSparseTilePixelSize = _minimumSparseTilePixelSize
+            BackgroundCircleCount = _backgroundCircleCount
         };
 
         if (!settings.IsValid)
@@ -1519,19 +1487,13 @@ public partial class MainWindow : Window
         double OutlineThickness,
         double LabelSize,
         AnnotationLabelDisplay LabelDisplay,
-        bool ShowLabels,
-        bool ShowBoxes,
-        bool ShowSparseImageTiles,
-        bool ShowBackgroundImages)
+        bool ShowLabels)
     {
         public static AnnotationDisplayOptions Default { get; } = new(
             AnnotationDisplayMode.Outline,
             2,
-            8.5,
-            AnnotationLabelDisplay.Class,
-            true,
-            true,
-            true,
+                8.5,
+                AnnotationLabelDisplay.Class,
             true);
     }
 

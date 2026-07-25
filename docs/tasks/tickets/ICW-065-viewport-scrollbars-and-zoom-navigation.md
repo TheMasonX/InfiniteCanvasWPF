@@ -37,7 +37,7 @@ Provide custom, camera-native horizontal and vertical scrollbars for scene navig
 ## Validation
 
 - Command: `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release`; `dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release`
-- Result: `ViewportScrollbarPolicyTests` passed 3/3 and the Release WPF app build succeeded. The full core suite currently has two pre-existing failures in `CameraTransformTests.Zoom_RejectsScalesOutsideConfiguredBounds` and `ViewportZoomPolicyTests.ComputeWheelDeltas_ZoomInFromBothFloorsAdvancesEachAxisByOneNotch`; the scrollbar policy tests pass independently.
+- Result: `ViewportScrollbarPolicyTests` passed 3/3 previously, and the restored Release WPF app build succeeds. The current build has one pre-existing nullable warning in `ZeroCopyBitmapFactory.Windows.cs`; the scrollbar overlay and handlers compile successfully.
 
 ## Notes
 
