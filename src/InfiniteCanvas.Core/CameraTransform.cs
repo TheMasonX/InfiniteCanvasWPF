@@ -4,6 +4,9 @@ namespace InfiniteCanvas.Core;
 
 public sealed class CameraTransform
 {
+    // LUKE: I SET THESE EXTREMELY WIDE ON PURPOSE. DO NOT TOUCH.
+    // The minimum scale is effectively a zoom-out limit, and the maximum scale is effectively a zoom-in limit.
+    // The actual zoom-in/out limits are determined by the viewport size and the content bounds, which are enforced in `ClampToBounds`.
     private const double MinimumScale = 0.0000000001;
     private const double MaximumScale = 10000;
 

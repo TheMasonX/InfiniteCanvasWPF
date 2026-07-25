@@ -39,6 +39,34 @@ public class CanvasUserSettingsTests
     }
 
     [Test]
+    public void SaveAndLoad_RoundTripsLayerVisibilitySettings()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"InfiniteCanvas-{Guid.NewGuid():N}");
+        var path = Path.Combine(directory, "settings.json");
+        var settings = new CanvasUserSettings
+        {
+            ShowSparseImageTiles = false,
+            ShowBackgroundImages = false
+        };
+
+        try
+        {
+            CanvasUserSettingsStore.Save(path, settings);
+            var loaded = CanvasUserSettingsStore.Load(path);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(loaded.ShowSparseImageTiles, Is.False);
+                Assert.That(loaded.ShowBackgroundImages, Is.False);
+            });
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
+    [Test]
     public void Load_ReturnsDefaultsForMalformedOrInvalidSettings()
     {
         var path = Path.GetTempFileName();

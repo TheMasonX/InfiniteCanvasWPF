@@ -190,6 +190,9 @@
                         <CheckBox x:Name="ShowImageTilesCheckBox" Content="Show image tiles" IsChecked="True"
                                   Margin="0,8,0,0" Checked="OnShowImageTilesChanged" Unchecked="OnShowImageTilesChanged" />
 
+                        <CheckBox x:Name="ShowBackgroundImagesCheckBox" Content="Show background images" IsChecked="True"
+                                  Margin="0,8,0,0" Checked="OnShowBackgroundImagesChanged" Unchecked="OnShowBackgroundImagesChanged" />
+
                         <TextBlock Text="Background noise" Margin="0,10,0,4" FontSize="12"
                                    Foreground="{StaticResource SecondaryTextBrush}" />
                         <Slider x:Name="BackgroundNoiseSlider" Minimum="0" Maximum="24" Value="8" TickFrequency="1"

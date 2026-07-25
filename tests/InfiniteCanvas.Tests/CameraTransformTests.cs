@@ -24,7 +24,7 @@ public class CameraTransformTests
     }
 
     [Test]
-    public void Zoom_RejectsScalesOutsideConfiguredBounds()
+    public void Zoom_AllowsWideDefaultScaleRange()
     {
         var camera = new CameraTransform();
 
@@ -32,8 +32,8 @@ public class CameraTransformTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(zoomed, Is.False);
-            Assert.That(camera.WorldToScreen(10, 10), Is.EqualTo(new ScreenPoint(10, 10)));
+            Assert.That(zoomed, Is.True);
+            Assert.That(camera.WorldToScreen(10, 10), Is.EqualTo(new ScreenPoint(1000, 1000)));
         });
     }
 

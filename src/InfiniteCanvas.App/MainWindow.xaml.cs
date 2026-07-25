@@ -19,7 +19,6 @@ public partial class MainWindow : Window
     private CanvasViewportViewModel<SampleAnnotation> _viewModel = null!;
     private CameraTransform _camera = new();
     private readonly CoalescingAsyncAction _renderAction;
-    private readonly RenderRequestTracker _renderRequestTracker = new();
     private readonly DispatcherTimer _resizeTimer;
     private readonly DispatcherTimer _anchorPanTimer;
     private readonly ISelectionOutlineAnimator _selectionOutlineAnimator;
@@ -101,11 +100,7 @@ public partial class MainWindow : Window
 
     private void OnAboutButtonClicked(object sender, RoutedEventArgs e)
     {
-        var dialog = new AboutDialog
-        {
-            Owner = this
-        };
-        dialog.ShowDialog();
+        new AboutDialog { Owner = this }.ShowDialog();
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -145,9 +140,8 @@ public partial class MainWindow : Window
         LabelSizeSlider.Value = settings.LabelSize;
         LabelDisplayComboBox.SelectedIndex = settings.LabelDisplay;
         ShowLabelsCheckBox.IsChecked = settings.ShowLabels;
-        ShowImageTilesCheckBox.IsChecked = settings.ShowSparseImageTiles;
+        ShowImageTilesCheckBox.IsChecked = true;
         ShowBackgroundImagesCheckBox.IsChecked = settings.ShowBackgroundImages;
-        _showImageTiles = settings.ShowSparseImageTiles;
         _showBackgroundImages = settings.ShowBackgroundImages;
         _backgroundNoise = settings.BackgroundNoise;
         _backgroundCircleCount = settings.BackgroundCircleCount;
@@ -300,7 +294,6 @@ public partial class MainWindow : Window
             return;
         }
 
-        var requestVersion = _renderRequestTracker.BeginRequest();
         var width = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualWidth), 1, 4096);
         var height = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualHeight), 1, 4096);
         EnforceZoomFloor(width, height);
@@ -322,11 +315,6 @@ public partial class MainWindow : Window
                 _tileCacheBudget.TryReserve);
             return (Bitmap: bitmap, VisibleItems: visibleItems, VisibleTiles: visibleTiles);
         }, cancellationToken);
-
-        if (!_renderRequestTracker.IsCurrent(requestVersion))
-        {
-            return;
-        }
 
         var frameVisual = BuildFrameVisual(frame.Bitmap, frame.VisibleItems, camera, width, height);
         PublishFrame(factory, frameVisual);
@@ -629,9 +617,11 @@ public partial class MainWindow : Window
 
     private static ToolTip CreateAnnotationToolTip(SampleAnnotation annotation)
     {
+        var confidence = annotation.Features["Confidence"];
+        var severity = annotation.Features["Severity"];
         return new ToolTip
         {
-            Content = AnnotationFeaturePresenter.BuildTooltipContent(annotation)
+            Content = $"{annotation.Id}\n{annotation.Classification}\nConfidence {confidence:P1}  |  Severity {severity:P1}"
         };
     }
 
@@ -689,7 +679,6 @@ public partial class MainWindow : Window
         _lastPointerPosition = current;
         _camera.Pan(current.X - previous.X, current.Y - previous.Y);
         ClampCameraToScene();
-        _renderRequestTracker.Advance();
         await RequestRenderAsync();
     }
 
@@ -737,7 +726,6 @@ public partial class MainWindow : Window
 
         _camera.Pan(-(adjustedX * gain), -(adjustedY * gain));
         ClampCameraToScene();
-        _renderRequestTracker.Advance();
         await RequestRenderAsync();
     }
 
@@ -775,29 +763,24 @@ public partial class MainWindow : Window
             return;
         }
 
-        var axis = track == _horizontalScrollbarTrack
-            ? ViewportScrollbarAxis.Horizontal
-            : ViewportScrollbarAxis.Vertical;
+        var axis = track == _horizontalScrollbarTrack ? ViewportScrollbarAxis.Horizontal : ViewportScrollbarAxis.Vertical;
         if (_viewportScrollbarOverlay is null)
         {
             return;
         }
 
-        var pointer = e.GetPosition(_viewportScrollbarOverlay);
-        var trackLength = axis == ViewportScrollbarAxis.Horizontal ? track.ActualWidth : track.ActualHeight;
         var thumb = axis == ViewportScrollbarAxis.Horizontal ? _horizontalScrollbarThumb : _verticalScrollbarThumb;
         if (thumb is null)
         {
             return;
         }
 
+        var pointer = e.GetPosition(_viewportScrollbarOverlay);
+        var trackLength = axis == ViewportScrollbarAxis.Horizontal ? track.ActualWidth : track.ActualHeight;
         var thumbLength = axis == ViewportScrollbarAxis.Horizontal ? thumb.ActualWidth : thumb.ActualHeight;
         var pointerPosition = axis == ViewportScrollbarAxis.Horizontal ? pointer.X : pointer.Y;
-        var trackPosition = axis == ViewportScrollbarAxis.Horizontal
-            ? Canvas.GetLeft(track)
-            : Canvas.GetTop(track);
+        var trackPosition = axis == ViewportScrollbarAxis.Horizontal ? Canvas.GetLeft(track) : Canvas.GetTop(track);
         var target = (pointerPosition - trackPosition - (thumbLength / 2)) / Math.Max(1, trackLength - thumbLength);
-
         await PanToScrollbarPositionAsync(axis, target);
         e.Handled = true;
     }
@@ -809,21 +792,15 @@ public partial class MainWindow : Window
             return;
         }
 
-        _scrollbarDragAxis = thumb == _horizontalScrollbarThumb
-            ? ViewportScrollbarAxis.Horizontal
-            : ViewportScrollbarAxis.Vertical;
-        var track = _scrollbarDragAxis == ViewportScrollbarAxis.Horizontal
-            ? _horizontalScrollbarTrack
-            : _verticalScrollbarTrack;
+        _scrollbarDragAxis = thumb == _horizontalScrollbarThumb ? ViewportScrollbarAxis.Horizontal : ViewportScrollbarAxis.Vertical;
+        var track = _scrollbarDragAxis == ViewportScrollbarAxis.Horizontal ? _horizontalScrollbarTrack : _verticalScrollbarTrack;
         if (track is null)
         {
             return;
         }
 
         var pointer = e.GetPosition(track);
-        var thumbPosition = _scrollbarDragAxis == ViewportScrollbarAxis.Horizontal
-            ? Canvas.GetLeft(thumb)
-            : Canvas.GetTop(thumb);
+        var thumbPosition = _scrollbarDragAxis == ViewportScrollbarAxis.Horizontal ? Canvas.GetLeft(thumb) : Canvas.GetTop(thumb);
         _scrollbarDragPointerOffset = (_scrollbarDragAxis == ViewportScrollbarAxis.Horizontal ? pointer.X : pointer.Y) - thumbPosition;
         thumb.CaptureMouse();
         e.Handled = true;
@@ -847,9 +824,7 @@ public partial class MainWindow : Window
         var pointerPosition = axis == ViewportScrollbarAxis.Horizontal ? pointer.X : pointer.Y;
         var trackLength = axis == ViewportScrollbarAxis.Horizontal ? track.ActualWidth : track.ActualHeight;
         var thumbLength = axis == ViewportScrollbarAxis.Horizontal ? thumb.ActualWidth : thumb.ActualHeight;
-        var target = (pointerPosition - _scrollbarDragPointerOffset) / Math.Max(1, trackLength - thumbLength);
-
-        await PanToScrollbarPositionAsync(axis, target);
+        await PanToScrollbarPositionAsync(axis, (pointerPosition - _scrollbarDragPointerOffset) / Math.Max(1, trackLength - thumbLength));
         e.Handled = true;
     }
 
@@ -868,57 +843,34 @@ public partial class MainWindow : Window
     {
         var width = Math.Max(1, ViewportHost.ActualWidth);
         var height = Math.Max(1, ViewportHost.ActualHeight);
-        var camera = _camera.Capture();
-        var delta = ViewportScrollbarPolicy.ComputePanDelta(camera, _sceneBounds, width, height, axis, targetPosition);
+        var delta = ViewportScrollbarPolicy.ComputePanDelta(_camera.Capture(), _sceneBounds, width, height, axis, targetPosition);
         if (delta == 0)
         {
             return;
         }
 
-        _camera.Pan(
-            axis == ViewportScrollbarAxis.Horizontal ? delta : 0,
-            axis == ViewportScrollbarAxis.Vertical ? delta : 0);
+        _camera.Pan(axis == ViewportScrollbarAxis.Horizontal ? delta : 0, axis == ViewportScrollbarAxis.Vertical ? delta : 0);
         ClampCameraToScene();
         await RequestRenderAsync();
     }
 
     private void UpdateViewportScrollbars(CameraSnapshot camera, double viewportWidth, double viewportHeight)
     {
-        const double margin = 10;
-        const double trackThickness = 10;
-        const double minimumThumbLength = 24;
-        var horizontalTrackLength = Math.Max(0, viewportWidth - (margin * 2) - trackThickness - 4);
-        var verticalTrackLength = Math.Max(0, viewportHeight - (margin * 2) - trackThickness - 4);
+        if (_viewportScrollbarOverlay is null || _horizontalScrollbarTrack is null || _horizontalScrollbarThumb is null || _verticalScrollbarTrack is null || _verticalScrollbarThumb is null)
+        {
+            return;
+        }
 
-        UpdateScrollbar(
-            ViewportScrollbarAxis.Horizontal,
-            ViewportScrollbarPolicy.ComputeMetrics(camera, _sceneBounds, viewportWidth, viewportHeight, ViewportScrollbarAxis.Horizontal),
-            _horizontalScrollbarTrack!,
-            _horizontalScrollbarThumb!,
-            margin,
-            viewportHeight - margin - trackThickness,
-            horizontalTrackLength,
-            minimumThumbLength);
-        UpdateScrollbar(
-            ViewportScrollbarAxis.Vertical,
-            ViewportScrollbarPolicy.ComputeMetrics(camera, _sceneBounds, viewportWidth, viewportHeight, ViewportScrollbarAxis.Vertical),
-            _verticalScrollbarTrack!,
-            _verticalScrollbarThumb!,
-            viewportWidth - margin - trackThickness,
-            margin,
-            verticalTrackLength,
-            minimumThumbLength);
+        const double margin = 10;
+        const double thickness = 10;
+        const double minimumThumbLength = 24;
+        var horizontalLength = Math.Max(0, viewportWidth - (margin * 2) - thickness - 4);
+        var verticalLength = Math.Max(0, viewportHeight - (margin * 2) - thickness - 4);
+        UpdateScrollbar(ViewportScrollbarAxis.Horizontal, ViewportScrollbarPolicy.ComputeMetrics(camera, _sceneBounds, viewportWidth, viewportHeight, ViewportScrollbarAxis.Horizontal), _horizontalScrollbarTrack, _horizontalScrollbarThumb, margin, viewportHeight - margin - thickness, horizontalLength, minimumThumbLength);
+        UpdateScrollbar(ViewportScrollbarAxis.Vertical, ViewportScrollbarPolicy.ComputeMetrics(camera, _sceneBounds, viewportWidth, viewportHeight, ViewportScrollbarAxis.Vertical), _verticalScrollbarTrack, _verticalScrollbarThumb, viewportWidth - margin - thickness, margin, verticalLength, minimumThumbLength);
     }
 
-    private static void UpdateScrollbar(
-        ViewportScrollbarAxis axis,
-        ViewportScrollbarMetrics metrics,
-        Border track,
-        Border thumb,
-        double left,
-        double top,
-        double trackLength,
-        double minimumThumbLength)
+    private static void UpdateScrollbar(ViewportScrollbarAxis axis, ViewportScrollbarMetrics metrics, Border track, Border thumb, double left, double top, double trackLength, double minimumThumbLength)
     {
         if (!metrics.IsScrollable || trackLength <= minimumThumbLength)
         {
@@ -947,6 +899,17 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void OnShowBackgroundImagesChanged(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        _showBackgroundImages = ShowBackgroundImagesCheckBox.IsChecked ?? true;
+        await RequestRenderAsync();
+    }
+
     private void OnViewportMouseLeave(object sender, MouseEventArgs e)
     {
         _hoverPointerPosition = null;
@@ -962,17 +925,6 @@ public partial class MainWindow : Window
         }
 
         _showImageTiles = ShowImageTilesCheckBox.IsChecked ?? true;
-        await RequestRenderAsync();
-    }
-
-    private async void OnShowBackgroundImagesChanged(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded)
-        {
-            return;
-        }
-
-        _showBackgroundImages = ShowBackgroundImagesCheckBox.IsChecked ?? true;
         await RequestRenderAsync();
     }
 
@@ -1023,7 +975,6 @@ public partial class MainWindow : Window
         if (_camera.Zoom(zoomDeltas.ScaleX, zoomDeltas.ScaleY, new ScreenPoint(origin.X, origin.Y)))
         {
             ClampCameraToScene();
-            _renderRequestTracker.Advance();
             await RequestRenderAsync();
         }
     }
@@ -1095,7 +1046,6 @@ public partial class MainWindow : Window
 
         ApplyPercentZoom(percent);
         ClampCameraToScene();
-        _renderRequestTracker.Advance();
         await RequestRenderAsync();
     }
 
@@ -1134,7 +1084,6 @@ public partial class MainWindow : Window
         }
 
         ClampCameraToScene();
-        _renderRequestTracker.Advance();
         await RequestRenderAsync();
     }
 
@@ -1202,7 +1151,6 @@ public partial class MainWindow : Window
         try
         {
             ClampCameraToScene();
-            _renderRequestTracker.Advance();
             await RequestRenderAsync();
         }
         catch (OperationCanceledException)
@@ -1291,7 +1239,6 @@ public partial class MainWindow : Window
         }
 
         _selectedAnnotationId = null;
-        _renderRequestTracker.Advance();
         UpdateSelectedAnnotationFeatures();
         await RegenerateSceneAsync(fitToWidth: true);
     }
@@ -1401,8 +1348,6 @@ public partial class MainWindow : Window
             LabelSize = LabelSizeSlider.Value,
             LabelDisplay = LabelDisplayComboBox.SelectedIndex,
             ShowLabels = ShowLabelsCheckBox.IsChecked ?? true,
-            ShowSparseImageTiles = ShowImageTilesCheckBox.IsChecked ?? true,
-            ShowBackgroundImages = ShowBackgroundImagesCheckBox.IsChecked ?? true,
             BackgroundNoise = _backgroundNoise,
             BackgroundCircleCount = _backgroundCircleCount
         };

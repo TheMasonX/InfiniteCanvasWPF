@@ -383,17 +383,7 @@ public sealed record SampleAnnotation(
 
     public IReadOnlyList<FeatureDisplayItem> GetFeatureDisplayItems()
     {
-        return Features
-            .OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
-            .Select(item => new FeatureDisplayItem(item.Key, FormatFeatureValue(item.Value)))
-            .ToArray();
-    }
-
-    private static string FormatFeatureValue(double value)
-    {
-        return value <= 1.0 && value >= 0.0
-            ? string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0:P1}", value)
-            : value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+        return AnnotationFeaturePresenter.BuildRows(this);
     }
 }
 
