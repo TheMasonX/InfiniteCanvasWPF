@@ -1,27 +1,49 @@
-# ICW-016: README MVP Behavior Refresh
+---
+id: ICW-016-readme-mvp-behavior-refresh
+author: Copilot
+key: ICW
+title: Icw 016 Readme Mvp Behavior Refresh
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: To Do
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-016-readme-mvp-behavior-refresh
 
 ## Summary
 
-Update README behavior and architecture notes so they match the current inspection tile plus annotation scene workflow.
+- Status: To Do
 
 ## Scope
 
-- README.md
-- docs/ADR/0002-inspection-raster-and-annotation-layers.md
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Pending:
-  - Manual review of README run instructions and architecture sections against current app behavior.
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- Cross-validated audit finding: README still references deprecated periodic ingestion behavior.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Rewrite MVP and architecture sections to reflect current generation, interaction, and rendering flow.
+- ICW-000

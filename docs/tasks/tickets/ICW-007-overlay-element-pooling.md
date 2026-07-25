@@ -1,32 +1,49 @@
-# ICW-007: Overlay Element Pooling
+---
+id: ICW-007-overlay-element-pooling
+author: Copilot
+key: ICW
+title: Icw 007 Overlay Element Pooling
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: To Do
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-007-overlay-element-pooling
 
 ## Summary
 
-Pool retained annotation overlay elements to reduce per-frame allocation churn and preserve smooth selection animation continuity.
+- Status: To Do
 
 ## Scope
 
-- src/InfiniteCanvas.App/MainWindow.xaml.cs
-- src/InfiniteCanvas.App/MainWindow.xaml
-- tests/InfiniteCanvas.Windows.Tests
-- docs/tasks/JIRA.md
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Audit capture only in this pass.
-- Implementation validation command (planned):
-  - `dotnet build .\src\InfiniteCanvas.App\InfiniteCanvas.App.csproj --configuration Release`
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- Overlay visuals are recreated each frame per visible annotation.
-- Allocation pattern includes brushes, rectangles, containers, labels, and tooltips.
-- Rebuild strategy can reset selection animation phase each frame during interaction.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Implement retained element pool as the parent overlay slice, then deliver ICW-019 animation continuity and ICW-028 frame-shell retention in the same rollout to avoid duplicate rewrites.
+- ICW-000

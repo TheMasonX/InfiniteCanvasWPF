@@ -1,28 +1,49 @@
-# ICW-020: Pixelometer O(1) Tile Lookup
+---
+id: ICW-020-pixelometer-o1-tile-lookup
+author: Copilot
+key: ICW
+title: Icw 020 Pixelometer O1 Tile Lookup
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: To Do
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-020-pixelometer-o1-tile-lookup
 
 ## Summary
 
-Replace per-mouse-move linear tile scan with direct grid index arithmetic while preserving defect-sample correctness.
+- Status: To Do
 
 ## Scope
 
-- src/InfiniteCanvas.App/MainWindow.xaml.cs
-- src/InfiniteCanvas.Rendering/SampleImageGenerator.cs
-- tests/InfiniteCanvas.Tests
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Pending:
-  - `dotnet test .\tests\InfiniteCanvas.Tests\InfiniteCanvas.Tests.csproj --configuration Release`
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- Cross-validated audit finding: pixelometer sampling currently scales linearly with tile count.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Add coordinate-to-tile index mapping by tile dimensions and columns, then validate boundary conditions.
+- ICW-000

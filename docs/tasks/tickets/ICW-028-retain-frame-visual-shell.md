@@ -1,29 +1,49 @@
-# ICW-028: Retain Frame Visual Shell to Reduce Per-Frame UI Allocation
+---
+id: ICW-028-retain-frame-visual-shell
+author: Copilot
+key: ICW
+title: Icw 028 Retain Frame Visual Shell
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: To Do
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-028-retain-frame-visual-shell
 
 ## Summary
 
-Reduce per-frame UI allocation churn by retaining and updating a persistent frame visual shell instead of reconstructing root visual objects for every render.
+- Status: To Do
 
 ## Scope
 
-- src/InfiniteCanvas.App/MainWindow.xaml.cs
-- tests/InfiniteCanvas.Windows.Tests
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Pending:
-  - `dotnet build .\src\InfiniteCanvas.App\InfiniteCanvas.App.csproj --configuration Release`
-  - interaction smoke test under sustained pan/zoom
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- `BuildFrameVisual` currently allocates new `Grid`, `Image`, and overlay `Canvas` each frame.
-- ICW-007 addresses annotation pooling, but root frame container churn remains.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Prototype persistent shell with source/layer updates and compare allocation profile against current behavior.
+- ICW-000

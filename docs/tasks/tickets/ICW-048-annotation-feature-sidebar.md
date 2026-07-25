@@ -1,28 +1,49 @@
-# ICW-048: Annotation Feature Sidebar
+---
+id: ICW-048-annotation-feature-sidebar
+author: Copilot
+key: ICW
+title: Icw 048 Annotation Feature Sidebar
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: To Do
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-048-annotation-feature-sidebar
 
 ## Summary
 
-Expose the selected annotation's feature metadata in a sidebar DataGrid so an inspection selection has a concrete detail view.
+- Status: To Do
 
 ## Scope
 
-- Bind selection from the canvas to a feature-row collection.
-- Show feature name and value columns in the existing side-panel layout.
-- Provide an explicit empty state after selection clears or scene regeneration.
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Add focused selection-to-detail mapping coverage where logic can remain UI-independent.
-- Run the Release app build and Windows UI smoke test.
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- `SampleAnnotation.Features` already supplies the required metadata, while current canvas selection changes only overlay state.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Select a view-model or code-behind data-binding shape consistent with the current side-panel implementation.
+- ICW-000

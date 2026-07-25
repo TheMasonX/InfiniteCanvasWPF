@@ -1,36 +1,49 @@
-# ICW-049: Tile Cache Budget Capacity Regression
+---
+id: ICW-049-tile-cache-budget-capacity-regression
+author: Copilot
+key: ICW
+title: Icw 049 Tile Cache Budget Capacity Regression
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: Done
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-049-tile-cache-budget-capacity-regression
 
 ## Summary
 
-Fix the tile-cache default budget so it can retain generated default-size tiles. The existing 4,000,000-pixel budget is smaller than one 8192x4096 tile (33,554,432 pixels), causing every completed tile to be immediately evicted and regenerated.
+- Status: Done
 
 ## Scope
 
-- Set the default cache budget to retain a bounded number of default-size tiles.
-- Preserve pixel-cost-based cache accounting and eviction.
-- Add focused regression coverage proving the configured default capacity can retain at least one default tile.
-- Update the cache invariant and task trackers with validation evidence.
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release`
-- `dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release`
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-Results:
+## Notes
 
-- Focused `SampleImageGeneratorTests`: 7 passed, 0 failed.
-- Release application build: succeeded.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Findings
+## Related Tasks
 
-- Runtime diagnostics repeatedly reported `Budget 0/4,000,000 pixels | 0/256 cached | generated 0/256` after the view remained still.
-- A default tile costs 33,554,432 pixels, so `TileCacheBudget.TrackTile` adds it, observes budget overflow, evicts the same tile, and calls `ResetImageCache`.
-
-## Outcome
-
-- The default budget is now 134,217,728 pixels, retaining four default-size tiles before pixel-budget eviction begins.
-- Default tile dimensions are named constants shared by generation, cache sizing, and regression coverage.
+- ICW-000

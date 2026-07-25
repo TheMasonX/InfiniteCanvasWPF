@@ -1,0 +1,49 @@
+Benchmark guidance and Windows benchmark notes
+
+This document describes the recommended benchmark practices for InfiniteCanvasWPF and explains why the Windows-specific point-based benchmark was replaced.
+
+Recommended practices
+
+- Benchmarks should exercise the real shipped render path (tile generation + annotation composition) rather than legacy point-based primitives.
+- Use BenchmarkDotNet stable config and produce CSV/HTML outputs stored under `BenchmarkDotNet.Artifacts/results`.
+- Run Windows-specific benchmarks on a stable Windows runner with no other CPU load and consistent power profile.
+
+Reproducibility
+
+- Example run (Windows x64):
+
+```powershell
+dotnet run -c Release --project benchmarks/InfiniteCanvas.Benchmarks -f net10.0-windows
+```
+
+- Review outputs under `BenchmarkDotNet.Artifacts/results`.
+
+Migration note
+
+The legacy `ProjectionAndBitmapBenchmarks.Windows.cs` previously exercised a point-based `GenerateFrozenBitmap(IEnumerable<ScreenPoint>, ...)` overload not used by the shipping app. Replace that benchmark with a tile+annotation workload to measure realistic allocation/throughput behavior.
+# Benchmarks Guide
+
+This document describes how to run and interpret the project's benchmarks.
+
+## Targets
+- `net10.0` — cross-platform spatial indexing and snapshot benchmarks.
+- `net10.0-windows` — Windows-only projection and zero-copy bitmap benchmarks (requires Windows and WPF support).
+
+## Recommended commands
+```powershell
+# Cross-platform benchmarks
+dotnet run -c Release --project benchmarks/InfiniteCanvas.Benchmarks -f net10.0
+
+# Windows-only projection/bitmap benchmarks (Windows machines only)
+dotnet run -c Release --project benchmarks/InfiniteCanvas.Benchmarks -f net10.0-windows
+```
+
+## Reproducibility
+- Run on a quiescent machine; disable background heavy workloads.
+- Use `--runtimes` and `--framework` flags as needed for multiple runtimes.
+- Keep BIOS power settings on "High Performance" for consistent CPU frequency.
+
+## Variance and Baselines
+- Do not use benchmark results as CI pass/fail checks without a documented baseline policy.
+- Capture CSV/HTML outputs under `BenchmarkDotNet.Artifacts/results` and archive them alongside a short description of the machine.
+

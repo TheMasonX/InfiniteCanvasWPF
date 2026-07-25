@@ -64,8 +64,19 @@ If the user gives a requirement, bug report, task note, implementation hint, use
 ## Task tracking
 
 - Use docs/tasks/active-tasks.md as the live checklist for in-progress work.
-- Create a ticket file under docs/tasks/tickets/ for non-trivial work items.
+- Create or update a ticket file under docs/tasks/tickets/ for non-trivial work items.
+- Normalize task files into the shared ICW task format so the full backlog uses the same fields and section order.
 - Record at least: status, summary, scope, validation command, findings, and next step.
+- Keep tags, dependencies, and links consistent so tasks remain searchable and linkable.
+
+## Sprint handoff policy
+
+Before committing and pushing a sprint-sized batch of work, the agent should:
+
+1. Review the current task and implementation state.
+2. Create or update a handoff note in docs/handoffs/ with the current status, notable findings, validation evidence, and the recommended next step.
+3. Include the handoff note in the working diff so the repository captures the sprint transition clearly.
+4. Only then proceed with commit and push.
 
 ## Verification and communication
 
@@ -73,3 +84,4 @@ If the user gives a requirement, bug report, task note, implementation hint, use
 - Prefer evidence from build, test, or benchmark output over guesswork.
 - Verify claims and sources for accuracy before acting on them.
 - Do not claim completion until the relevant validation command has been run and the tracker has been updated.
+- Before any commit/push for a sprint batch, ensure a current handoff note exists in docs/handoffs/ and reflects the latest state.

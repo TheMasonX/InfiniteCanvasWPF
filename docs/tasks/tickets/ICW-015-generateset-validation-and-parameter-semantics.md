@@ -1,28 +1,49 @@
-# ICW-015: GenerateSet Validation and Parameter Semantics
+---
+id: ICW-015-generateset-validation-and-parameter-semantics
+author: Copilot
+key: ICW
+title: Icw 015 Generateset Validation And Parameter Semantics
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: In Progress
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-015-generateset-validation-and-parameter-semantics
 
 ## Summary
 
-Fix argument validation in `GenerateSet` so invalid parameters throw accurately attributed exceptions and clarify the `imageCount` versus `rows` semantics.
+- Status: In Progress
 
 ## Scope
 
-- src/InfiniteCanvas.Rendering/SampleImageGenerator.cs
-- tests/InfiniteCanvas.Tests/SampleImageGeneratorTests.cs
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- `dotnet test .\tests\InfiniteCanvas.Tests\InfiniteCanvas.Tests.csproj --configuration Release`
-  - Passed: 23/23.
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- Completed: replaced grouped guards with per-parameter argument validation and added a focused test that verifies accurate `ParamName` attribution for invalid arguments.
-- Remaining: `imageCount` dual-purpose behavior when `rows` is supplied still needs explicit documentation/tests.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Finish the `rows` + `imageCount` behavior documentation/tests and then close the task.
+- ICW-000

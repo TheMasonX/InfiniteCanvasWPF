@@ -1,32 +1,49 @@
-# ICW-018: Rendering Abstraction and Point-Overload Ownership
+---
+id: ICW-018-rendering-abstraction-and-overload-ownership
+author: Copilot
+key: ICW
+title: Icw 018 Rendering Abstraction And Overload Ownership
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: To Do
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-018-rendering-abstraction-and-overload-ownership
 
 ## Summary
 
-Resolve ownership and lifecycle for dormant rendering abstractions and benchmark-only rendering overloads.
+- Status: To Do
 
 ## Scope
 
-- src/InfiniteCanvas.Rendering/IRenderer.cs
-- src/InfiniteCanvas.Rendering/ViewportRenderRequest.cs
-- src/InfiniteCanvas.Rendering/ZeroCopyBitmapFactory.Windows.cs
-- tests/InfiniteCanvas.Windows.Tests/ZeroCopyBitmapFactoryTests.cs
-- benchmarks/InfiniteCanvas.Benchmarks/ProjectionAndBitmapBenchmarks.Windows.cs
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Pending:
-  - `dotnet build .\src\InfiniteCanvas.App\InfiniteCanvas.App.csproj --configuration Release`
-  - `dotnet test .\tests\InfiniteCanvas.Windows.Tests\InfiniteCanvas.Windows.Tests.csproj --configuration Release`
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- Cross-validated audit finding: `IRenderer` and `ViewportRenderRequest` are not consumed by the app.
-- Point-only overload paths are currently exercised by tests and benchmarks.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Either remove dead surfaces or document and enforce benchmark-only ownership boundaries.
+- ICW-000

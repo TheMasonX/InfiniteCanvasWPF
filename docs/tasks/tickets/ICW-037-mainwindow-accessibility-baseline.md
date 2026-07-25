@@ -1,33 +1,49 @@
-# ICW-037: MainWindow Accessibility Baseline
+---
+id: ICW-037-mainwindow-accessibility-baseline
+author: Copilot
+key: ICW
+title: Icw 037 Mainwindow Accessibility Baseline
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: To Do
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
-- Priority: P3
+# ICW-037-mainwindow-accessibility-baseline
 
 ## Summary
 
-Add foundational accessibility metadata and keyboard affordances to the MainWindow control surface so key workflows are screen-reader and keyboard friendly.
+- Status: To Do
 
 ## Scope
 
-- src/InfiniteCanvas.App/MainWindow.xaml
-- src/InfiniteCanvas.App/MainWindow.xaml.cs
-- docs/tasks/active-tasks.md
-- docs/tasks/JIRA.md
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Pending:
-  - `dotnet build .\src\InfiniteCanvas.App\InfiniteCanvas.App.csproj --configuration Release`
-  - Manual keyboard traversal and action check (zoom preset, custom zoom apply, regenerate, cache reset)
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- No `AutomationProperties.Name` metadata found on interactive controls.
-- No keyboard shortcuts/access keys are defined for primary actions.
-- No explicit key bindings exist for high-frequency workflows.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Add automation names and minimally invasive keyboard access cues/bindings for primary controls while preserving current visual and interaction behavior.
+- ICW-000

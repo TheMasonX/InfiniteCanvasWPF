@@ -1,34 +1,49 @@
-# ICW-032: Spatial Query Interface Strengthening
+---
+id: ICW-032-spatial-query-interface-strengthening
+author: Copilot
+key: ICW
+title: Icw 032 Spatial Query Interface Strengthening
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: To Do
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-032-spatial-query-interface-strengthening
 
 ## Summary
 
-Strengthen spatial-index abstraction to support count-only and lower-allocation query paths while preserving current behavior.
+- Status: To Do
 
 ## Scope
 
-- src/InfiniteCanvas.Spatial/ISpatialIndexService.cs
-- src/InfiniteCanvas.Spatial/LiveSpatialIndexService.cs
-- src/InfiniteCanvas.Spatial/StrTreeSpatialIndexService.cs
-- src/InfiniteCanvas.Spatial/ImmutableSpatialIndexService.cs
-- src/InfiniteCanvas.ViewModels/CanvasViewportViewModel.cs
-- tests/InfiniteCanvas.Tests
-- docs/tasks/active-tasks.md
-- docs/tasks/JIRA.md
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Pending:
-  - `dotnet test .\tests\InfiniteCanvas.Tests\InfiniteCanvas.Tests.csproj --configuration Release`
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- Current interface exposes only list-returning query, forcing materialization even when only counts are required.
-- This limits optimization options for high-frequency viewport updates.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Add a compatible count-oriented query contract and migrate count-only call sites first.
+- ICW-000

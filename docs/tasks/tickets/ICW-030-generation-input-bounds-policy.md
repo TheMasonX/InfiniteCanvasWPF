@@ -1,33 +1,49 @@
-# ICW-030: Generation Input Bounds Policy
+---
+id: ICW-030-generation-input-bounds-policy
+author: Copilot
+key: ICW
+title: Icw 030 Generation Input Bounds Policy
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: To Do
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-030-generation-input-bounds-policy
 
 ## Summary
 
-Define and enforce safe upper bounds for scene generation controls, especially objects per tile, to prevent accidental OOM/freeze behavior.
+- Status: To Do
 
 ## Scope
 
-- src/InfiniteCanvas.App/MainWindow.xaml.cs
-- src/InfiniteCanvas.Rendering/SampleImageGenerator.cs
-- tests/InfiniteCanvas.Tests/SampleImageGeneratorTests.cs
-- docs/tasks/active-tasks.md
-- docs/tasks/JIRA.md
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Pending:
-  - `dotnet test .\tests\InfiniteCanvas.Tests\InfiniteCanvas.Tests.csproj --configuration Release`
-  - `dotnet build .\src\InfiniteCanvas.App\InfiniteCanvas.App.csproj --configuration Release`
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- Current validation allows any non-negative objects-per-tile value.
-- Generator allocates annotations directly by that count, creating a user-triggerable memory and latency hazard.
-- Current defect raster sizing multiplies annotation dimensions by roughly `2.4x` to `4.5x`, increasing per-object allocation/work cost and amplifying the impact of unbounded object counts.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Introduce policy limits with user-facing validation messages and tests for accepted/rejected boundary values.
+- ICW-000

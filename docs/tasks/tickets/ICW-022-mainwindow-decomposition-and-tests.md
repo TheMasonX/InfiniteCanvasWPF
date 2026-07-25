@@ -1,30 +1,49 @@
-# ICW-022: MainWindow Decomposition and Test Backfill
+---
+id: ICW-022-mainwindow-decomposition-and-tests
+author: Copilot
+key: ICW
+title: Icw 022 Mainwindow Decomposition And Tests
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: To Do
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-022-mainwindow-decomposition-and-tests
 
 ## Summary
 
-Extract pure logic from `MainWindow` into testable units while preserving WPF thread boundaries and behavior.
+- Status: To Do
 
 ## Scope
 
-- src/InfiniteCanvas.App/MainWindow.xaml.cs
-- src/InfiniteCanvas.ViewModels
-- src/InfiniteCanvas.Core
-- tests/InfiniteCanvas.Tests
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Pending:
-  - `dotnet build .\src\InfiniteCanvas.App\InfiniteCanvas.App.csproj --configuration Release`
-  - `dotnet test .\tests\InfiniteCanvas.Tests\InfiniteCanvas.Tests.csproj --configuration Release`
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- Cross-validated audit finding: code-behind remains large with substantial pure logic that can be unit tested.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Move zoom-floor, generation-parameter, and pixelometer helper math into focused classes and backfill tests.
+- ICW-000

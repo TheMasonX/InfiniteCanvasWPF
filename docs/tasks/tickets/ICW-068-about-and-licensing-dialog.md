@@ -1,21 +1,49 @@
-# ICW-068: About and licensing dialog
+---
+id: ICW-068-about-and-licensing-dialog
+author: Copilot
+key: ICW
+title: Icw 068 About And Licensing Dialog
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-## Status
-Proposed
+# ICW-068-about-and-licensing-dialog
 
 ## Summary
-Add a discoverable About dialog with project attribution, third-party licensing information, and links to bundled license text.
+
+## Status
 
 ## Scope
-- Add a small About entry to the UI, likely in the header or a help menu.
-- Show the core project attribution, used libraries, and a scrollable license list.
-- Copy a licenses folder into the build output and link each item to the bundled text.
+
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
-- dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release
 
-## Findings
-- The request is comparatively low-risk and can be implemented as a lightweight dialog with minimal impact on rendering and interaction logic.
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Next Step
-Add the dialog UI and a simple license asset bundle for the current project dependencies.
+## Notes
+
+- Add implementation details, blockers, or follow-up questions here.
+
+## Related Tasks
+
+- ICW-000

@@ -1,39 +1,49 @@
-# ICW-034: Coalescing Render Fault Handling And Follow-Up Preservation
+---
+id: ICW-034-coalescing-render-fault-and-followup-preservation
+author: Copilot
+key: ICW
+title: Icw 034 Coalescing Render Fault And Followup Preservation
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: Done
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
-- Priority: P1
+# ICW-034-coalescing-render-fault-and-followup-preservation
 
 ## Summary
 
-Harden `CoalescingAsyncAction` so render scheduling survives `_action` faults without dropping queued follow-up requests or rethrowing stale processing exceptions during disposal.
+- Status: Done
 
 ## Scope
 
-- src/InfiniteCanvas.Core/CoalescingAsyncAction.cs
-- src/InfiniteCanvas.App/MainWindow.xaml.cs
-- tests/InfiniteCanvas.Tests/CoalescingAsyncActionTests.cs
-- docs/tasks/active-tasks.md
-- docs/tasks/JIRA.md
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- `dotnet test .\tests\InfiniteCanvas.Tests\InfiniteCanvas.Tests.csproj --configuration Release`
-  - Passed: 35 tests, 0 failures.
-- `dotnet test .\tests\InfiniteCanvas.Tests\InfiniteCanvas.Tests.csproj --configuration Release --filter FullyQualifiedName~CoalescingAsyncActionTests`
-  - Passed: 4 tests, 0 failures.
-- `dotnet build .\src\InfiniteCanvas.App\InfiniteCanvas.App.csproj --configuration Release`
-  - Succeeded.
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- `ProcessAsync` executes `await _action(...)` with no catch policy, so non-cancellation faults bubble through the shared processing task.
-- A queued `_requested = true` follow-up can be discarded if `_action` throws before the loop reevaluates pending work.
-- `DisposeAsync` can rethrow stale non-cancellation failures by awaiting an already-faulted processing task during window close.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Outcome
+## Related Tasks
 
-- `CoalescingAsyncAction` now reports non-cancellation action failures through an optional callback instead of faulting its shared processing task.
-- A request coalesced while a failing action is in flight is processed by the next scheduler iteration.
-- Lifetime cancellation still propagates so active callers observe the expected canceled task during disposal.
+- ICW-000

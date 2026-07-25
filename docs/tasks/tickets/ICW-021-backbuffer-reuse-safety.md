@@ -1,29 +1,49 @@
-# ICW-021: Back-Buffer Reuse Safety Validation
+---
+id: ICW-021-backbuffer-reuse-safety
+author: Copilot
+key: ICW
+title: Icw 021 Backbuffer Reuse Safety
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: To Do
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-021-backbuffer-reuse-safety
 
 ## Summary
 
-Validate compositor-safe reuse policy for front/back memory sections and add guardrails only if stress evidence requires them.
+- Status: To Do
 
 ## Scope
 
-- src/InfiniteCanvas.App/MainWindow.xaml.cs
-- src/InfiniteCanvas.Rendering/ZeroCopyBitmapFactory.Windows.cs
-- docs/handoffs/2026-07-23-render-coalescing.md
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Pending:
-  - `dotnet build .\src\InfiniteCanvas.App\InfiniteCanvas.App.csproj --configuration Release`
-  - Stress run and visual tearing check during rapid interaction and resize.
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- Cross-validated audit finding: theoretical risk exists if a reused back-buffer is overwritten before compositor consumption completes.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Reproduce or disprove tearing under stress and codify minimal buffering policy from measured evidence.
+- ICW-000

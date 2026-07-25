@@ -1,41 +1,49 @@
-# ICW-024: DesignDoc to ADR and Task Reconciliation
+---
+id: ICW-024-designdoc-adr-reconciliation
+author: Copilot
+key: ICW
+title: Icw 024 Designdoc Adr Reconciliation
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: To Do
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-024-designdoc-adr-reconciliation
 
 ## Summary
 
-Reconcile `DesignDoc.md` architecture intent against accepted ADRs and tracked backlog, then convert uncovered items into durable tasks and ADR follow-ups.
+- Status: To Do
 
 ## Scope
 
-- DesignDoc.md
-- docs/ADR/0001-benchmark-project-targeting-and-baselines.md
-- docs/ADR/0002-inspection-raster-and-annotation-layers.md
-- docs/tasks/active-tasks.md
-- docs/tasks/JIRA.md
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
 
-## Coverage Findings
+## Acceptance Criteria
 
-- Implemented and captured:
-  - Benchmark harness and baseline policy direction (ADR-0001, ICW-001).
-  - Inspection raster plus annotation layering and immutable-per-frame camera snapshot (ADR-0002, ICW-002/003/006/008/009/010/011/012/013).
-  - Hybrid live indexing abstraction and publish flow exists in code via `LiveSpatialIndexService<T>` and `ISpatialIndexService<T>` abstraction.
-- Captured but still open:
-  - Overdraw measurement (ICW-004).
-  - Resize and surface policy (ICW-005).
-  - Overlay pooling and continuity (ICW-007 and ICW-019).
-  - Back-buffer reuse safety validation (ICW-021).
-- Missing from ADR/task durability before this reconciliation:
-  - Explicit ADR for live hybrid index model used by implementation.
-  - Explicit ADR for zero-copy buffer lifecycle and handoff safety policy.
-  - Explicit spike for GPU pivot criteria and trigger policy from design open questions.
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Completed evidence review from current ADRs, active tasks, JIRA, and source layout.
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Next Step
+## Notes
 
-- Track ADR and spike follow-up via ICW-025, ICW-026, and ICW-027.
+- Add implementation details, blockers, or follow-up questions here.
+
+## Related Tasks
+
+- ICW-000

@@ -1,31 +1,49 @@
-# ICW-004: Zoomed-Out Pixel Overdraw Spike
+---
+id: ICW-004-zoomed-out-overdraw-spike
+author: Copilot
+key: ICW
+title: Icw 004 Zoomed Out Overdraw Spike
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: To Do
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-004-zoomed-out-overdraw-spike
 
 ## Summary
 
-Measure zoomed-out rendering overdraw and evaluate inner-loop math cost so optimization decisions are based on benchmark evidence.
+- Status: To Do
 
 ## Scope
 
-- src/InfiniteCanvas.Rendering/ZeroCopyBitmapFactory.Windows.cs
-- benchmarks/InfiniteCanvas.Benchmarks
-- docs/tasks/JIRA.md
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Audit capture only in this pass.
-- Investigation validation command (planned):
-  - `dotnet run --project .\benchmarks\InfiniteCanvas.Benchmarks\InfiniteCanvas.Benchmarks.csproj --configuration Release --framework net10.0-windows --no-build -- --filter "*ProjectionAndBitmapBenchmarks*"`
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- DrawTile and DrawDefectPatch perform per-pixel division in hot loops.
-- Audit recommends comparing current division-heavy path with incremental world-coordinate stepping.
-- Results should guide deduplication, accumulation, or alternate rendering strategy selection.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Add benchmark variants for division versus incremented stepping and capture perf deltas across representative zoom levels.
+- ICW-000

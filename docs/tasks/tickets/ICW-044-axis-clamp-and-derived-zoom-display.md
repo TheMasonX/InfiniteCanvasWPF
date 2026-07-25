@@ -1,32 +1,49 @@
-# ICW-044: Axis Clamp and Derived Zoom Display
+---
+id: ICW-044-axis-clamp-and-derived-zoom-display
+author: Copilot
+key: ICW
+title: Icw 044 Axis Clamp And Derived Zoom Display
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: Done
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-044-axis-clamp-and-derived-zoom-display
 
 ## Summary
 
-Allow one camera axis to continue non-linear zooming after the other reaches its zoom-out clamp, and make the zoom dropdown a command surface whose display reflects calculated zoom rather than rigid selection.
+- Status: Done
 
 ## Scope
 
-- Clamp each axis independently during continued wheel zoom.
-- Preserve non-linear zoom behavior on the unclamped axis.
-- Treat preset items as commands that set a temporary camera state.
-- Display the calculated ideal zoom percentage using the largest material axis constraint (for example, vertical height).
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Add deterministic camera tests for one-axis-clamped continuation in both orientations.
-- Add tests for calculated display percentage and preset override behavior after wheel zoom.
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- Current preset selection and uniform-first clamp behavior conflate command intent with actual camera state.
-- Added pure zoom policy that clamps each wheel target independently.
-- ComboBox clears preset selection after command execution and displays calculated percentage for the stricter fit axis.
-- Focused policy tests and the full 32-test suite passed; Release app build succeeded.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Visually verify cursor anchoring after one axis reaches its floor.
+- ICW-000

@@ -1,3 +1,30 @@
+---
+status: proposed
+title: Global UI exception safety net and harden async-void handlers
+repo-area: src/InfiniteCanvas.App
+severity: high
+assignee: app-team
+---
+
+Summary:
+Add global unhandled exception handlers (`DispatcherUnhandledException`, `AppDomain.UnhandledException`, `TaskScheduler.UnobservedTaskException`) and harden `async void` event handlers so UI exceptions are logged and do not crash the process silently.
+
+Scope:
+- `src/InfiniteCanvas.App/App.xaml`
+- `src/InfiniteCanvas.App/App.xaml.cs`
+- selected `async void` handlers in `MainWindow.xaml.cs`
+
+Acceptance criteria:
+- App registers global exception handlers and logs exceptions to `StatusText` or telemetry.
+- Long-running `async void` handlers use `SafeFireAndForget` or wrap awaits in try/catch.
+
+Validation commands:
+- `dotnet build ./InfiniteCanvasWPF.slnx --configuration Release`
+- `dotnet test ./tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --filter CoalescingAsyncActionTests`
+
+Estimated effort: Small
+Risk: Low
+Suggested owner: @app-team
 # ICW-014: Global Exception Safety Net for Async UI Pipeline
 
 - Status: To Do

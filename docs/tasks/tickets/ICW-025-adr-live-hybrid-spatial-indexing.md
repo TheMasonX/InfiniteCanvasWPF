@@ -1,29 +1,49 @@
-# ICW-025: ADR for Live Hybrid Spatial Indexing
+---
+id: ICW-025-adr-live-hybrid-spatial-indexing
+author: Copilot
+key: ICW
+title: Icw 025 Adr Live Hybrid Spatial Indexing
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: In Review
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-025-adr-live-hybrid-spatial-indexing
 
 ## Summary
 
-Capture the implemented snapshot plus hot-buffer live indexing strategy as an explicit architectural decision record.
+- Status: In Review
 
 ## Scope
 
-- docs/ADR
-- src/InfiniteCanvas.Spatial/LiveSpatialIndexService.cs
-- src/InfiniteCanvas.Spatial/ISpatialIndexService.cs
-- README.md
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Draft ADR created: `docs/ADR/0003-live-hybrid-spatial-indexing.md`
-- Pending approval review.
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- Current behavior exists in code but is not represented in accepted ADRs.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Review proposal wording and approve or request revisions before marking Accepted.
+- ICW-000

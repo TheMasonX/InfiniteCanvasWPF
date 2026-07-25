@@ -58,22 +58,14 @@
                     MouseWheel="OnViewportMouseWheel"
                     SizeChanged="OnViewportSizeChanged">
                 <Grid>
-                    <ScrollViewer x:Name="ViewportScrollViewer"
-                                  HorizontalScrollBarVisibility="Auto"
-                                  VerticalScrollBarVisibility="Auto"
-                                  CanContentScroll="False"
-                                  Background="Transparent">
-                        <Grid x:Name="ViewportContentHost" HorizontalAlignment="Left" VerticalAlignment="Top">
-                            <Viewbox x:Name="FramePresenter" Stretch="Fill" StretchDirection="Both" />
-                            <Canvas IsHitTestVisible="False">
-                                <Ellipse x:Name="PanAnchorVisual"
-                                         Width="16" Height="16"
-                                         Stroke="#D7FF3D3D" StrokeThickness="2"
-                                         Fill="#40FF3D3D"
-                                         Visibility="Collapsed" />
-                            </Canvas>
-                        </Grid>
-                    </ScrollViewer>
+                    <Viewbox x:Name="FramePresenter" Stretch="Fill" StretchDirection="Both" />
+                    <Canvas IsHitTestVisible="False">
+                        <Ellipse x:Name="PanAnchorVisual"
+                                 Width="16" Height="16"
+                                 Stroke="#D7FF3D3D" StrokeThickness="2"
+                                 Fill="#40FF3D3D"
+                                 Visibility="Collapsed" />
+                    </Canvas>
                     <TextBlock x:Name="LoadingOverlay" Text="BUILDING INITIAL SNAPSHOT"
                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold"

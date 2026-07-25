@@ -1,31 +1,49 @@
-# ICW-041: Label Size and Display Mode
+---
+id: ICW-041-label-size-and-display-mode
+author: Copilot
+key: ICW
+title: Icw 041 Label Size And Display Mode
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: Done
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-041-label-size-and-display-mode
 
 ## Summary
 
-Reduce the default annotation label size to approximately 70% of its current value and let users display either class or ID, never both. Default to class.
+- Status: Done
 
 ## Scope
 
-- Replace the combined class-and-ID label behavior with a Class/ID dropdown.
-- Default the dropdown and generated labels to Class.
-- Preserve global label visibility and positioning behavior.
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Add focused label formatting/default tests where the logic is extracted or already testable.
-- `dotnet build .\src\InfiniteCanvas.App\InfiniteCanvas.App.csproj --configuration Release`
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- Runtime screenshots show oversized labels and severe overlap at zoomed-out densities.
-- Default label size changed from 12 to 8.5.
-- Added a Class/ID dropdown defaulting to Class; combined labels were removed.
-- Full test suite passed 32/32 and the Release app build succeeded.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Visually review extreme zoom-out density and tune only if 8.5 remains too large.
+- ICW-000

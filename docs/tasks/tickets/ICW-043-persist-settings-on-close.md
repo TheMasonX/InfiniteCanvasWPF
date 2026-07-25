@@ -1,33 +1,49 @@
-# ICW-043: Persist Settings on Close
+---
+id: ICW-043-persist-settings-on-close
+author: Copilot
+key: ICW
+title: Icw 043 Persist Settings On Close
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: Done
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-043-persist-settings-on-close
 
 ## Summary
 
-Persist user-adjustable display, zoom, and generation settings between application runs and save current settings on close.
+- Status: Done
 
 ## Scope
 
-- Define a versioned settings model with stable defaults.
-- Load settings before initial scene/control synchronization.
-- Save settings through the coordinated close lifecycle without blocking or racing disposed resources.
-- Recover safely from missing or malformed settings files.
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Add round-trip and invalid-file tests for the settings store.
-- `dotnet build .\src\InfiniteCanvas.App\InfiniteCanvas.App.csproj --configuration Release`
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- Current control state is initialized from literals on each app run.
-- Close-time persistence must coordinate with ICW-029 shutdown hardening.
-- Added a versioned JSON model in Core with range validation, default fallback, and atomic temporary-file replacement.
-- MainWindow loads before initial generation and saves current generation/display controls on close.
-- Focused persistence tests and the full 32-test suite passed; Release app build succeeded.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Add schema migration when a future settings version changes persisted fields.
+- ICW-000

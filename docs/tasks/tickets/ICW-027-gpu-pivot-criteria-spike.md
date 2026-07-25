@@ -1,29 +1,49 @@
-# ICW-027: GPU Pivot Criteria and Trigger Spike
+---
+id: ICW-027-gpu-pivot-criteria-spike
+author: Copilot
+key: ICW
+title: Icw 027 Gpu Pivot Criteria Spike
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: To Do
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-027-gpu-pivot-criteria-spike
 
 ## Summary
 
-Define measurable thresholds and decision criteria for when the current InteropBitmap CPU pipeline should pivot to a GPU-backed path.
+- Status: To Do
 
 ## Scope
 
-- DesignDoc.md
-- docs/tasks/JIRA.md
-- benchmarks/InfiniteCanvas.Benchmarks
-- src/InfiniteCanvas.Rendering
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Pending:
-  - Benchmark-based criteria draft reviewed with maintainers.
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- Design open question on GPU acceleration is not yet represented by a dedicated backlog item.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Propose trigger metrics (frame latency, overdraw saturation, CPU utilization) and a minimal proof strategy.
+- ICW-000

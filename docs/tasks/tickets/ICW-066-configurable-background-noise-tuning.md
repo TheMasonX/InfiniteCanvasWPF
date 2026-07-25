@@ -1,22 +1,49 @@
-# ICW-066: Configurable background noise and defect-circle tuning
+---
+id: ICW-066-configurable-background-noise-tuning
+author: Copilot
+key: ICW
+title: Icw 066 Configurable Background Noise Tuning
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-## Status
-In Progress
+# ICW-066-configurable-background-noise-tuning
 
 ## Summary
-Expose the background tile noise intensity and defect-circle density as runtime-editable settings that are persisted and covered by tests.
+
+## Status
 
 ## Scope
-- Extend the generator and settings model so the background tile noise amplitude and defect circle count can be configured.
-- Surface these settings in the existing display/generation UI with clear validation and persistence.
-- Preserve deterministic generation and add focused regression tests around the new settings.
+
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
-- dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Debug
-- dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release
 
-## Findings
-- The current generator already uses deterministic noise and defect circles, but the parameters are hardcoded inside the renderer/generator. The request should turn those into editable runtime properties rather than hidden constants.
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Next Step
-Introduce a small settings model in the core layer, wire it into the generator call path, and expose it in the UI.
+## Notes
+
+- Add implementation details, blockers, or follow-up questions here.
+
+## Related Tasks
+
+- ICW-000

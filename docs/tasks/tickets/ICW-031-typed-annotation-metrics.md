@@ -1,33 +1,49 @@
-# ICW-031: Typed Annotation Metrics Instead Of String-Keyed Feature Map
+---
+id: ICW-031-typed-annotation-metrics
+author: Copilot
+key: ICW
+title: Icw 031 Typed Annotation Metrics
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: To Do
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-031-typed-annotation-metrics
 
 ## Summary
 
-Replace brittle `Dictionary<string,double>` feature plumbing with typed annotation metrics to reduce runtime key-risk and improve refactor safety.
+- Status: To Do
 
 ## Scope
 
-- src/InfiniteCanvas.Rendering/SampleImageTile.cs
-- src/InfiniteCanvas.Rendering/SampleImageGenerator.cs
-- src/InfiniteCanvas.App/MainWindow.xaml.cs
-- tests/InfiniteCanvas.Tests
-- docs/tasks/active-tasks.md
-- docs/tasks/JIRA.md
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Pending:
-  - `dotnet test .\tests\InfiniteCanvas.Tests\InfiniteCanvas.Tests.csproj --configuration Release`
-  - `dotnet build .\src\InfiniteCanvas.App\InfiniteCanvas.App.csproj --configuration Release`
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- Generator emits metadata as `Dictionary<string,double>` and UI reads string keys directly.
-- Contract is implicit and not compiler-checked.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Introduce a typed metrics value object and migrate UI/tooltips/tests to strong members.
+- ICW-000

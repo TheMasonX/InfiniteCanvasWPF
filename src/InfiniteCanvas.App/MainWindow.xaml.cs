@@ -288,7 +288,6 @@ public partial class MainWindow : Window
         var frameVisual = BuildFrameVisual(frame.Bitmap, frame.VisibleItems, camera, width, height);
         PublishFrame(factory, frameVisual);
         _viewModel.ApplyFrame(viewport, frame.VisibleItems.Count);
-        UpdateViewportScrollState(camera, width, height);
 
         stopwatch.Stop();
         var generatedTileCount = _tiles.Count(tile => tile.IsBackgroundFetched);
@@ -348,34 +347,6 @@ public partial class MainWindow : Window
     {
         ApplyFitToWidthZoom();
         ClampCameraToScene();
-    }
-
-    private void UpdateViewportScrollState(CameraSnapshot camera, double viewportWidth, double viewportHeight)
-    {
-        if (_sceneBounds.Width <= 0 || _sceneBounds.Height <= 0)
-        {
-            return;
-        }
-
-        var (contentWidth, contentHeight) = ViewportScrollPolicy.ComputeContentSize(
-            viewportWidth,
-            viewportHeight,
-            _sceneBounds.Width,
-            _sceneBounds.Height,
-            camera);
-
-        ViewportContentHost.Width = Math.Max(viewportWidth, contentWidth);
-        ViewportContentHost.Height = Math.Max(viewportHeight, contentHeight);
-
-        var (horizontalOffset, verticalOffset) = ViewportScrollPolicy.ComputeScrollOffsets(
-            viewportWidth,
-            viewportHeight,
-            ViewportContentHost.Width,
-            ViewportContentHost.Height,
-            camera);
-
-        ViewportScrollViewer.ScrollToHorizontalOffset(horizontalOffset);
-        ViewportScrollViewer.ScrollToVerticalOffset(verticalOffset);
     }
 
     private Grid BuildFrameVisual(

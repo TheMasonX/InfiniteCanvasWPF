@@ -1,28 +1,49 @@
-# ICW-019: Overlay Animation Continuity During Rerenders
+---
+id: ICW-019-overlay-animation-continuity
+author: Copilot
+key: ICW
+title: Icw 019 Overlay Animation Continuity
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: To Do
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-019-overlay-animation-continuity
 
 ## Summary
 
-Maintain selected-annotation animation continuity across rerenders while integrating with overlay pooling goals.
+- Status: To Do
 
 ## Scope
 
-- src/InfiniteCanvas.App/MainWindow.xaml.cs
-- docs/tasks/JIRA.md
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Pending:
-  - `dotnet build .\src\InfiniteCanvas.App\InfiniteCanvas.App.csproj --configuration Release`
-  - Visual verification during pan/zoom and resize interaction.
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- Cross-validated audit finding: frame-level element recreation restarts the selected outline animation clock each render.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Persist selected overlay visuals or animation clocks independent of full-frame rebuild cadence.
+- ICW-000

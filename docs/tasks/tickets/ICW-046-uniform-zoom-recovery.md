@@ -1,30 +1,49 @@
-# ICW-046: Uniform Zoom Recovery
+---
+id: ICW-046-uniform-zoom-recovery
+author: Copilot
+key: ICW
+title: Icw 046 Uniform Zoom Recovery
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: Done
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-046-uniform-zoom-recovery
 
 ## Summary
 
-Prefer uniform wheel zoom whenever one common target scale keeps both viewport axes above their respective fit floors. Retain anisotropic zoom only while a uniform target would still clamp one axis.
+- Status: Done
 
 ## Scope
 
-- Correct pure wheel zoom policy behavior for zoom-in after a prior axis clamp.
-- Preserve existing independent clamp behavior while zooming out.
-- Cover both the retained-clamp and uniform-recovery transitions with deterministic unit tests.
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- `dotnet test .\tests\InfiniteCanvas.Tests\InfiniteCanvas.Tests.csproj --configuration Release --filter FullyQualifiedName~ViewportZoomPolicyTests`
-- `dotnet build .\src\InfiniteCanvas.App\InfiniteCanvas.App.csproj --configuration Release`
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- The current policy clamps raw per-axis targets independently and therefore never converges an anisotropic camera back to a valid uniform target during zoom-in.
-- Zoom-in now holds an axis at its floor while the other axis remains below the common legal target, then applies a shared target scale once that threshold is reached.
-- Focused `ViewportZoomPolicyTests` passed 5/5 and the Release app build succeeded.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Visually verify cursor anchoring across the uniform-recovery transition.
+- ICW-000

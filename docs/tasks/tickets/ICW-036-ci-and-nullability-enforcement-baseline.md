@@ -1,36 +1,49 @@
-# ICW-036: CI And Nullability Enforcement Baseline
+---
+id: ICW-036-ci-and-nullability-enforcement-baseline
+author: Copilot
+key: ICW
+title: Icw 036 Ci And Nullability Enforcement Baseline
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: To Do
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
-- Priority: P2
+# ICW-036-ci-and-nullability-enforcement-baseline
 
 ## Summary
 
-Add minimal repository automation and central compile-policy enforcement so build/test and nullable hygiene are verified continuously instead of manually.
+- Status: To Do
 
 ## Scope
 
-- .github/workflows
-- Directory.Build.props
-- src/**/*.csproj
-- tests/InfiniteCanvas.Tests
-- tests/InfiniteCanvas.Windows.Tests
-- docs/tasks/active-tasks.md
-- docs/tasks/JIRA.md
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Pending:
-  - CI run on push/PR for `dotnet build` and both test projects
-  - Local smoke: `dotnet test .\InfiniteCanvasWPF.slnx --configuration Release`
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- Repository currently has no workflow automation under `.github/workflows`.
-- Nullable context is enabled in project files but warning enforcement is decentralized and non-blocking.
-- Manual validation claims in task logs are not independently enforced by branch automation.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Add a Windows CI workflow and a root `Directory.Build.props` policy for warnings-as-errors (or nullable warnings-as-errors), then verify solution behavior under the new policy.
+- ICW-000

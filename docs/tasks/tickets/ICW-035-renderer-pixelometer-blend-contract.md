@@ -1,37 +1,49 @@
-# ICW-035: Renderer And Pixelometer Blend Contract
+---
+id: ICW-035-renderer-pixelometer-blend-contract
+author: Copilot
+key: ICW
+title: Icw 035 Renderer Pixelometer Blend Contract
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: To Do
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
-- Priority: P1
+# ICW-035-renderer-pixelometer-blend-contract
 
 ## Summary
 
-Unify defect blending and sampling semantics between the raster renderer and pixelometer readout to remove user-visible value mismatches over annotated defect pixels.
+- Status: To Do
 
 ## Scope
 
-- src/InfiniteCanvas.App/MainWindow.xaml.cs
-- src/InfiniteCanvas.Rendering/ZeroCopyBitmapFactory.Windows.cs
-- src/InfiniteCanvas.Rendering/SampleImageTile.cs
-- tests/InfiniteCanvas.Tests
-- tests/InfiniteCanvas.Windows.Tests
-- docs/tasks/active-tasks.md
-- docs/tasks/JIRA.md
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Pending:
-  - `dotnet test .\tests\InfiniteCanvas.Tests\InfiniteCanvas.Tests.csproj --configuration Release`
-  - `dotnet test .\tests\InfiniteCanvas.Windows.Tests\InfiniteCanvas.Windows.Tests.csproj --configuration Release`
-  - `dotnet build .\src\InfiniteCanvas.App\InfiniteCanvas.App.csproj --configuration Release`
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- Renderer applies class-tinted blend channels in `ZeroCopyBitmapFactory`, while pixelometer still uses legacy grayscale subtraction in `MainWindow`.
-- Divergence creates systematic mismatch between on-screen pixel color and reported pixelometer value.
-- Blend and world-to-pixel sampling logic remain duplicated across multiple classes, increasing future drift risk.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Extract one shared blend/sampling helper consumed by renderer and pixelometer, then add parity tests proving sampled defect values match rendered output expectations.
+- ICW-000

@@ -1,35 +1,49 @@
-# ICW-023: Low-Priority Audit Cleanup Batch
+---
+id: ICW-023-low-priority-audit-cleanups
+author: Copilot
+key: ICW
+title: Icw 023 Low Priority Audit Cleanups
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: To Do
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-023-low-priority-audit-cleanups
 
 ## Summary
 
-Batch approved low-risk cleanup items from audit findings into one controlled, regression-safe pass.
+- Status: To Do
 
 ## Scope
 
-- src/InfiniteCanvas.Rendering/SampleImageTile.cs
-- src/InfiniteCanvas.Core/CameraTransform.cs
-- src/InfiniteCanvas.ViewModels/CanvasViewportViewModel.cs
-- src/InfiniteCanvas.App/MainWindow.xaml
-- src/InfiniteCanvas.App/MainWindow.xaml.cs
-- src/InfiniteCanvas.Rendering/ZeroCopyBitmapFactory.Windows.cs
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Pending:
-  - `dotnet build .\src\InfiniteCanvas.App\InfiniteCanvas.App.csproj --configuration Release`
-  - `dotnet test .\tests\InfiniteCanvas.Tests\InfiniteCanvas.Tests.csproj --configuration Release`
-  - `dotnet test .\tests\InfiniteCanvas.Windows.Tests\InfiniteCanvas.Windows.Tests.csproj --configuration Release`
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- Cross-validated findings include duplicated formulas/helpers, duplicated defaults, magic epsilon naming, and finalizer lock pattern cleanup.
-- Additional net-new nits to include in this batch: `UnmapViewOfFile` return value is ignored in disposal, integer parsing culture invariance is inconsistent in generation controls, and degenerate bounds in render sampling loops rely on implicit clamp behavior rather than explicit guards.
-- `Bgra32BufferLayout.GetPixelOffset` uses a combined guard that always attributes failures to `x`, mirroring the same parameter-attribution anti-pattern already tracked elsewhere.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Triage and sequence quick wins with zero behavior change expectations and targeted tests.
+- ICW-000

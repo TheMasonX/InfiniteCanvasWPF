@@ -1,32 +1,49 @@
-# ICW-005: DPI-Aware Resize And Maximum Surface Policy
+---
+id: ICW-005-dpi-aware-resize-and-surface-policy
+author: Copilot
+key: ICW
+title: Icw 005 Dpi Aware Resize And Surface Policy
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: To Do
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-005-dpi-aware-resize-and-surface-policy
 
 ## Summary
 
-Define and test explicit resize and max-render-surface policy for high-DPI and large monitor scenarios.
+- Status: To Do
 
 ## Scope
 
-- src/InfiniteCanvas.App/MainWindow.xaml.cs
-- src/InfiniteCanvas.Rendering
-- tests/InfiniteCanvas.Windows.Tests
-- docs/tasks/JIRA.md
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Audit capture only in this pass.
-- Implementation validation command (planned):
-  - `dotnet test .\tests\InfiniteCanvas.Windows.Tests\InfiniteCanvas.Windows.Tests.csproj --configuration Release`
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- Max render dimension clamp literal appears in multiple call sites.
-- Policy needs to cover per-monitor DPI behavior and 4K/5K display expectations.
-- Audit recommends consolidating clamp to one named policy constant while implementing DPI behavior.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Specify policy constants and resize behavior first, then add coverage for clamp and DPI scenarios.
+- ICW-000

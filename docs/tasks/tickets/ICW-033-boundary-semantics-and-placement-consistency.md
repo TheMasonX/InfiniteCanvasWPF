@@ -1,32 +1,49 @@
-# ICW-033: Boundary Semantics And Placement Consistency
+---
+id: ICW-033-boundary-semantics-and-placement-consistency
+author: Copilot
+key: ICW
+title: Icw 033 Boundary Semantics And Placement Consistency
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - task-tracker
+  - icw
+  - backlog
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
+---
 
-- Status: To Do
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
+# ICW-033-boundary-semantics-and-placement-consistency
 
 ## Summary
 
-Unify coordinate-boundary semantics and remove annotation placement edge bias for deterministic and auditable spatial behavior.
+- Status: To Do
 
 ## Scope
 
-- src/InfiniteCanvas.Core/SpatialBounds.cs
-- src/InfiniteCanvas.Rendering/SampleImageGenerator.cs
-- src/InfiniteCanvas.Rendering/SampleImageTile.cs
-- tests/InfiniteCanvas.Tests
-- docs/tasks/active-tasks.md
-- docs/tasks/JIRA.md
+- Review and update the relevant implementation area.
+- Capture the acceptance criteria and validation path.
+
+## Acceptance Criteria
+
+- The task has a clear implementation goal.
+- The task is linked to the relevant files or design notes.
+- The validation command and outcome are recorded.
 
 ## Validation
 
-- Pending:
-  - `dotnet test .\tests\InfiniteCanvas.Tests\InfiniteCanvas.Tests.csproj --configuration Release`
+- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
+- Result: To be completed when implemented.
 
-## Findings
+## Notes
 
-- Placement math excludes rightmost/bottommost legal start positions because random upper bounds are exclusive.
-- Intersection checks use closed bounds while sampling checks use half-open bounds.
+- Add implementation details, blockers, or follow-up questions here.
 
-## Next Step
+## Related Tasks
 
-- Define one boundary policy, apply consistently, and add edge-coordinate tests to lock expected behavior.
+- ICW-000
