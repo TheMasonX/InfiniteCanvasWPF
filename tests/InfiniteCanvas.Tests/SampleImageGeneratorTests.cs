@@ -15,7 +15,7 @@ public class SampleImageGeneratorTests
         {
             Assert.That(first, Has.Count.EqualTo(2));
             Assert.That(first[0].Pixels, Is.EqualTo(second[0].Pixels));
-            Assert.That(first[0].Pixels, Has.All.EqualTo((byte)128));
+            Assert.That(first[0].Pixels.Distinct().Count(), Is.GreaterThan(1));
             Assert.That(first[0].Annotations, Has.Count.EqualTo(3));
             Assert.That(first[0].Annotations.Select(item => item.Id),
                 Is.EqualTo(second[0].Annotations.Select(item => item.Id)));
@@ -35,16 +35,30 @@ public class SampleImageGeneratorTests
             Assert.That(tiles, Has.Count.EqualTo(64));
             Assert.That(tiles, Has.All.Property(nameof(SampleImageTile.IsImageGenerated)).False);
             Assert.That(tiles[0].PixelWidth, Is.EqualTo(8192));
-            Assert.That(tiles[0].PixelHeight, Is.EqualTo(2048));
+            Assert.That(tiles[0].PixelHeight, Is.EqualTo(4096));
             Assert.That(tiles[0].Annotations[0].DefectPixelWidth, Is.GreaterThan(0));
             Assert.That(tiles[0].Annotations[0].DefectPixelHeight, Is.GreaterThan(0));
             Assert.That(tiles[1].Bounds.X, Is.EqualTo(8192));
             Assert.That(tiles[1].Bounds.Y, Is.EqualTo(0));
             Assert.That(tiles[2].Bounds.X, Is.EqualTo(0));
-            Assert.That(tiles[2].Bounds.Y, Is.EqualTo(2048));
+            Assert.That(tiles[2].Bounds.Y, Is.EqualTo(4096));
             Assert.That(tiles[63].Bounds.X, Is.EqualTo(8192));
-            Assert.That(tiles[63].Bounds.Y, Is.EqualTo(63488));
+            Assert.That(tiles[63].Bounds.Y, Is.EqualTo(126976));
             Assert.That(tiles.Sum(tile => tile.Annotations.Count), Is.EqualTo(64));
+        });
+    }
+
+    [Test]
+    public void TileCacheBudget_DefaultCapacity_AcceptsDefaultTileCost()
+    {
+        var cacheBudget = new TileCacheBudget(TileCacheBudget.DefaultMaxPixels);
+        var defaultTileCost = checked(SampleImageGenerator.DefaultPixelWidth * SampleImageGenerator.DefaultPixelHeight);
+        var defaultBudget = TileCacheBudget.DefaultMaxPixels;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(defaultBudget, Is.GreaterThanOrEqualTo((long)defaultTileCost));
+            Assert.That(cacheBudget.CanAccept(defaultTileCost), Is.True);
         });
     }
 
@@ -113,6 +127,35 @@ public class SampleImageGeneratorTests
             Assert.That(
                 () => SampleImageGenerator.GenerateSet(defectPoolSize: 0),
                 Throws.TypeOf<ArgumentOutOfRangeException>().With.Property(nameof(ArgumentOutOfRangeException.ParamName)).EqualTo("defectPoolSize"));
+        });
+    }
+
+    [Test]
+    public void GenerateSet_ProducesBackgroundNoiseAndSmallDefectCircles()
+    {
+        var tile = SampleImageGenerator.GenerateSet(1, 64, 32, targetValue: 128, noise: 8, objectsPerTile: 0, seed: 42)[0];
+        var pixels = tile.Pixels;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pixels.Distinct().Count(), Is.GreaterThan(3), "Background tiles should include visible variation rather than a uniform fill.");
+            Assert.That(pixels.Any(value => value < 110), Is.True, "Background tiles should contain darker defect-like circles near the target gray.");
+            Assert.That(pixels.Any(value => value > 140), Is.True, "Background tiles should contain brighter noise variation.");
+        });
+    }
+
+    [Test]
+    public void AnnotationFeatureDisplayItems_ExposeReadableRows()
+    {
+        var tile = SampleImageGenerator.GenerateSet(1, 64, 32, objectsPerTile: 1, seed: 42)[0];
+        var annotation = tile.Annotations[0];
+
+        var rows = annotation.GetFeatureDisplayItems();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(rows.Select(item => item.Name), Is.EquivalentTo(new[] { "Confidence", "Severity" }));
+            Assert.That(rows.First(item => item.Name == "Confidence").Value, Does.Contain("%"));
         });
     }
 

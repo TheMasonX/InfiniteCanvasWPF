@@ -11,6 +11,7 @@ public sealed class SampleImageTile
     private readonly object _cacheGate = new();
     private readonly Func<byte[]> _pixelFactory;
     private readonly byte _placeholderValue;
+    private readonly int _pixelCost;
     private byte[]? _pixels;
     private int _generationQueued;
 #if WINDOWS
@@ -43,6 +44,7 @@ public sealed class SampleImageTile
         PixelHeight = pixelHeight;
         _placeholderValue = placeholderValue;
         _pixelFactory = () => ValidatePixels(pixelFactory(), pixelWidth, pixelHeight);
+        _pixelCost = checked(pixelWidth * pixelHeight);
         Annotations = annotations;
     }
 
@@ -71,6 +73,7 @@ public sealed class SampleImageTile
         PixelHeight = pixelHeight;
         _placeholderValue = placeholderValue;
         _backgroundBitmapFactory = backgroundBitmapFactory;
+        _pixelCost = checked(pixelWidth * pixelHeight);
         _pixelFactory = () =>
         {
             using var bitmap = _backgroundBitmapFactory();
@@ -89,6 +92,8 @@ public sealed class SampleImageTile
     public int PixelHeight { get; }
 
     public byte PlaceholderValue => _placeholderValue;
+
+    public int PixelCost => _pixelCost;
 
     public bool IsImageGenerated => Volatile.Read(ref _pixels) is not null;
 
@@ -311,5 +316,119 @@ public sealed record SampleAnnotation(
 
         value = DefectPixels[(sourceY * DefectPixelWidth) + sourceX];
         return true;
+    }
+
+    public IReadOnlyList<FeatureDisplayItem> GetFeatureDisplayItems()
+    {
+        return Features
+            .OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(item => new FeatureDisplayItem(item.Key, FormatFeatureValue(item.Value)))
+            .ToArray();
+    }
+
+    private static string FormatFeatureValue(double value)
+    {
+        return value <= 1.0 && value >= 0.0
+            ? string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0:P1}", value)
+            : value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+    }
+}
+
+public sealed record FeatureDisplayItem(string Name, string Value);
+
+public sealed class TileCacheBudget
+{
+    public const int DefaultRetainedTileCount = 4;
+    public const long DefaultMaxPixels = DefaultRetainedTileCount
+        * (long)SampleImageGenerator.DefaultPixelWidth
+        * SampleImageGenerator.DefaultPixelHeight;
+
+    private readonly long _maxPixels;
+    private readonly Dictionary<string, SampleImageTile> _trackedTiles = new(StringComparer.OrdinalIgnoreCase);
+    private long _usedPixels;
+
+    public TileCacheBudget(long maxPixels)
+    {
+        if (maxPixels <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxPixels));
+        }
+
+        _maxPixels = maxPixels;
+    }
+
+    public long MaxPixels => _maxPixels;
+
+    public long UsedPixels => Volatile.Read(ref _usedPixels);
+
+    public bool CanAccept(int pixelCost) => UsedPixels + pixelCost <= _maxPixels;
+
+    public void Add(int pixelCost)
+    {
+        if (pixelCost <= 0)
+        {
+            return;
+        }
+
+        Interlocked.Add(ref _usedPixels, pixelCost);
+    }
+
+    public void Remove(int pixelCost)
+    {
+        if (pixelCost <= 0)
+        {
+            return;
+        }
+
+        Interlocked.Add(ref _usedPixels, -pixelCost);
+    }
+
+    public void TrackTile(SampleImageTile tile)
+    {
+        ArgumentNullException.ThrowIfNull(tile);
+        if (!tile.IsImageGenerated)
+        {
+            return;
+        }
+
+        lock (_trackedTiles)
+        {
+            if (_trackedTiles.ContainsKey(tile.Id))
+            {
+                return;
+            }
+
+            _trackedTiles[tile.Id] = tile;
+            Add(tile.PixelCost);
+
+            while (UsedPixels > _maxPixels && _trackedTiles.Count > 0)
+            {
+                var evictedTile = _trackedTiles.Values.FirstOrDefault();
+                if (evictedTile is null)
+                {
+                    break;
+                }
+
+                _trackedTiles.Remove(evictedTile.Id);
+                Remove(evictedTile.PixelCost);
+                evictedTile.ResetImageCache();
+            }
+        }
+    }
+
+    public void Clear()
+    {
+        lock (_trackedTiles)
+        {
+            _trackedTiles.Clear();
+            Interlocked.Exchange(ref _usedPixels, 0);
+        }
+    }
+
+    public string DescribeStatus(IReadOnlyList<SampleImageTile> tiles)
+    {
+        var generated = tiles.Count(tile => tile.IsImageGenerated);
+        var used = UsedPixels;
+        return $"Budget {used:N0}/{_maxPixels:N0} pixels  |  {generated}/{tiles.Count} cached";
     }
 }

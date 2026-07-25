@@ -148,6 +148,9 @@
                         <CheckBox x:Name="ShowLabelsCheckBox" Content="Show labels" IsChecked="True"
                                   Margin="0,8,0,0" Checked="OnShowLabelsChanged" Unchecked="OnShowLabelsChanged" />
 
+                        <CheckBox x:Name="ShowImageTilesCheckBox" Content="Show image tiles" IsChecked="True"
+                                  Margin="0,8,0,0" Checked="OnShowImageTilesChanged" Unchecked="OnShowImageTilesChanged" />
+
                         <Border Height="1" Margin="0,14,0,12" Background="{StaticResource BorderBrush}" />
 
                         <TextBlock Text="SCENE MATERIAL" FontFamily="Cascadia Mono" FontSize="12"
@@ -168,6 +171,22 @@
                                 Height="30" Click="OnRegenerateClicked" />
                         <Button x:Name="DebugDumpCacheButton" Content="Debug: Dump Cache + Reset" Margin="0,8,0,0"
                                 Height="30" Click="OnDebugDumpCacheClicked" />
+                        <TextBlock x:Name="CacheStatusText" Margin="0,8,0,0" FontSize="11"
+                                   Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" />
+
+                        <TextBlock Text="FEATURES" Margin="0,14,0,4" FontFamily="Cascadia Mono" FontSize="12"
+                                   FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                        <TextBlock Text="Select an annotation to inspect its feature values." Margin="0,0,0,6"
+                                   FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" />
+                        <DataGrid x:Name="FeatureDataGrid" AutoGenerateColumns="False" HeadersVisibility="Column"
+                                  CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True"
+                                  BorderThickness="1" BorderBrush="{StaticResource BorderBrush}" Background="#111418"
+                                  Height="180" ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=SelectedAnnotationFeatures}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
+                                <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="120" />
+                            </DataGrid.Columns>
+                        </DataGrid>
                     </StackPanel>
                 </ScrollViewer>
             </Border>

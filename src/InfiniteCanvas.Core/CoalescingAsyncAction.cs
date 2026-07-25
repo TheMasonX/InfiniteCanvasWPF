@@ -4,15 +4,19 @@ public sealed class CoalescingAsyncAction : IAsyncDisposable
 {
     private readonly object _gate = new();
     private readonly Func<CancellationToken, Task> _action;
+    private readonly Action<Exception>? _onActionFault;
     private readonly CancellationTokenSource _lifetime = new();
     private Task? _processingTask;
     private bool _requested;
     private bool _disposed;
 
-    public CoalescingAsyncAction(Func<CancellationToken, Task> action)
+    public CoalescingAsyncAction(
+        Func<CancellationToken, Task> action,
+        Action<Exception>? onActionFault = null)
     {
         ArgumentNullException.ThrowIfNull(action);
         _action = action;
+        _onActionFault = onActionFault;
     }
 
     public Task RequestAsync()
@@ -76,7 +80,29 @@ public sealed class CoalescingAsyncAction : IAsyncDisposable
                 _requested = false;
             }
 
-            await _action(_lifetime.Token).ConfigureAwait(false);
+            try
+            {
+                await _action(_lifetime.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (_lifetime.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                ReportActionFault(exception);
+            }
+        }
+    }
+
+    private void ReportActionFault(Exception exception)
+    {
+        try
+        {
+            _onActionFault?.Invoke(exception);
+        }
+        catch
+        {
         }
     }
 }

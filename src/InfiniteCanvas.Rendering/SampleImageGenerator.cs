@@ -8,6 +8,9 @@ namespace InfiniteCanvas.Rendering;
 
 public static class SampleImageGenerator
 {
+    public const int DefaultPixelWidth = 8192;
+    public const int DefaultPixelHeight = 4096;
+
     private static readonly string[] Classifications = ["Scratch", "Inclusion", "Stain", "Edge defect"];
     private static readonly IReadOnlyDictionary<string, Bgra32Color> ClassificationColors = new Dictionary<string, Bgra32Color>
     {
@@ -27,8 +30,8 @@ public static class SampleImageGenerator
 
     public static IReadOnlyList<SampleImageTile> GenerateSet(
         int imageCount = 64,
-        int pixelWidth = 8192,
-        int pixelHeight = 2048,
+        int pixelWidth = DefaultPixelWidth,
+        int pixelHeight = DefaultPixelHeight,
         byte targetValue = 128,
         byte noise = 8,
         int objectsPerTile = 16,
@@ -140,10 +143,41 @@ public static class SampleImageGenerator
             throw new ArgumentOutOfRangeException(nameof(width));
         }
 
-        _ = noise;
-        _ = random;
         var pixels = new byte[checked(width * height)];
-        Array.Fill(pixels, targetValue);
+        var noiseSpread = Math.Clamp(noise + 8, 8, 24);
+        for (var index = 0; index < pixels.Length; index++)
+        {
+            var jitter = random.Next(-noiseSpread, noiseSpread + 1);
+            pixels[index] = (byte)Math.Clamp(targetValue + jitter, 0, 255);
+        }
+
+        var circleCount = random.Next(2, 5);
+        var maxRadius = Math.Max(8, Math.Min(width, height) / 10);
+        for (var circleIndex = 0; circleIndex < circleCount; circleIndex++)
+        {
+            var centerX = random.Next(0, width);
+            var centerY = random.Next(0, height);
+            var radius = random.Next(6, maxRadius + 1);
+            var circleValue = (byte)Math.Clamp(targetValue - random.Next(10, 34), 0, 255);
+            var radiusSquared = radius * radius;
+
+            for (var y = Math.Max(0, centerY - radius); y < Math.Min(height, centerY + radius + 1); y++)
+            {
+                var dy = y - centerY;
+                var dySquared = dy * dy;
+                for (var x = Math.Max(0, centerX - radius); x < Math.Min(width, centerX + radius + 1); x++)
+                {
+                    var dx = x - centerX;
+                    if ((dx * dx) + dySquared > radiusSquared)
+                    {
+                        continue;
+                    }
+
+                    var offset = (y * width) + x;
+                    pixels[offset] = (byte)Math.Min(pixels[offset], circleValue);
+                }
+            }
+        }
 
         return pixels;
     }
@@ -303,11 +337,34 @@ public static class SampleImageGenerator
         byte noise,
         int seed)
     {
-        _ = noise;
-        _ = seed;
+        var pixels = GenerateMonochromePixels(width, height, targetValue, noise, new Random(seed));
         var bitmap = new Bitmap(width, height, PixelFormat.Format24bppRgb);
-        using var graphics = Graphics.FromImage(bitmap);
-        graphics.Clear(Color.FromArgb(targetValue, targetValue, targetValue));
+        var bounds = new Rectangle(0, 0, width, height);
+        var data = bitmap.LockBits(bounds, ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
+        try
+        {
+            unsafe
+            {
+                var destination = (byte*)data.Scan0;
+                for (var y = 0; y < height; y++)
+                {
+                    var rowOffset = y * width;
+                    var row = destination + (y * data.Stride);
+                    for (var x = 0; x < width; x++)
+                    {
+                        var value = pixels[rowOffset + x];
+                        var channelOffset = x * 3;
+                        row[channelOffset] = value;
+                        row[channelOffset + 1] = value;
+                        row[channelOffset + 2] = value;
+                    }
+                }
+            }
+        }
+        finally
+        {
+            bitmap.UnlockBits(data);
+        }
 
         return bitmap;
     }

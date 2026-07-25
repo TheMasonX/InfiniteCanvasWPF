@@ -44,13 +44,18 @@ public partial class MainWindow : Window
     private int _objectsPerTile = 16;
     private int _generationSeed = 1729;
     private int _busyOperationCount;
+    private TileCacheBudget _tileCacheBudget = new(TileCacheBudget.DefaultMaxPixels);
+    private bool _showImageTiles = true;
+    private IReadOnlyList<FeatureDisplayItem> _selectedAnnotationFeatures = [];
+
+    public IReadOnlyList<FeatureDisplayItem> SelectedAnnotationFeatures => _selectedAnnotationFeatures;
 
     public MainWindow()
     {
         InitializeComponent();
 
         InitializeSpatialState();
-        _renderAction = new CoalescingAsyncAction(DispatchRenderFrameAsync);
+        _renderAction = new CoalescingAsyncAction(DispatchRenderFrameAsync, OnRenderActionFaulted);
         _selectionOutlineAnimator = SelectionOutlineAnimatorFactory.Create(SelectionOutlineAnimationMode.MarchingDash);
 
         _resizeTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(150), DispatcherPriority.Background, OnResizeElapsed, Dispatcher)
@@ -114,6 +119,7 @@ public partial class MainWindow : Window
         LabelSizeSlider.Value = settings.LabelSize;
         LabelDisplayComboBox.SelectedIndex = settings.LabelDisplay;
         ShowLabelsCheckBox.IsChecked = settings.ShowLabels;
+        ShowImageTilesCheckBox.IsChecked = true;
     }
 
     private async Task RegenerateSceneAsync(bool fitToWidth)
@@ -129,6 +135,7 @@ public partial class MainWindow : Window
             InitializeSpatialState();
             _selectedAnnotationId = null;
             _camera = new CameraTransform(0.01, 50);
+            _tileCacheBudget = new TileCacheBudget(_tileCacheBudget.MaxPixels);
             UnsubscribeTileGenerationEvents(_tiles);
 
             var tileCount = checked(_tileColumns * _tileRows);
@@ -149,6 +156,7 @@ public partial class MainWindow : Window
 
             _annotations = _tiles.SelectMany(tile => tile.Annotations).ToArray();
             _spatialIndex.AddRange(_annotations);
+            UpdateSelectedAnnotationFeatures();
             StatusText.Text = $"Publishing {_annotations.Count:N0} classified annotations";
             await _spatialIndex.PublishSnapshotAsync(_lifetime.Token);
 
@@ -195,6 +203,11 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (sender is SampleImageTile tile)
+        {
+            _tileCacheBudget.TrackTile(tile);
+        }
+
         _ = Dispatcher.InvokeAsync(async () =>
         {
             if (!IsLoaded || _lifetime.IsCancellationRequested)
@@ -235,6 +248,11 @@ public partial class MainWindow : Window
         return Dispatcher.InvokeAsync(() => RenderFrameAsync(cancellationToken)).Task.Unwrap();
     }
 
+    private static void OnRenderActionFaulted(Exception exception)
+    {
+        Debug.WriteLine($"Render action failed: {exception}");
+    }
+
     private async Task RenderFrameAsync(CancellationToken cancellationToken)
     {
         if (!IsLoaded || ViewportHost.ActualWidth < 1 || ViewportHost.ActualHeight < 1)
@@ -265,6 +283,7 @@ public partial class MainWindow : Window
 
         stopwatch.Stop();
         var generatedTileCount = _tiles.Count(tile => tile.IsBackgroundFetched);
+        UpdateCacheStatus(generatedTileCount);
         StatusText.Text = $"Frame {width}x{height}  |  {stopwatch.Elapsed.TotalMilliseconds:F1} ms  |  Zoom {camera.ScaleX:F3}x  |  Images {generatedTileCount}/{_tiles.Count}";
         UpdateZoomDisplay(camera, width, height);
 
@@ -328,12 +347,15 @@ public partial class MainWindow : Window
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Top
         };
-        frame.Children.Add(new Image
+        if (_showImageTiles)
         {
-            Source = bitmap,
-            Stretch = Stretch.Fill,
-            SnapsToDevicePixels = true
-        });
+            frame.Children.Add(new Image
+            {
+                Source = bitmap,
+                Stretch = Stretch.Fill,
+                SnapsToDevicePixels = true
+            });
+        }
 
         frame.Children.Add(BuildTileGridLayer(camera, frameWidth, frameHeight));
 
@@ -559,6 +581,7 @@ public partial class MainWindow : Window
         if (sender is Border { Tag: SampleAnnotation annotation })
         {
             _selectedAnnotationId = annotation.Id;
+            UpdateSelectedAnnotationFeatures(annotation);
             e.Handled = true;
             await RequestRenderAsync();
         }
@@ -689,6 +712,17 @@ public partial class MainWindow : Window
         _hoverPointerPosition = null;
         PixelometerWorldText.Text = "WORLD X --  Y --";
         PixelometerValueText.Text = "PIXEL --";
+    }
+
+    private async void OnShowImageTilesChanged(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        _showImageTiles = ShowImageTilesCheckBox.IsChecked ?? true;
+        await RequestRenderAsync();
     }
 
     private async void OnViewportMouseWheel(object sender, MouseWheelEventArgs e)
@@ -979,6 +1013,8 @@ public partial class MainWindow : Window
             return;
         }
 
+        _selectedAnnotationId = null;
+        UpdateSelectedAnnotationFeatures();
         await RegenerateSceneAsync(fitToWidth: true);
     }
 
@@ -993,8 +1029,33 @@ public partial class MainWindow : Window
             tile.ResetImageCache();
         }
 
+        _tileCacheBudget = new TileCacheBudget(_tileCacheBudget.MaxPixels);
+        UpdateCacheStatus();
         StatusText.Text = "Image cache reset. Tiles will regenerate lazily as they come into range.";
         await RequestRenderAsync();
+    }
+
+    private void UpdateCacheStatus(int? generatedTileCount = null)
+    {
+        var generatedCount = generatedTileCount ?? _tiles.Count(tile => tile.IsBackgroundFetched);
+        var cacheSummary = _tileCacheBudget.DescribeStatus(_tiles);
+        CacheStatusText.Text = cacheSummary;
+        StatusText.Text = $"Frame {Math.Max(1, _tiles.Count)} tiles  |  Cache {cacheSummary}";
+        Debug.WriteLine($"[Cache] {cacheSummary}  |  generated {generatedCount}/{_tiles.Count}");
+    }
+
+    private void UpdateSelectedAnnotationFeatures(SampleAnnotation? annotation = null)
+    {
+        var selectedAnnotation = annotation ?? _annotations.FirstOrDefault(item => item.Id == _selectedAnnotationId);
+        if (selectedAnnotation is null)
+        {
+            _selectedAnnotationFeatures = [];
+            FeatureDataGrid.ItemsSource = SelectedAnnotationFeatures;
+            return;
+        }
+
+        _selectedAnnotationFeatures = selectedAnnotation.GetFeatureDisplayItems();
+        FeatureDataGrid.ItemsSource = SelectedAnnotationFeatures;
     }
 
     private bool TryReadGenerationOptions(out string validationError)

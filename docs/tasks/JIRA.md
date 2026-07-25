@@ -35,7 +35,7 @@
 | ICW-031 | To Do | Improvement | Replace string-keyed annotation feature map with typed metrics | Move confidence/severity metadata to strong types to remove runtime key-risk and improve refactor safety. |
 | ICW-032 | To Do | Improvement | Strengthen spatial query abstraction for count-oriented paths | Extend query contracts to avoid forced list materialization where only counts are required, while preserving compatibility. |
 | ICW-033 | To Do | Task | Unify boundary semantics and annotation placement consistency | Define one coordinate-boundary policy and remove placement edge bias; add tests covering edge coordinates and intersections. |
-| ICW-034 | To Do | Bug | Harden coalesced render scheduler fault handling and queued follow-up preservation | Ensure `CoalescingAsyncAction` does not fault-leak through shared task state and does not discard coalesced follow-up requests when the wrapped action throws; align disposal-time behavior and tests. |
+| ICW-034 | Done | Bug | Harden coalesced render scheduler fault handling and queued follow-up preservation | Non-cancellation action faults are reported without faulting shared scheduler state; queued follow-up requests are preserved and disposal remains cancellation-safe. |
 | ICW-035 | To Do | Bug | Unify renderer and pixelometer defect blend contract | Remove formula divergence between render path and pixelometer readout by centralizing blend/sampling helper usage and validating parity. |
 | ICW-036 | To Do | Story | Establish CI and nullable-enforcement baseline | Add repository CI workflow for build/tests and central warning policy so nullable and analyzer regressions fail fast instead of relying on manual validation only. |
 | ICW-037 | To Do | Improvement | Add accessibility baseline to MainWindow controls | Provide automation names, access keys, and primary keyboard bindings for scene controls and core actions without changing visual behavior. |
@@ -48,8 +48,10 @@
 | ICW-044 | Done | Bug | Preserve independent non-linear axis zoom and show derived zoom percentage | Wheel targets clamp per axis, the free axis continues non-linear scaling, preset selections act as commands, and read-only ComboBox text shows the percentage of the stricter material-fit axis. |
 | ICW-045 | Done | Improvement | Replace the rejected custom zoom UI with inline entry and Apply action | Selecting `Custom...` reveals a compact percentage field; Apply and Enter use the same validation and update path. |
 | ICW-046 | Done | Bug | Recover uniform zoom after an axis clamp no longer applies | Uniform zoom is now recovered when the free axis reaches a common legal target; anisotropy remains only while the constrained floor still prevents it. |
-| ICW-047 | To Do | Story | Generate taller sparse background image tiles with cache controls and metrics | Double default tile height; generate noisy background imagery on demand as it approaches the viewport; enforce pixel-budgeted cache limits; add a Show Image Tiles display toggle and visible per-cache diagnostics. |
-| ICW-048 | To Do | Story | Inspect selected annotation features in a sidebar DataGrid | Selecting an annotation populates a sidebar grid with its feature names and values; clearing the selection returns the panel to its empty state. |
+| ICW-047 | Done | Story | Generate taller sparse background image tiles with cache controls and metrics | Default tile height is doubled, background imagery now uses noisy sparse variation, pixel-budgeted cache tracking is active, and the UI exposes Show Image Tiles plus live cache diagnostics. |
+| ICW-048 | Done | Story | Inspect selected annotation features in a sidebar DataGrid | Selecting an annotation populates the sidebar DataGrid with formatted feature values; clearing the selection returns the panel to its empty state. |
+| ICW-049 | Done | Bug | Fix tile-cache default capacity below one generated tile | Default budget is now 134,217,728 pixels, retaining four 8192x4096 tiles; focused regression tests and Release app build passed. |
+| REQ-001 | Done | Docs | Capture recurring functional requirements and invariants in a durable registry | Added a requirements-and-invariants registry covering zoom policy, tile generation, cache behavior, annotation inspection, and settings persistence so future work can reference the same contract. |
 
 ## Activity
 
@@ -115,3 +117,7 @@
 | 2026-07-24 | ICW-048 | Captured requirement to display selected annotation features in a sidebar DataGrid. |
 | 2026-07-24 | ICW-046 | Completed pure uniform-recovery zoom policy and focused regression coverage; 5/5 policy tests and Release app build passed. |
 | 2026-07-24 | ICW-045 | Completed Custom preset flow with inline percent input plus shared Apply/Enter behavior; Release app build passed. |
+| 2026-07-24 | ICW-047 | Completed taller noisy tile generation, pixel-budget cache tracking, and visible cache diagnostics with full Release validation. |
+| 2026-07-24 | ICW-048 | Completed sidebar feature inspection wiring for selected annotations and added the empty-state DataGrid behavior. |
+| 2026-07-24 | ICW-049 | Completed cache-capacity fix: default budget now retains four full-size tiles; focused tests passed 7/7 and the Release app build succeeded. |
+| 2026-07-24 | ICW-034 | Completed scheduler fault containment: non-cancellation render faults are reported, pending coalesced redraws run, and core tests passed 35/35. |
