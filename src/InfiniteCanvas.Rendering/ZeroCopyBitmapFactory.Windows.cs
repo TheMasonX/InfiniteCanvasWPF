@@ -245,11 +245,12 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
                     var worldX = (x - camera.OffsetX) / camera.ScaleX;
                     var sourceX = Math.Clamp((int)(worldX - imageLeftWorld), 0, bitmap.Width - 1);
                     var value = sourceRow[sourceX * 3];
-
                     var offset = _layout.GetPixelOffset(x, y);
-                    destination[offset] = value;
-                    destination[offset + 1] = value;
-                    destination[offset + 2] = value;
+                    var currentValue = destination[offset];
+                    var displayValue = DefectOverlaySampler.ResolveDisplayValue(currentValue, annotation, worldX, worldY);
+                    destination[offset] = displayValue;
+                    destination[offset + 1] = displayValue;
+                    destination[offset + 2] = displayValue;
                     destination[offset + 3] = byte.MaxValue;
                 }
             }

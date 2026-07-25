@@ -17,6 +17,8 @@ public class CanvasScrollbarWiringTests
             Assert.That(xaml, Does.Contain("HorizontalScrollbarTrack"));
             Assert.That(xaml, Does.Contain("VerticalScrollbarTrack"));
             Assert.That(xaml, Does.Contain("OnScrollbarThumbMouseMove"));
+            Assert.That(xaml, Does.Contain("HorizontalScrollBarVisibility=\"Disabled\""));
+            Assert.That(xaml, Does.Contain("Padding=\"0,0,14,0\""));
             Assert.That(codeBehind, Does.Contain("private void UpdateViewportScrollbars("));
             Assert.That(codeBehind, Does.Contain("UpdateViewportScrollbars(camera, width, height);"));
             Assert.That(codeBehind, Does.Contain("ViewportScrollbarPolicy.ComputeMetrics"));

@@ -2,12 +2,14 @@
 id: ICW-014-global-exception-safety-net
 key: ICW-014
 title: Global UI exception safety net and harden async-void handlers
-status: Proposed
+status: In Progress
 type: Task
 priority: P2
 tags:
   - icw
   - task-tracker
+  - stability
+  - logging
 dependsOn: []
 related: []
 links:
@@ -16,53 +18,37 @@ created: 2026-07-25
 updated: 2026-07-25
 ---
 
-Summary:
-Add global unhandled exception handlers (`DispatcherUnhandledException`, `AppDomain.UnhandledException`, `TaskScheduler.UnobservedTaskException`) and harden `async void` event handlers so UI exceptions are logged and do not crash the process silently.
-
-Scope:
-- `src/InfiniteCanvas.App/App.xaml`
-- `src/InfiniteCanvas.App/App.xaml.cs`
-- selected `async void` handlers in `MainWindow.xaml.cs`
-
-Acceptance criteria:
-- App registers global exception handlers and logs exceptions to `StatusText` or telemetry.
-- Long-running `async void` handlers use `SafeFireAndForget` or wrap awaits in try/catch.
-
-Validation commands:
-- `dotnet build ./InfiniteCanvasWPF.slnx --configuration Release`
-- `dotnet test ./tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --filter CoalescingAsyncActionTests`
-
-Estimated effort: Small
-Risk: Low
-Suggested owner: @app-team
 # ICW-014: Global Exception Safety Net for Async UI Pipeline
-
-- Status: In Progress
-- Date: 2026-07-24
-- Owner: InfiniteCanvas Agent
 
 ## Summary
 
-Add application-level unhandled exception handling so async-void UI event failures are surfaced, logged, and handled with user-safe behavior.
+Add application-level unhandled-exception handling so async-void UI event failures are surfaced, logged, and handled without crashing the process silently.
 
 ## Scope
 
-- src/InfiniteCanvas.App/App.xaml
 - src/InfiniteCanvas.App/App.xaml.cs
+- src/InfiniteCanvas.App/Logging/SerilogHost.cs
 - src/InfiniteCanvas.App/MainWindow.xaml.cs
 - tests/InfiniteCanvas.Tests
 
+## Acceptance Criteria
+
+- The app registers global Dispatcher/AppDomain/TaskScheduler exception handlers and logs failures centrally.
+- Logging initialization degrades gracefully if the Windows Event Log sink cannot be created.
+- Selected async-void handlers remain safe under unexpected faults.
+
 ## Validation
 
-- Pending:
-  - `dotnet build .\src\InfiniteCanvas.App\InfiniteCanvas.App.csproj --configuration Release`
-  - `dotnet test .\tests\InfiniteCanvas.Tests\InfiniteCanvas.Tests.csproj --configuration Release`
+- Command: `dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release`
+- Result: Succeeded with 1 existing nullable warning in the renderer path.
+- Command: `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release --filter "FullyQualifiedName~SampleImageTileTests|FullyQualifiedName~CanvasUserSettingsTests|FullyQualifiedName~CoalescingAsyncActionTests"`
+- Result: Passed (9/9 tests, 0 failures)
 
 ## Findings
 
-- Cross-validated audit finding: the app initially lacked global Dispatcher/AppDomain/TaskScheduler unhandled exception safety hooks; the current worktree now registers and removes all three hooks in `App.xaml.cs`.
-- Coalesced render scheduling currently relies on fault-prone task propagation semantics, so unhandled render faults can surface through async-void event paths without centralized reporting.
-- Application-level hooks are now registered in `App.OnStartup`; dispatcher faults are logged and marked handled, unobserved task faults are logged and observed, and process-level faults are logged as fatal. Remaining validation is selected async-void handler coverage and close-time lifecycle stress.
+- The current worktree now registers and removes all three global handlers in App startup/shutdown.
+- The logging host now falls back to file-only logging if the Event Log sink cannot be initialized, which closes the new first-launch crash path identified in the audit.
+- Remaining work is to harden selected MainWindow async-void handlers with a shared safer wrapper and to validate close-time cancellation paths.
 
 ## Dependencies
 
@@ -70,4 +56,4 @@ Add application-level unhandled exception handling so async-void UI event failur
 
 ## Next Step
 
-- Harden selected `MainWindow` async-void handlers with a shared safe wrapper, then validate close-time cancellation and disposal paths.
+- Add a shared async-void wrapper for the main UI handlers and confirm no close-time disposal regressions.

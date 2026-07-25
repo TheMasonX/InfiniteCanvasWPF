@@ -10,6 +10,7 @@ public static class SampleImageGenerator
 {
     public const int DefaultPixelWidth = 8192;
     public const int DefaultPixelHeight = 4096;
+    public const int NoiseBlockSize = 512;
     public const int MaxObjectsPerTile = 256;
 
     private static readonly string[] Classifications = ["Scratch", "Inclusion", "Stain", "Edge defect"];
@@ -137,7 +138,14 @@ public static class SampleImageGenerator
         int seed = 1729,
         int circleCount = 3)
     {
-        return GenerateMonochromePixels(width, height, targetValue, noise, new DeterministicRandom(seed), circleCount);
+        return GenerateMonochromePixels(
+            width,
+            height,
+            targetValue,
+            noise,
+            new DeterministicRandom(seed),
+            new DeterministicRandom(unchecked(seed + 0x2F6E2B1)),
+            circleCount);
     }
 
     private static byte[] GenerateMonochromePixels(
@@ -146,6 +154,7 @@ public static class SampleImageGenerator
         byte targetValue,
         byte noise,
         DeterministicRandom random,
+        DeterministicRandom circleRandom,
         int circleCount)
     {
         if (width <= 0 || height <= 0)
@@ -154,27 +163,21 @@ public static class SampleImageGenerator
         }
 
         var pixels = new byte[checked(width * height)];
-        Array.Fill(pixels, targetValue);
-        if (noise > 0)
+        var noiseSpread = Math.Clamp(noise + 8, 8, 24);
+        for (var pixelIndex = 0; pixelIndex < pixels.Length; pixelIndex++)
         {
-            var noiseSpread = Math.Clamp(noise + 8, 8, 24);
-            var noiseSampleCount = Math.Min(pixels.Length, Math.Max(64, pixels.Length / 1024));
-            for (var sampleIndex = 0; sampleIndex < noiseSampleCount; sampleIndex++)
-            {
-                var jitter = random.Next(-noiseSpread, noiseSpread + 1);
-                var pixelIndex = random.Next(pixels.Length);
-                pixels[pixelIndex] = (byte)Math.Clamp(targetValue + jitter, 0, 255);
-            }
+            var jitter = noise == 0 ? 0 : random.Next(-noiseSpread, noiseSpread + 1);
+            pixels[pixelIndex] = (byte)Math.Clamp(targetValue + jitter, 0, 255);
         }
 
         var effectiveCircleCount = Math.Clamp(circleCount, 0, 8);
         var maxRadius = Math.Max(8, Math.Min(width, height) / 10);
         for (var circleIndex = 0; circleIndex < effectiveCircleCount; circleIndex++)
         {
-            var centerX = random.Next(0, width);
-            var centerY = random.Next(0, height);
-            var radius = random.Next(6, maxRadius + 1);
-            var circleValue = (byte)Math.Clamp(targetValue - random.Next(10, 34), 0, 255);
+            var centerX = circleRandom.Next(0, width);
+            var centerY = circleRandom.Next(0, height);
+            var radius = circleRandom.Next(6, maxRadius + 1);
+            var circleValue = (byte)Math.Clamp(targetValue - circleRandom.Next(10, 34), 0, 255);
             var radiusSquared = radius * radius;
 
             for (var y = Math.Max(0, centerY - radius); y < Math.Min(height, centerY + radius + 1); y++)
@@ -354,22 +357,55 @@ public static class SampleImageGenerator
         int seed,
         int circleCount)
     {
-        var pixels = GenerateMonochromePixels(width, height, targetValue, noise, new DeterministicRandom(seed), circleCount);
         var bitmap = new Bitmap(width, height, PixelFormat.Format24bppRgb);
-        var bounds = new Rectangle(0, 0, width, height);
-        var data = bitmap.LockBits(bounds, ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
+        using (var graphics = Graphics.FromImage(bitmap))
+        {
+            graphics.Clear(Color.FromArgb(targetValue, targetValue, targetValue));
+            using var noiseBlock = GenerateNoiseBlock(targetValue, noise, seed);
+            for (var y = 0; y < height; y += NoiseBlockSize)
+            {
+                for (var x = 0; x < width; x += NoiseBlockSize)
+                {
+                    var drawWidth = Math.Min(NoiseBlockSize, width - x);
+                    var drawHeight = Math.Min(NoiseBlockSize, height - y);
+                    graphics.DrawImage(
+                        noiseBlock,
+                        new Rectangle(x, y, drawWidth, drawHeight),
+                        new Rectangle(0, 0, drawWidth, drawHeight),
+                        GraphicsUnit.Pixel);
+                }
+            }
+
+            DrawBackgroundCircles(graphics, width, height, targetValue, seed, circleCount);
+        }
+
+        return bitmap;
+    }
+
+    private static Bitmap GenerateNoiseBlock(byte targetValue, byte noise, int seed)
+    {
+        var blockPixels = GenerateMonochromePixels(
+            NoiseBlockSize,
+            NoiseBlockSize,
+            targetValue,
+            noise,
+            new DeterministicRandom(seed),
+            new DeterministicRandom(unchecked(seed + 0x2F6E2B1)),
+            circleCount: 0);
+        var block = new Bitmap(NoiseBlockSize, NoiseBlockSize, PixelFormat.Format24bppRgb);
+        var bounds = new Rectangle(0, 0, NoiseBlockSize, NoiseBlockSize);
+        var data = block.LockBits(bounds, ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
         try
         {
             unsafe
             {
                 var destination = (byte*)data.Scan0;
-                for (var y = 0; y < height; y++)
+                for (var y = 0; y < NoiseBlockSize; y++)
                 {
-                    var rowOffset = y * width;
                     var row = destination + (y * data.Stride);
-                    for (var x = 0; x < width; x++)
+                    for (var x = 0; x < NoiseBlockSize; x++)
                     {
-                        var value = pixels[rowOffset + x];
+                        var value = blockPixels[(y * NoiseBlockSize) + x];
                         var channelOffset = x * 3;
                         row[channelOffset] = value;
                         row[channelOffset + 1] = value;
@@ -380,10 +416,32 @@ public static class SampleImageGenerator
         }
         finally
         {
-            bitmap.UnlockBits(data);
+            block.UnlockBits(data);
         }
 
-        return bitmap;
+        return block;
+    }
+
+    private static void DrawBackgroundCircles(
+        Graphics graphics,
+        int width,
+        int height,
+        byte targetValue,
+        int seed,
+        int circleCount)
+    {
+        var random = new DeterministicRandom(unchecked(seed + 0x2F6E2B1));
+        var effectiveCircleCount = Math.Clamp(circleCount, 0, 8);
+        var maxRadius = Math.Max(8, Math.Min(width, height) / 10);
+        for (var circleIndex = 0; circleIndex < effectiveCircleCount; circleIndex++)
+        {
+            var centerX = random.Next(0, width);
+            var centerY = random.Next(0, height);
+            var radius = random.Next(6, maxRadius + 1);
+            var circleValue = (byte)Math.Clamp(targetValue - random.Next(10, 34), 0, 255);
+            using var brush = new SolidBrush(Color.FromArgb(circleValue, circleValue, circleValue));
+            graphics.FillEllipse(brush, centerX - radius, centerY - radius, radius * 2, radius * 2);
+        }
     }
 
     private static Bitmap GenerateCenteredDefectBitmap(int width, int height, DeterministicRandom random)

@@ -46,6 +46,7 @@ public partial class MainWindow : Window
     private int _busyOperationCount;
     private TileCacheBudget _tileCacheBudget = new(TileCacheBudget.DefaultMaxBytes);
     private bool _showBackgroundImages = true;
+    private byte _backgroundTargetValue = 128;
     private byte _backgroundNoise = 8;
     private int _backgroundCircleCount = 3;
     private bool _showImageTiles = true;
@@ -127,6 +128,7 @@ public partial class MainWindow : Window
         TilesXTextBox.Text = _tileColumns.ToString();
         TilesYTextBox.Text = _tileRows.ToString();
         ObjectsPerTileTextBox.Text = _objectsPerTile.ToString();
+        GenerationSeedTextBox.Text = _generationSeed.ToString();
     }
 
     private void ApplySettingsToUi(CanvasUserSettings settings)
@@ -134,17 +136,21 @@ public partial class MainWindow : Window
         _tileColumns = settings.TileColumns;
         _tileRows = settings.TileRows;
         _objectsPerTile = settings.ObjectsPerTile;
+        _generationSeed = settings.GenerationSeed;
         ApplyGenerationControlsToUi();
         DisplayModeComboBox.SelectedIndex = settings.AnnotationDisplayMode;
         OutlineThicknessSlider.Value = settings.OutlineThickness;
         LabelSizeSlider.Value = settings.LabelSize;
         LabelDisplayComboBox.SelectedIndex = settings.LabelDisplay;
         ShowLabelsCheckBox.IsChecked = settings.ShowLabels;
-        ShowImageTilesCheckBox.IsChecked = true;
+        ShowImageTilesCheckBox.IsChecked = settings.ShowImageTiles;
+        _showImageTiles = settings.ShowImageTiles;
         ShowBackgroundImagesCheckBox.IsChecked = settings.ShowBackgroundImages;
         _showBackgroundImages = settings.ShowBackgroundImages;
+        _backgroundTargetValue = settings.BackgroundTargetValue;
         _backgroundNoise = settings.BackgroundNoise;
         _backgroundCircleCount = settings.BackgroundCircleCount;
+        BackgroundTargetSlider.Value = settings.BackgroundTargetValue;
         BackgroundNoiseSlider.Value = settings.BackgroundNoise;
         BackgroundCircleCountSlider.Value = settings.BackgroundCircleCount;
     }
@@ -175,8 +181,9 @@ public partial class MainWindow : Window
                     objectsPerTile: _objectsPerTile,
                     columns: _tileColumns,
                     rows: _tileRows,
-                    seed: _generationSeed++,
+                    seed: _generationSeed,
                     defectPoolSize: 64,
+                    targetValue: _backgroundTargetValue,
                     noise: _backgroundNoise,
                     circleCount: _backgroundCircleCount),
                 _lifetime.Token);
@@ -312,7 +319,9 @@ public partial class MainWindow : Window
                 visibleTiles,
                 visibleItems,
                 camera,
-                _tileCacheBudget.TryReserve);
+                _tileCacheBudget.TryReserve,
+                showBackgroundImages: _showBackgroundImages,
+                showSparseImageTiles: _showImageTiles);
             return (Bitmap: bitmap, VisibleItems: visibleItems, VisibleTiles: visibleTiles);
         }, cancellationToken);
 
@@ -396,7 +405,7 @@ public partial class MainWindow : Window
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Top
         };
-        if (_showBackgroundImages && _showImageTiles)
+        if (_showBackgroundImages || _showImageTiles)
         {
             frame.Children.Add(new Image
             {
@@ -928,26 +937,16 @@ public partial class MainWindow : Window
         await RequestRenderAsync();
     }
 
-    private async void OnBackgroundNoiseChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void OnBackgroundTargetChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (!IsLoaded)
-        {
-            return;
-        }
-
-        _backgroundNoise = (byte)Math.Round(BackgroundNoiseSlider.Value);
-        await RegenerateSceneAsync(fitToWidth: false);
     }
 
-    private async void OnBackgroundCircleCountChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void OnBackgroundNoiseChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (!IsLoaded)
-        {
-            return;
-        }
+    }
 
-        _backgroundCircleCount = (int)Math.Round(BackgroundCircleCountSlider.Value);
-        await RegenerateSceneAsync(fitToWidth: false);
+    private void OnBackgroundCircleCountChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
     }
 
     private async void OnViewportMouseWheel(object sender, MouseWheelEventArgs e)
@@ -1306,6 +1305,12 @@ public partial class MainWindow : Window
             return false;
         }
 
+        if (!int.TryParse(GenerationSeedTextBox.Text, out var seed))
+        {
+            validationError = "Generation seed must be a valid integer.";
+            return false;
+        }
+
         if ((long)columns * rows > 2000)
         {
             validationError = "Tile count must be 2000 or less for this demo.";
@@ -1315,6 +1320,10 @@ public partial class MainWindow : Window
         _tileColumns = columns;
         _tileRows = rows;
         _objectsPerTile = objectsPerTile;
+        _generationSeed = seed;
+        _backgroundTargetValue = (byte)Math.Round(BackgroundTargetSlider.Value);
+        _backgroundNoise = (byte)Math.Round(BackgroundNoiseSlider.Value);
+        _backgroundCircleCount = (int)Math.Round(BackgroundCircleCountSlider.Value);
         return true;
     }
 
@@ -1343,13 +1352,17 @@ public partial class MainWindow : Window
             ObjectsPerTile = int.TryParse(ObjectsPerTileTextBox.Text, out var objectsPerTile) && objectsPerTile >= 0
                 ? objectsPerTile
                 : _objectsPerTile,
+            GenerationSeed = int.TryParse(GenerationSeedTextBox.Text, out var seed) ? seed : _generationSeed,
             AnnotationDisplayMode = DisplayModeComboBox.SelectedIndex,
             OutlineThickness = OutlineThicknessSlider.Value,
             LabelSize = LabelSizeSlider.Value,
             LabelDisplay = LabelDisplayComboBox.SelectedIndex,
             ShowLabels = ShowLabelsCheckBox.IsChecked ?? true,
-            BackgroundNoise = _backgroundNoise,
-            BackgroundCircleCount = _backgroundCircleCount
+            ShowImageTiles = _showImageTiles,
+            ShowBackgroundImages = _showBackgroundImages,
+            BackgroundTargetValue = (byte)Math.Round(BackgroundTargetSlider.Value),
+            BackgroundNoise = (byte)Math.Round(BackgroundNoiseSlider.Value),
+            BackgroundCircleCount = (int)Math.Round(BackgroundCircleCountSlider.Value)
         };
 
         if (!settings.IsValid)
@@ -1391,7 +1404,7 @@ public partial class MainWindow : Window
 
         if (TryReadPixelValue(worldX, worldY, out var backgroundValue, out var defectValue, out var tileId))
         {
-            var finalValue = BlendDefect(backgroundValue, defectValue);
+            var finalValue = ResolveDisplayPixelValue(backgroundValue, worldX, worldY);
             PixelometerValueText.Text = $"PIXEL {finalValue}  ({tileId}) bg {backgroundValue} + defect {defectValue}";
             return;
         }
@@ -1434,9 +1447,11 @@ public partial class MainWindow : Window
         return false;
     }
 
-    private static byte BlendDefect(byte baseValue, byte defectValue)
+    private byte ResolveDisplayPixelValue(byte backgroundValue, double worldX, double worldY)
     {
-        return (byte)Math.Clamp(baseValue - (defectValue / 2), byte.MinValue, byte.MaxValue);
+        var sampleArea = new SpatialBounds(worldX, worldY, 0.01, 0.01);
+        var hitAnnotations = _spatialIndex.Query(sampleArea);
+        return DefectOverlaySampler.ResolveDisplayValue(backgroundValue, hitAnnotations, worldX, worldY);
     }
 
     private void BeginBusyOperation()
@@ -1471,11 +1486,11 @@ public partial class MainWindow : Window
             true);
     }
 
-            private enum AnnotationLabelDisplay
-            {
-            Class,
-            Id
-            }
+    private enum AnnotationLabelDisplay
+    {
+        Class,
+        Id
+    }
 
     private enum AnnotationDisplayMode
     {

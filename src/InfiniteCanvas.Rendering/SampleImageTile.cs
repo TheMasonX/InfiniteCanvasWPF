@@ -15,6 +15,7 @@ public sealed class SampleImageTile
     private readonly int _pixelCost;
     private byte[]? _pixels;
     private int _generationQueued;
+    private int _generationEpoch;
     private long _generationDurationTicks;
 #if WINDOWS
     private readonly Func<Bitmap>? _backgroundBitmapFactory;
@@ -172,6 +173,7 @@ public sealed class SampleImageTile
         lock (_cacheGate)
         {
             _pixels = null;
+            Interlocked.Increment(ref _generationEpoch);
             Interlocked.Exchange(ref _generationQueued, 0);
 #if WINDOWS
             Interlocked.Exchange(ref _backgroundFetched, 0);
@@ -256,13 +258,14 @@ public sealed class SampleImageTile
         _ = Task.Run(() =>
         {
             var generationStarted = Stopwatch.GetTimestamp();
+            var generationEpoch = Volatile.Read(ref _generationEpoch);
             try
             {
                 var generated = _pixelFactory();
                 var shouldRaiseEvent = false;
                 lock (_cacheGate)
                 {
-                    if (_pixels is null)
+                    if (_pixels is null && generationEpoch == Volatile.Read(ref _generationEpoch))
                     {
                         _pixels = generated;
                         Interlocked.Exchange(ref _generationDurationTicks, Stopwatch.GetTimestamp() - generationStarted);

@@ -27,11 +27,18 @@ internal static class SerilogHost
                 path: filePath,
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 14,
-                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
-            .WriteTo.EventLog("InfiniteCanvas", manageEventSource: true, restrictedToMinimumLevel: LogEventLevel.Warning)
-            .CreateLogger();
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}");
 
-        return configuration;
+        try
+        {
+            configuration.WriteTo.EventLog("InfiniteCanvas", manageEventSource: true, restrictedToMinimumLevel: LogEventLevel.Warning);
+        }
+        catch (Exception exception)
+        {
+            System.Diagnostics.Debug.WriteLine($"Falling back to file-only logging because the EventLog sink could not be initialized: {exception.Message}");
+        }
+
+        return configuration.CreateLogger();
     }
 
     public static void Shutdown()

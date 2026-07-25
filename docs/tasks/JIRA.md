@@ -2,6 +2,7 @@
 
 | Key | Status | Type | Summary | Acceptance / Notes |
 | --- | --- | --- | --- | --- |
+| ICW-094 | Done | Bug | Keep display-settings scrollbar beside panel content | Reserve a right-side content inset for the vertical settings scrollbar, disable horizontal overflow, and prevent controls or labels from rendering beneath the scrollbar. |
 | ICW-001 | Done | Story | Add repeatable performance benchmark harness | BenchmarkDotNet covers STR query selectivity, live snapshot/hot/publishing queries, snapshot rebuild allocation, and Windows projection plus bitmap generation. |
 | ICW-002 | Done | Story | Capture an immutable camera state per frame | Viewport query and every projection use the same transform state. |
 | ICW-003 | Done | Improvement | Remove duplicate spatial query per rendered frame | Render statistics reuse the viewport query result. |
@@ -69,6 +70,7 @@
 
 | Date | Key | Update |
 | --- | --- | --- |
+| 2026-07-25 | ICW-094 | Added a reserved settings-panel scrollbar inset and disabled horizontal overflow; added a source-level wiring regression assertion. |
 | 2026-07-23 | ICW-001 | Added multi-target benchmark project, benchmark suites, documentation, and ADR-0001. |
 | 2026-07-23 | ICW-002 | Captured one immutable camera snapshot for viewport query, raster composition, and overlay projection. |
 | 2026-07-23 | ICW-003 | Reused render query results for visible statistics instead of querying the index twice. |

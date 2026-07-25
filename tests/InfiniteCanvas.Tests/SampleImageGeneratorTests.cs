@@ -209,6 +209,28 @@ public class SampleImageGeneratorTests
     }
 
     [Test]
+    public void GenerateMonochromePixels_AppliesDeterministicOffsetToEveryPixel()
+    {
+        var pixels = SampleImageGenerator.GenerateMonochromePixels(32, 32, 128, 8, seed: 42, circleCount: 0);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pixels, Has.Length.EqualTo(32 * 32));
+            Assert.That(pixels.Distinct().Count(), Is.GreaterThan(3));
+            Assert.That(pixels.Count(value => value != 128), Is.GreaterThan(32 * 32 / 2));
+        });
+    }
+
+    [Test]
+    public void GenerateMonochromePixels_IsStableForTheSameSeed()
+    {
+        var first = SampleImageGenerator.GenerateMonochromePixels(32, 32, 128, 8, seed: 42, circleCount: 0);
+        var second = SampleImageGenerator.GenerateMonochromePixels(32, 32, 128, 8, seed: 42, circleCount: 0);
+
+        Assert.That(second, Is.EqualTo(first));
+    }
+
+    [Test]
     public void GenerateSet_RespectsConfiguredNoiseAndCircleCount()
     {
         var tile = SampleImageGenerator.GenerateSet(1, 64, 32, targetValue: 128, noise: 0, objectsPerTile: 0, seed: 42, circleCount: 0)[0];

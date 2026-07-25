@@ -107,8 +107,8 @@
                                        Foreground="{StaticResource SecondaryTextBrush}" />
                         </StackPanel>
                     </Border>
-                    <ProgressBar Grid.Row="3" x:Name="RenderBusyBar" Height="2" IsIndeterminate="True" Visibility="Collapsed" d:Visibility="Visible"
-                             VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="0,0,0,1" />
+                    <ProgressBar Grid.Row="3" x:Name="RenderBusyBar" Height="1" IsIndeterminate="True" Visibility="Collapsed" d:Visibility="Visible"
+                             VerticalAlignment="Bottom" HorizontalAlignment="Stretch" />
                 </Grid>
             </Border>
 
@@ -117,7 +117,9 @@
             <Border Grid.Column="2" Background="{StaticResource PanelBackgroundBrush}"
                     BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                     Padding="6">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto"
+                              Padding="0,0,14,0">
                     <StackPanel>
                         <TextBlock Text="DISPLAY OPTIONS" FontFamily="Cascadia Mono" FontSize="12"
                                    FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
@@ -181,6 +183,11 @@
                         <CheckBox x:Name="ShowBackgroundImagesCheckBox" Content="Show background images" IsChecked="True"
                                   Margin="0,8,0,0" Checked="OnShowBackgroundImagesChanged" Unchecked="OnShowBackgroundImagesChanged" />
 
+                        <TextBlock Text="Background target" Margin="0,10,0,4" FontSize="12"
+                                   Foreground="{StaticResource SecondaryTextBrush}" />
+                        <Slider x:Name="BackgroundTargetSlider" Minimum="0" Maximum="255" Value="128" TickFrequency="1"
+                                IsSnapToTickEnabled="True" ValueChanged="OnBackgroundTargetChanged" />
+
                         <TextBlock Text="Background noise" Margin="0,10,0,4" FontSize="12"
                                    Foreground="{StaticResource SecondaryTextBrush}" />
                         <Slider x:Name="BackgroundNoiseSlider" Minimum="0" Maximum="24" Value="8" TickFrequency="1"
@@ -206,6 +213,10 @@
                         <TextBlock Text="Objects per tile" Margin="0,8,0,4" FontSize="12"
                                    Foreground="{StaticResource SecondaryTextBrush}" />
                         <TextBox x:Name="ObjectsPerTileTextBox" Text="16" />
+
+                        <TextBlock Text="Generation seed" Margin="0,8,0,4" FontSize="12"
+                                   Foreground="{StaticResource SecondaryTextBrush}" />
+                        <TextBox x:Name="GenerationSeedTextBox" Text="1729" />
 
                         <Grid x:Name="ButtonGrid" Margin="0,12,0,0">
                             <Grid.ColumnDefinitions>

@@ -1,13 +1,15 @@
 ---
 id: ICW-035-renderer-pixelometer-blend-contract
-key: ICW
-title: Icw 035 Renderer Pixelometer Blend Contract
-status: Proposed
+key: ICW-035
+title: Unify renderer and pixelometer defect blending and sampling contract
+status: In Progress
 type: Task
 priority: P2
 tags:
   - icw
   - task-tracker
+  - rendering
+  - pixelometer
 dependsOn: []
 related: []
 links:
@@ -16,32 +18,35 @@ created: 2026-07-25
 updated: 2026-07-25
 ---
 
-# ICW-035-renderer-pixelometer-blend-contract
+# ICW-035 - Unify renderer and pixelometer defect blending and sampling contract
 
 ## Summary
 
-- Status: To Do
+The pixelometer and the defect overlay renderer were using different sampling assumptions. This task makes them share one explicit defect-overlay sampling contract so the readout matches what the user sees.
 
 ## Scope
 
-- Review and update the relevant implementation area.
-- Capture the acceptance criteria and validation path.
+- Review the defect overlay path in the renderer and the pixelometer readout.
+- Introduce a shared sampler/helper for defect overlay values.
+- Add regression coverage around overlay sampling semantics.
 
 ## Acceptance Criteria
 
-- The task has a clear implementation goal.
-- The task is linked to the relevant files or design notes.
-- The validation command and outcome are recorded.
+- The pixelometer and defect renderer use the same defect sampling helper.
+- Defect values are resolved consistently for both matching and non-matching world coordinates.
+- Regression tests prove the contract is stable.
 
 ## Validation
 
-- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
-- Result: To be completed when implemented.
+- Command: `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release --filter "FullyQualifiedName~SampleImageTileTests"`
+- Result: Passed (9/9 tests, 0 failures)
 
 ## Notes
 
-- Add implementation details, blockers, or follow-up questions here.
+- The initial implementation now routes both paths through a shared sampler in the rendering layer.
+- Follow-up work can extend this to a full renderer-level pixel assertion if the overlay path is exercised more broadly.
 
 ## Related Tasks
 
-- ICW-000
+- ICW-014
+- ICW-094

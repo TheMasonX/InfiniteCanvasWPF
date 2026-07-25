@@ -15,6 +15,7 @@ public class CanvasUserSettingsTests
             TileColumns = 4,
             TileRows = 10,
             ObjectsPerTile = 7,
+            GenerationSeed = 42,
             AnnotationDisplayMode = 2,
             OutlineThickness = 3.5,
             LabelSize = 9,
@@ -22,7 +23,9 @@ public class CanvasUserSettingsTests
             ShowLabels = false,
             ShowBoxes = false,
             ShowSparseImageTiles = false,
+            ShowImageTiles = false,
             ShowBackgroundImages = false,
+            BackgroundTargetValue = 160,
             MinimumSparseTilePixelSize = 128
         };
 
@@ -46,7 +49,9 @@ public class CanvasUserSettingsTests
         var settings = new CanvasUserSettings
         {
             ShowSparseImageTiles = false,
-            ShowBackgroundImages = false
+            ShowImageTiles = false,
+            ShowBackgroundImages = false,
+            BackgroundTargetValue = 160
         };
 
         try
@@ -57,7 +62,9 @@ public class CanvasUserSettingsTests
             Assert.Multiple(() =>
             {
                 Assert.That(loaded.ShowSparseImageTiles, Is.False);
+                Assert.That(loaded.ShowImageTiles, Is.False);
                 Assert.That(loaded.ShowBackgroundImages, Is.False);
+                Assert.That(loaded.BackgroundTargetValue, Is.EqualTo(160));
             });
         }
         finally

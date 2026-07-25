@@ -14,6 +14,8 @@ public sealed record CanvasUserSettings
 
     public int ObjectsPerTile { get; init; } = 16;
 
+    public int GenerationSeed { get; init; } = 1729;
+
     public int AnnotationDisplayMode { get; init; }
 
     public double OutlineThickness { get; init; } = 2;
@@ -28,7 +30,11 @@ public sealed record CanvasUserSettings
 
     public bool ShowSparseImageTiles { get; init; } = true;
 
+    public bool ShowImageTiles { get; init; } = true;
+
     public bool ShowBackgroundImages { get; init; } = true;
+
+    public byte BackgroundTargetValue { get; init; } = 128;
 
     public byte BackgroundNoise { get; init; } = 8;
 

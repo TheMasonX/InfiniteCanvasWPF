@@ -31,6 +31,8 @@ Keep these core project notes in mind:
 Utility scripts should go under scripts/ and be callable from the command line.
 Create folders as needed to keep scripts organized, but don't overcomplicate the structure. Temporary scripts belong under `scripts/temp/`.
 Scripts should ideally be idempotent, deterministic, and safe to run multiple times. Scripts should not require user input or interactive prompts where possible.
+If Python is used, prefer Python 3.11+ and include a `requirements.txt` for dependencies.
+**ALWAYS** use a `.venv` virtual environment for Python scripts to avoid polluting the global Python installation.
 
 ## Documentation change policy
 
