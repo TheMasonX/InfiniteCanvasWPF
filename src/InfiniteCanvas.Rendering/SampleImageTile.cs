@@ -193,11 +193,21 @@ public sealed class SampleImageTile
         out byte[] pixels,
         Func<bool>? tryReserveCacheEntry = null)
     {
+        return TryGetPixelsNonBlocking(mipLevel, out pixels, out _, tryReserveCacheEntry);
+    }
+
+    public bool TryGetPixelsNonBlocking(
+        int mipLevel,
+        out byte[] pixels,
+        out int residentMipLevel,
+        Func<bool>? tryReserveCacheEntry = null)
+    {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(mipLevel);
         lock (_cacheGate)
         {
             if (_mipPixels.TryGetValue(mipLevel, out pixels!))
             {
+                residentMipLevel = mipLevel;
                 return true;
             }
         }
@@ -205,10 +215,45 @@ public sealed class SampleImageTile
         if (_mipPixelFactory is null)
         {
             pixels = Array.Empty<byte>();
-            return false;
+            residentMipLevel = 0;
+            return TryGetNativePixels(out pixels);
         }
 
         EnsureMipPixelsGenerationStarted(mipLevel, tryReserveCacheEntry);
+        lock (_cacheGate)
+        {
+            if (_pixels is not null)
+            {
+                pixels = _pixels;
+                residentMipLevel = 0;
+                return true;
+            }
+
+            var fallback = _mipPixels
+                .OrderBy(pair => Math.Abs(pair.Key - mipLevel))
+                .FirstOrDefault();
+            if (fallback.Value is not null)
+            {
+                pixels = fallback.Value;
+                residentMipLevel = fallback.Key;
+                return true;
+            }
+        }
+
+        pixels = Array.Empty<byte>();
+        residentMipLevel = 0;
+        return false;
+    }
+
+    private bool TryGetNativePixels(out byte[] pixels)
+    {
+        var cached = Volatile.Read(ref _pixels);
+        if (cached is not null)
+        {
+            pixels = cached;
+            return true;
+        }
+
         pixels = Array.Empty<byte>();
         return false;
     }

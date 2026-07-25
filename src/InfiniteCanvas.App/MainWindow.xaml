@@ -84,6 +84,28 @@
                         <RowDefinition Height="925*"/>
                     </Grid.RowDefinitions>
                     <Viewbox x:Name="FramePresenter" Stretch="Fill" StretchDirection="Both" Grid.RowSpan="2" />
+                        <Canvas x:Name="ViewportScrollbarOverlay" Grid.RowSpan="2" IsHitTestVisible="True">
+                        <Border x:Name="HorizontalScrollbarTrack" Width="120" Height="10"
+                            Background="#664B5563" CornerRadius="5"
+                            Visibility="Collapsed"
+                            MouseLeftButtonDown="OnScrollbarTrackMouseLeftButtonDown" />
+                        <Border x:Name="HorizontalScrollbarThumb" Width="48" Height="10"
+                            Background="#FFB7C0D9" CornerRadius="5"
+                            Visibility="Collapsed"
+                            MouseLeftButtonDown="OnScrollbarThumbMouseLeftButtonDown"
+                            MouseMove="OnScrollbarThumbMouseMove"
+                            MouseLeftButtonUp="OnScrollbarThumbMouseLeftButtonUp" />
+                        <Border x:Name="VerticalScrollbarTrack" Width="10" Height="120"
+                            Background="#664B5563" CornerRadius="5"
+                            Visibility="Collapsed"
+                            MouseLeftButtonDown="OnScrollbarTrackMouseLeftButtonDown" />
+                        <Border x:Name="VerticalScrollbarThumb" Width="10" Height="48"
+                            Background="#FFB7C0D9" CornerRadius="5"
+                            Visibility="Collapsed"
+                            MouseLeftButtonDown="OnScrollbarThumbMouseLeftButtonDown"
+                            MouseMove="OnScrollbarThumbMouseMove"
+                            MouseLeftButtonUp="OnScrollbarThumbMouseLeftButtonUp" />
+                        </Canvas>
                     <Canvas IsHitTestVisible="False" Grid.RowSpan="2">
                         <Ellipse x:Name="PanAnchorVisual"
                                  Width="16" Height="16"
@@ -100,6 +122,9 @@
                             BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Grid.Row="1">
                         <StackPanel>
                             <TextBlock x:Name="PixelometerWorldText" Text="WORLD X --  Y --"
+                                       FontFamily="Cascadia Mono" FontSize="11"
+                                       Foreground="{StaticResource SecondaryTextBrush}" />
+                            <TextBlock x:Name="PixelometerTileText" Text="TILE --"
                                        FontFamily="Cascadia Mono" FontSize="11"
                                        Foreground="{StaticResource SecondaryTextBrush}" />
                             <TextBlock x:Name="PixelometerValueText" Text="PIXEL --"

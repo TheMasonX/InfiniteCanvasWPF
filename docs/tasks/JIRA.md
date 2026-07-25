@@ -64,6 +64,8 @@
 | ICW-081 | Proposed | Task | Reconcile duplicate and orphaned audit tickets before adding more backlog work | Current ticket corpus contains duplicate ICW identities, incompatible schemas, and orphaned ticket files, preventing reliable audit de-duplication; normalize the corpus and add duplicate-ID validation. |
 | ICW-082 | Done | Bug | Persist the background-image visibility toggle | `ShowBackgroundImagesCheckBox` now round-trips through settings persistence and is applied during startup and render updates. |
 | ICW-305 | Proposed | Improvement | Make tile-cache eviction policy explicit and testable | Register the orphaned cache-policy ticket; current eviction selects the first eligible dictionary value rather than a documented recency policy. |
+| ICW-096 | In Progress | Bug | Restore viewport scrollbars and preserve resident imagery during mip transitions | Restore the missing camera-native scrollbar overlay, retain an older resident tile payload while a requested mip is generated, and verify cache diagnostics identify the active instance and variant state. |
+| ICW-097 | Proposed | Improvement | Reduce CPU cost of synthetic pixel generation and manipulation | Use profiler-guided benchmarks to reduce random-generation, zero-noise, circle-overlay, and per-pixel raster arithmetic costs without sacrificing required deterministic visual jitter. |
 | ICW-014 | In Progress | Story | Add global crash-safety handlers for async UI event pipeline | Registered WPF dispatcher, AppDomain, and unobserved-task exception hooks with Serilog reporting; selected async-void handlers remain for the next implementation step. |
 
 ## Activity
@@ -146,3 +148,5 @@
 | 2026-07-25 | ICW-081 | Critical peer review found duplicate ticket identities, incompatible ticket schemas, and orphaned ICW ticket files; durable reconciliation work is required before further audit-derived backlog growth. |
 | 2026-07-25 | ICW-082 | Critical peer review verified that background-image visibility is not persisted despite ICW-073 and the requirements registry claiming independent layer-toggle persistence. |
 | 2026-07-25 | ICW-305 | Critical peer review registered the existing orphaned cache-eviction finding; current code chooses the first eligible dictionary value and lacks an explicit deterministic eviction contract. |
+| 2026-07-25 | ICW-096 | User-reported regression and research: custom viewport scrollbar elements are absent from the current XAML; mip selection renders placeholders while replacement payloads are pending; cache debug identity requires investigation. |
+| 2026-07-25 | ICW-097 | User-requested profiler follow-up: supplied diagnostics show deterministic random modulo, full-image generation, circle bounds, and pixel projection/manipulation as CPU candidates; low-quality shared deterministic jitter is permitted subject to benchmark evidence. |

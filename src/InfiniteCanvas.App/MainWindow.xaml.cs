@@ -85,6 +85,7 @@ public partial class MainWindow : Window
         };
 
         PixelometerWorldText.Text = "WORLD X --  Y --";
+        PixelometerTileText.Text = "TILE --";
         PixelometerValueText.Text = "PIXEL --";
         ApplySettingsToUi(CanvasUserSettingsStore.Load(_settingsPath));
 
@@ -923,6 +924,7 @@ public partial class MainWindow : Window
     {
         _hoverPointerPosition = null;
         PixelometerWorldText.Text = "WORLD X --  Y --";
+        PixelometerTileText.Text = "TILE --";
         PixelometerValueText.Text = "PIXEL --";
     }
 
@@ -1402,17 +1404,28 @@ public partial class MainWindow : Window
 
         PixelometerWorldText.Text = $"WORLD X {worldX:F1}  Y {worldY:F1}";
 
-        if (TryReadPixelValue(worldX, worldY, out var backgroundValue, out var defectValue, out var tileId))
+        var mipLevel = BackgroundTileMipPolicy.SelectMipLevel(camera);
+        if (TryReadPixelValue(worldX, worldY, camera, mipLevel, out var backgroundValue, out var defectValue, out var tileId, out var tileInfo))
         {
             var finalValue = ResolveDisplayPixelValue(backgroundValue, worldX, worldY);
+            PixelometerTileText.Text = tileInfo.Format();
             PixelometerValueText.Text = $"PIXEL {finalValue}  ({tileId}) bg {backgroundValue} + defect {defectValue}";
             return;
         }
 
+        PixelometerTileText.Text = "TILE --";
         PixelometerValueText.Text = "PIXEL --";
     }
 
-    private bool TryReadPixelValue(double worldX, double worldY, out byte background, out byte defect, out string tileId)
+    private bool TryReadPixelValue(
+        double worldX,
+        double worldY,
+        CameraSnapshot camera,
+        int mipLevel,
+        out byte background,
+        out byte defect,
+        out string tileId,
+        out BackgroundTileReadoutInfo tileInfo)
     {
         if (_tiles.Count > 0
             && TileGridIndexLookup.TryGetTileIndex(
@@ -1437,13 +1450,17 @@ public partial class MainWindow : Window
                 }
             }
 
-            tileId = _tiles[tileIndex].Id;
+            var tile = _tiles[tileIndex];
+            var dimensions = BackgroundTileMipPolicy.GetDimensions(tile.PixelWidth, tile.PixelHeight, mipLevel);
+            tileInfo = new BackgroundTileReadoutInfo(tile.Id, mipLevel, dimensions.Width, dimensions.Height);
+            tileId = tile.Id;
             return true;
         }
 
         background = default;
         defect = default;
         tileId = string.Empty;
+        tileInfo = new BackgroundTileReadoutInfo(string.Empty, mipLevel, 0, 0);
         return false;
     }
 

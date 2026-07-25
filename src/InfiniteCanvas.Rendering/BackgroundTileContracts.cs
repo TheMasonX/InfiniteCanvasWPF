@@ -86,6 +86,15 @@ public readonly record struct BackgroundTileRequest
             MipLevel);
 }
 
+public sealed record BackgroundTileReadoutInfo(string TileId, int MipLevel, int CanonicalWidth, int CanonicalHeight)
+{
+    public string Format()
+    {
+        var normalizedTileId = string.IsNullOrWhiteSpace(TileId) ? "--" : TileId;
+        return $"TILE {normalizedTileId} mip {MipLevel} ({CanonicalWidth}x{CanonicalHeight})";
+    }
+}
+
 public sealed class BackgroundTilePayload
 {
     public BackgroundTilePayload(BackgroundTileRequest request, byte[] pixels)

@@ -159,21 +159,109 @@ public static class SampleImageGenerator
         int seed = 1729,
         int circleCount = 3)
     {
-        var pixels = GenerateMonochromePixels(
-            nativeWidth,
-            nativeHeight,
-            targetValue,
-            noise,
-            seed,
-            circleCount);
-        for (var level = 0; level < mipLevel; level++)
+        if (nativeWidth <= 0 || nativeHeight <= 0)
         {
-            var sourceDimensions = BackgroundTileMipPolicy.GetDimensions(nativeWidth, nativeHeight, level);
-            var destinationDimensions = BackgroundTileMipPolicy.GetDimensions(nativeWidth, nativeHeight, level + 1);
-            pixels = ReduceGray8Box(pixels, sourceDimensions, destinationDimensions);
+            throw new ArgumentOutOfRangeException(nameof(nativeWidth));
         }
 
+        ArgumentOutOfRangeException.ThrowIfNegative(mipLevel);
+        var (width, height) = BackgroundTileMipPolicy.GetDimensions(nativeWidth, nativeHeight, mipLevel);
+        var pixels = new byte[checked(width * height)];
+        if (noise == 0 && circleCount <= 0)
+        {
+            Array.Fill(pixels, targetValue);
+            return pixels;
+        }
+
+        var noiseSpread = Math.Clamp(noise + 8, 8, 24);
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                if (mipLevel == 0)
+                {
+                    var sampleSeed = unchecked(seed + (x * 73856093) + (y * 19349663));
+                    var jitter = noise == 0
+                        ? 0
+                        : new DeterministicRandom(sampleSeed).Next(-noiseSpread, noiseSpread + 1);
+                    pixels[(y * width) + x] = (byte)Math.Clamp(targetValue + jitter, 0, 255);
+                    continue;
+                }
+
+                var childX = x * 2;
+                var childY = y * 2;
+                var sum = 0;
+                var sampleCount = 0;
+                for (var offsetY = 0; offsetY < 2; offsetY++)
+                {
+                    for (var offsetX = 0; offsetX < 2; offsetX++)
+                    {
+                        var sampleX = childX + offsetX;
+                        var sampleY = childY + offsetY;
+                        if (sampleX >= BackgroundTileMipPolicy.GetDimensions(nativeWidth, nativeHeight, mipLevel - 1).Width
+                            || sampleY >= BackgroundTileMipPolicy.GetDimensions(nativeWidth, nativeHeight, mipLevel - 1).Height)
+                        {
+                            continue;
+                        }
+
+                        var sampleSeed = unchecked(seed
+                            + (sampleX * 73856093)
+                            + (sampleY * 19349663)
+                            + (mipLevel * 83492791));
+                        var jitter = noise == 0
+                            ? 0
+                            : new DeterministicRandom(sampleSeed).Next(-noiseSpread, noiseSpread + 1);
+                        sum += Math.Clamp(targetValue + jitter, 0, 255);
+                        sampleCount++;
+                    }
+                }
+
+                pixels[(y * width) + x] = (byte)((sum + (sampleCount / 2)) / sampleCount);
+            }
+        }
+
+        ApplyMipCircles(pixels, width, height, targetValue, circleCount, seed);
         return pixels;
+    }
+
+    private static void ApplyMipCircles(
+        byte[] pixels,
+        int width,
+        int height,
+        byte targetValue,
+        int circleCount,
+        int seed)
+    {
+        var random = new DeterministicRandom(unchecked(seed + 0x2F6E2B1));
+        var effectiveCircleCount = Math.Clamp(circleCount, 0, 8);
+        var maxRadius = Math.Max(1, Math.Min(width, height) / 10);
+        for (var circleIndex = 0; circleIndex < effectiveCircleCount; circleIndex++)
+        {
+            var centerX = random.Next(0, width);
+            var centerY = random.Next(0, height);
+            var radius = random.Next(1, maxRadius + 1);
+            var circleValue = (byte)Math.Clamp(targetValue - random.Next(10, 34), 0, 255);
+            var radiusSquared = radius * radius;
+            var left = Math.Max(0, centerX - radius);
+            var right = Math.Min(width, centerX + radius + 1);
+            var top = Math.Max(0, centerY - radius);
+            var bottom = Math.Min(height, centerY + radius + 1);
+
+            for (var y = top; y < bottom; y++)
+            {
+                var dy = y - centerY;
+                var dySquared = dy * dy;
+                for (var x = left; x < right; x++)
+                {
+                    var dx = x - centerX;
+                    if ((dx * dx) + dySquared <= radiusSquared)
+                    {
+                        var offset = (y * width) + x;
+                        pixels[offset] = Math.Min(pixels[offset], circleValue);
+                    }
+                }
+            }
+        }
     }
 
     public static byte[] ReduceGray8Box(
