@@ -16,6 +16,14 @@
             <Setter Property="HorizontalAlignment" Value="Center" />
             <Setter Property="Height" Value="30" />
         </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="MinHeight" Value="25" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+        </Style>
     </Window.Resources>
 
 
@@ -48,10 +56,6 @@
                                FontFamily="Cascadia Mono" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
                     <TextBlock Text="{Binding TotalItemCount, StringFormat=N0}" MinWidth="72"
                                FontFamily="Cascadia Mono" FontSize="18" FontWeight="SemiBold" />
-                        <Border Width="1" Height="28" Margin="18,0" Background="{StaticResource BorderBrush}" />
-                        <Button x:Name="AboutButton" Content="i" Width="30" Height="30"
-                            Padding="0" Margin="0" Click="OnAboutButtonClicked"
-                            ToolTip="About and licensing" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -80,22 +84,6 @@
                         <RowDefinition Height="925*"/>
                     </Grid.RowDefinitions>
                     <Viewbox x:Name="FramePresenter" Stretch="Fill" StretchDirection="Both" Grid.RowSpan="2" />
-                        <Canvas Name="ViewportScrollbarOverlay" Grid.RowSpan="2" IsHitTestVisible="True">
-                        <Border Name="HorizontalScrollbarTrack"
-                            Width="120" Height="10" Background="#664B5563" CornerRadius="5"
-                            Visibility="Collapsed" MouseLeftButtonDown="OnScrollbarTrackMouseLeftButtonDown" />
-                        <Border Name="HorizontalScrollbarThumb"
-                            Width="48" Height="10" Background="#FFB7C0D9" CornerRadius="5"
-                            Visibility="Collapsed" MouseLeftButtonDown="OnScrollbarThumbMouseLeftButtonDown"
-                            MouseMove="OnScrollbarThumbMouseMove" MouseLeftButtonUp="OnScrollbarThumbMouseLeftButtonUp" />
-                        <Border Name="VerticalScrollbarTrack"
-                            Width="10" Height="120" Background="#664B5563" CornerRadius="5"
-                            Visibility="Collapsed" MouseLeftButtonDown="OnScrollbarTrackMouseLeftButtonDown" />
-                        <Border Name="VerticalScrollbarThumb"
-                            Width="10" Height="48" Background="#FFB7C0D9" CornerRadius="5"
-                            Visibility="Collapsed" MouseLeftButtonDown="OnScrollbarThumbMouseLeftButtonDown"
-                            MouseMove="OnScrollbarThumbMouseMove" MouseLeftButtonUp="OnScrollbarThumbMouseLeftButtonUp" />
-                        </Canvas>
                     <Canvas IsHitTestVisible="False" Grid.RowSpan="2">
                         <Ellipse x:Name="PanAnchorVisual"
                                  Width="16" Height="16"
