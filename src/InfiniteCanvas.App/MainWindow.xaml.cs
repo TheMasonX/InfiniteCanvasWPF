@@ -745,7 +745,49 @@ public partial class MainWindow : Window
         }
 
         ZoomPresetComboBox.SelectedIndex = -1;
+        if (mode == 7)
+        {
+            CustomZoomPanel.Visibility = Visibility.Visible;
+            CustomZoomTextBox.Focus();
+            CustomZoomTextBox.SelectAll();
+            return;
+        }
+
+        CustomZoomPanel.Visibility = Visibility.Collapsed;
         await ApplyZoomPresetAsync(mode);
+    }
+
+    private async void OnCustomZoomClicked(object sender, RoutedEventArgs e)
+    {
+        await ApplyCustomZoomAsync();
+    }
+
+    private async void OnCustomZoomKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        await ApplyCustomZoomAsync();
+    }
+
+    private async Task ApplyCustomZoomAsync()
+    {
+        if (!double.TryParse(CustomZoomTextBox.Text, out var percent)
+            || !double.IsFinite(percent)
+            || percent <= 0)
+        {
+            StatusText.Text = "Custom zoom must be a positive percentage";
+            CustomZoomTextBox.Focus();
+            CustomZoomTextBox.SelectAll();
+            return;
+        }
+
+        ApplyPercentZoom(percent);
+        ClampCameraToScene();
+        await RequestRenderAsync();
     }
 
     private async Task ApplyZoomPresetAsync(int mode)

@@ -22,6 +22,37 @@ public static class ViewportZoomPolicy
             targetScaleX = Math.Max(targetScaleX, minimumScaleX);
             targetScaleY = Math.Max(targetScaleY, minimumScaleY);
         }
+        else
+        {
+            var xIsClamped = currentScaleX <= minimumScaleX;
+            var yIsClamped = currentScaleY <= minimumScaleY;
+            if (xIsClamped || yIsClamped)
+            {
+                var uniformTarget = xIsClamped && !yIsClamped
+                    ? targetScaleY
+                    : yIsClamped && !xIsClamped
+                        ? targetScaleX
+                        : Math.Max(targetScaleX, targetScaleY);
+
+                if (uniformTarget >= minimumScaleX && uniformTarget >= minimumScaleY)
+                {
+                    targetScaleX = uniformTarget;
+                    targetScaleY = uniformTarget;
+                }
+                else
+                {
+                    if (xIsClamped)
+                    {
+                        targetScaleX = minimumScaleX;
+                    }
+
+                    if (yIsClamped)
+                    {
+                        targetScaleY = minimumScaleY;
+                    }
+                }
+            }
+        }
 
         return new ZoomDeltas(targetScaleX / currentScaleX, targetScaleY / currentScaleY);
     }

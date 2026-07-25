@@ -105,7 +105,18 @@
                             <ComboBoxItem Content="100%" />
                             <ComboBoxItem Content="150%" />
                             <ComboBoxItem Content="200%" />
+                            <ComboBoxItem Content="Custom..." />
                         </ComboBox>
+                        <Grid x:Name="CustomZoomPanel" Margin="0,6,0,0" Visibility="Collapsed">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="CustomZoomTextBox" Text="100" ToolTip="Custom zoom percentage"
+                                     KeyDown="OnCustomZoomKeyDown" />
+                            <Button Grid.Column="2" Content="Apply" MinWidth="58" Click="OnCustomZoomClicked" />
+                        </Grid>
 
                         <TextBlock Text="Annotation mode" Margin="0,10,0,4" FontSize="12"
                                    Foreground="{StaticResource SecondaryTextBrush}" />

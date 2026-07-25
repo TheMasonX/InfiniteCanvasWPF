@@ -46,7 +46,10 @@
 | ICW-042 | Done | Bug | Restore unaltered grayscale bitmap defect imagery on a separate sparse image layer | Windows defect inputs remain pooled `System.Drawing.Bitmap` instances filled with grayscale 150 and populated by 5-10 GDI+ circles. Sparse rendering copies grayscale channels directly over the bitmap extent without class tinting or annotation-bound clipping. |
 | ICW-043 | Done | Story | Persist canvas settings and save them on close | Versioned JSON settings load before initial generation, save atomically on close, and recover to defaults from malformed or invalid files. |
 | ICW-044 | Done | Bug | Preserve independent non-linear axis zoom and show derived zoom percentage | Wheel targets clamp per axis, the free axis continues non-linear scaling, preset selections act as commands, and read-only ComboBox text shows the percentage of the stricter material-fit axis. |
-| ICW-045 | To Do | Improvement | Replace the rejected custom zoom UI with inline entry and Apply action | Rejected standalone controls and Custom item are removed. Future Custom dropdown content provides a textbox, Apply action, and Enter handling. |
+| ICW-045 | Done | Improvement | Replace the rejected custom zoom UI with inline entry and Apply action | Selecting `Custom...` reveals a compact percentage field; Apply and Enter use the same validation and update path. |
+| ICW-046 | Done | Bug | Recover uniform zoom after an axis clamp no longer applies | Uniform zoom is now recovered when the free axis reaches a common legal target; anisotropy remains only while the constrained floor still prevents it. |
+| ICW-047 | To Do | Story | Generate taller sparse background image tiles with cache controls and metrics | Double default tile height; generate noisy background imagery on demand as it approaches the viewport; enforce pixel-budgeted cache limits; add a Show Image Tiles display toggle and visible per-cache diagnostics. |
+| ICW-048 | To Do | Story | Inspect selected annotation features in a sidebar DataGrid | Selecting an annotation populates a sidebar grid with its feature names and values; clearing the selection returns the panel to its empty state. |
 
 ## Activity
 
@@ -107,3 +110,8 @@
 | 2026-07-24 | ICW-043 | Completed versioned settings load/save with atomic replacement and round-trip/malformed-file tests. |
 | 2026-07-24 | ICW-044 | Completed independent wheel-axis clamping, preset command semantics, and derived largest-axis percentage display with focused tests. |
 | 2026-07-24 | ICW-045 | Removed rejected custom zoom controls; retained the redesigned inline dropdown entry as the remaining task. |
+| 2026-07-24 | ICW-046 | Captured correction: zoom must recover to a common uniform scale as soon as the previously clamped axis no longer requires anisotropy. |
+| 2026-07-24 | ICW-047 | Captured taller default background tile, sparse on-demand image generation, pixel-budgeted cache, display-toggle, and cache-status requirements. |
+| 2026-07-24 | ICW-048 | Captured requirement to display selected annotation features in a sidebar DataGrid. |
+| 2026-07-24 | ICW-046 | Completed pure uniform-recovery zoom policy and focused regression coverage; 5/5 policy tests and Release app build passed. |
+| 2026-07-24 | ICW-045 | Completed Custom preset flow with inline percent input plus shared Apply/Enter behavior; Release app build passed. |

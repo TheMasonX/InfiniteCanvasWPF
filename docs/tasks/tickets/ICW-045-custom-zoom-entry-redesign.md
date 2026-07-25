@@ -1,6 +1,6 @@
 # ICW-045: Custom Zoom Entry Redesign
 
-- Status: To Do
+- Status: Done
 - Date: 2026-07-24
 - Owner: InfiniteCanvas Agent
 
@@ -24,8 +24,10 @@ Remove the current custom zoom UI. Replace it later with a Custom dropdown value
 
 - The current custom zoom UI does not fit the intended interaction model.
 - The rejected standalone textbox, Apply button, and Custom preset item have been removed.
-- The replacement remains intentionally deferred until its inline dropdown interaction is designed.
+- Selecting `Custom...` now reveals a compact percentage textbox beneath the preset selector.
+- Apply and Enter invoke the same validated camera-update operation.
+- Release app build passed.
 
 ## Next Step
 
-- Add a Custom dropdown value with inline textbox, Apply action, and Enter handling now that ICW-044 semantics are stable.
+- Keep complete unless user feedback requires a different command surface.

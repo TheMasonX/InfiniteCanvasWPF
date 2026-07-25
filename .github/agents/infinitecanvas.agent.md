@@ -59,4 +59,5 @@ If the user gives a requirement, bug report, task note, or implementation hint, 
 
 - State assumptions and open questions explicitly.
 - Prefer evidence from build, test, or benchmark output over guesswork.
+- Verify claims and sources for accuracy before acting on them.
 - Do not claim completion until the relevant validation command has been run and the tracker has been updated.
