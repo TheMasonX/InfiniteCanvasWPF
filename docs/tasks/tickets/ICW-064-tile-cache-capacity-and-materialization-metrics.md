@@ -1,25 +1,17 @@
 ---
 id: ICW-064-tile-cache-capacity-and-materialization-metrics
-author: Copilot
 key: ICW-064
 title: Bound lazy tile-cache admission without evicting visible tiles
 status: Done
 type: Bug
 priority: P0
 tags:
-  - rendering
-  - tile-cache
-  - memory
-  - regression
+  - icw
+  - task-tracker
 dependsOn: []
-related:
-  - ICW-047
-  - ICW-049
+related: []
 links:
-  - src/InfiniteCanvas.Rendering/SampleImageTile.cs
-  - src/InfiniteCanvas.Rendering/ZeroCopyBitmapFactory.Windows.cs
-  - src/InfiniteCanvas.App/MainWindow.xaml.cs
-  - tests/InfiniteCanvas.Tests/SampleImageGeneratorTests.cs
+  - docs/tasks/README.md
 created: 2026-07-25
 updated: 2026-07-25
 ---

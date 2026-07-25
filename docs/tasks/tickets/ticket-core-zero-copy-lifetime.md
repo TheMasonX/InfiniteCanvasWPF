@@ -1,15 +1,13 @@
 ---
 id: ticket-core-zero-copy-lifetime
-author: Copilot
 key: ICW-999
 title: Ticket Core Zero Copy Lifetime
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
-  - icw
   - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

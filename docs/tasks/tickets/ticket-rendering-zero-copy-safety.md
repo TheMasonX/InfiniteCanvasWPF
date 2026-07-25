@@ -1,15 +1,13 @@
 ---
 id: ticket-rendering-zero-copy-safety
-author: Copilot
 key: ICW-999
 title: Ticket Rendering Zero Copy Safety
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
-  - icw
   - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

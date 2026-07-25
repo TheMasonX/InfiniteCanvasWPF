@@ -1,15 +1,13 @@
 ---
 id: ICW-067-debug-property-editor
-author: Copilot
 key: ICW
 title: Icw 067 Debug Property Editor
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

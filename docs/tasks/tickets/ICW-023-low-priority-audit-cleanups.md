@@ -1,15 +1,13 @@
 ---
 id: ICW-023-low-priority-audit-cleanups
-author: Copilot
 key: ICW
 title: Icw 023 Low Priority Audit Cleanups
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

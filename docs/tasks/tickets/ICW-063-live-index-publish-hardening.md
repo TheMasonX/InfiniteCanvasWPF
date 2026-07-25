@@ -1,19 +1,16 @@
 ---
 id: ICW-063
-author: Copilot
 key: ICW-063
 title: Harden LiveSpatialIndexService publish semantics and failure recovery
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - spatial
-  - concurrency
-  - tests
+  - icw
+  - task-tracker
 dependsOn: []
 related: []
 links:
-  - src/InfiniteCanvas.Spatial/
   - docs/tasks/README.md
 created: 2026-07-25
 updated: 2026-07-25

@@ -1,15 +1,13 @@
 ---
 id: ICW-047-taller-sparse-background-tile-cache
-author: Copilot
 key: ICW
 title: Icw 047 Taller Sparse Background Tile Cache
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

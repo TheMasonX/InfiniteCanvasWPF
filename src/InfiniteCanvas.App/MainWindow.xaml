@@ -48,6 +48,10 @@
                                FontFamily="Cascadia Mono" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
                     <TextBlock Text="{Binding TotalItemCount, StringFormat=N0}" MinWidth="72"
                                FontFamily="Cascadia Mono" FontSize="18" FontWeight="SemiBold" />
+                    <Border Width="1" Height="28" Margin="18,0" Background="{StaticResource BorderBrush}" />
+                    <Button x:Name="AboutButton" Content="i" Width="30" Height="30"
+                            Padding="0" Margin="0" Click="OnAboutButtonClicked"
+                            ToolTip="About and licensing" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -76,6 +80,22 @@
                         <RowDefinition Height="925*"/>
                     </Grid.RowDefinitions>
                     <Viewbox x:Name="FramePresenter" Stretch="Fill" StretchDirection="Both" Grid.RowSpan="2" />
+                    <Canvas Name="ViewportScrollbarOverlay" Grid.RowSpan="2" IsHitTestVisible="True">
+                        <Border Name="HorizontalScrollbarTrack"
+                                Width="120" Height="10" Background="#664B5563" CornerRadius="5"
+                                Visibility="Collapsed" MouseLeftButtonDown="OnScrollbarTrackMouseLeftButtonDown" />
+                        <Border Name="HorizontalScrollbarThumb"
+                                Width="48" Height="10" Background="#FFB7C0D9" CornerRadius="5"
+                                Visibility="Collapsed" MouseLeftButtonDown="OnScrollbarThumbMouseLeftButtonDown"
+                                MouseMove="OnScrollbarThumbMouseMove" MouseLeftButtonUp="OnScrollbarThumbMouseLeftButtonUp" />
+                        <Border Name="VerticalScrollbarTrack"
+                                Width="10" Height="120" Background="#664B5563" CornerRadius="5"
+                                Visibility="Collapsed" MouseLeftButtonDown="OnScrollbarTrackMouseLeftButtonDown" />
+                        <Border Name="VerticalScrollbarThumb"
+                                Width="10" Height="48" Background="#FFB7C0D9" CornerRadius="5"
+                                Visibility="Collapsed" MouseLeftButtonDown="OnScrollbarThumbMouseLeftButtonDown"
+                                MouseMove="OnScrollbarThumbMouseMove" MouseLeftButtonUp="OnScrollbarThumbMouseLeftButtonUp" />
+                    </Canvas>
                     <Canvas IsHitTestVisible="False" Grid.RowSpan="2">
                         <Ellipse x:Name="PanAnchorVisual"
                                  Width="16" Height="16"
@@ -87,7 +107,7 @@
                                HorizontalAlignment="Center" VerticalAlignment="Top"
                                FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold"
                                Foreground="{StaticResource AccentBrush}" Margin="0,446,0,0" Grid.Row="1" />
-                    <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="14,0,0,14"
+                    <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="14,0,0,14"
                             Padding="10,7" Background="#DD1A2026"
                             BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Grid.Row="1">
                         <StackPanel>
@@ -165,10 +185,20 @@
                         </ComboBox>
 
                         <CheckBox x:Name="ShowLabelsCheckBox" Content="Show labels" IsChecked="True"
-                                  Margin="0,8,0,0" Checked="OnShowLabelsChanged" Unchecked="OnShowLabelsChanged" />
+                                  Margin="0,8,0,0" Foreground="{StaticResource CheckBoxLabelBrush}"
+                                  Checked="OnShowLabelsChanged" Unchecked="OnShowLabelsChanged" />
 
-                        <CheckBox x:Name="ShowImageTilesCheckBox" Content="Show image tiles" IsChecked="True"
-                                  Margin="0,8,0,0" Checked="OnShowImageTilesChanged" Unchecked="OnShowImageTilesChanged" />
+                        <CheckBox x:Name="ShowBoxesCheckBox" Content="Show boxes" IsChecked="True"
+                                  Margin="0,8,0,0" Foreground="{StaticResource CheckBoxLabelBrush}"
+                                  Checked="OnShowBoxesChanged" Unchecked="OnShowBoxesChanged" />
+
+                        <CheckBox x:Name="ShowSparseImageTilesCheckBox" Content="Show sparse image tiles" IsChecked="True"
+                                  Margin="0,8,0,0" Foreground="{StaticResource CheckBoxLabelBrush}"
+                                  Checked="OnShowSparseImageTilesChanged" Unchecked="OnShowSparseImageTilesChanged" />
+
+                        <CheckBox x:Name="ShowBackgroundImagesCheckBox" Content="Show background images" IsChecked="True"
+                                  Margin="0,8,0,0" Foreground="{StaticResource CheckBoxLabelBrush}"
+                                  Checked="OnShowBackgroundImagesChanged" Unchecked="OnShowBackgroundImagesChanged" />
 
                         <TextBlock Text="Background noise" Margin="0,10,0,4" FontSize="12"
                                    Foreground="{StaticResource SecondaryTextBrush}" />
@@ -179,6 +209,11 @@
                                    Foreground="{StaticResource SecondaryTextBrush}" />
                         <Slider x:Name="BackgroundCircleCountSlider" Minimum="0" Maximum="8" Value="3" TickFrequency="1"
                                 IsSnapToTickEnabled="True" ValueChanged="OnBackgroundCircleCountChanged" />
+
+                        <TextBlock Text="Min sparse tile px" Margin="0,10,0,4" FontSize="12"
+                                   Foreground="{StaticResource SecondaryTextBrush}" />
+                        <Slider x:Name="MinimumSparseTilePixelSizeSlider" Minimum="0" Maximum="512" Value="96" TickFrequency="16"
+                                IsSnapToTickEnabled="True" ValueChanged="OnMinimumSparseTilePixelSizeChanged" />
 
                         <Border Height="1" Margin="0,14,0,12" Background="{StaticResource BorderBrush}" />
 

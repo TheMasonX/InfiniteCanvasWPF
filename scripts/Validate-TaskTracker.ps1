@@ -5,7 +5,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$validStatuses = @('Proposed', 'To Do', 'In Progress', 'In Review', 'Done', 'Archived', 'Blocked')
+$validStatuses = @('Proposed', 'To Do', 'In Progress', 'In Review', 'Done', 'Archived', 'Blocked', 'Reverted')
 $validTypes = @('Task', 'Story', 'Bug', 'Spike', 'Improvement', 'Docs', 'Epic')
 $validPriorities = @('P0', 'P1', 'P2', 'P3')
 $requiredFields = @('id', 'key', 'title', 'status', 'type', 'priority', 'tags')

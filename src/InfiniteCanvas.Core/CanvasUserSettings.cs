@@ -24,9 +24,17 @@ public sealed record CanvasUserSettings
 
     public bool ShowLabels { get; init; } = true;
 
+    public bool ShowBoxes { get; init; } = true;
+
+    public bool ShowSparseImageTiles { get; init; } = true;
+
+    public bool ShowBackgroundImages { get; init; } = true;
+
     public byte BackgroundNoise { get; init; } = 8;
 
     public int BackgroundCircleCount { get; init; } = 3;
+
+    public double MinimumSparseTilePixelSize { get; init; } = 96;
 
     public bool IsValid =>
         Version == CurrentVersion
@@ -38,7 +46,8 @@ public sealed record CanvasUserSettings
         && OutlineThickness is >= 1 and <= 6
         && LabelSize is >= 8 and <= 20
         && LabelDisplay is >= 0 and <= 1
-        && BackgroundCircleCount is >= 0 and <= 8;
+        && BackgroundCircleCount is >= 0 and <= 8
+        && MinimumSparseTilePixelSize is >= 0 and <= 4096;
 }
 
 public static class CanvasUserSettingsStore

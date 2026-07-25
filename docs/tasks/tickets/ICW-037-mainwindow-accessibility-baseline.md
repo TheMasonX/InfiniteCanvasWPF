@@ -1,15 +1,13 @@
 ---
 id: ICW-037-mainwindow-accessibility-baseline
-author: Copilot
 key: ICW
 title: Icw 037 Mainwindow Accessibility Baseline
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

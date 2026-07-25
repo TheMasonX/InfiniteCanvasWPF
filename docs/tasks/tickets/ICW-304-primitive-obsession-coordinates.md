@@ -1,9 +1,19 @@
 ---
-status: proposed
+id: ICW-304-primitive-obsession-coordinates
+key: ICW-304
 title: Reduce primitive obsession: introduce strong types for world vs pixel units
-repo-area: src/InfiniteCanvas.Core
-severity: medium
-assignee: core-team
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Summary:

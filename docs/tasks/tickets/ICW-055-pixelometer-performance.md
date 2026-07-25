@@ -1,15 +1,13 @@
 ---
 id: ICW-055-pixelometer-performance
-author: Copilot
 key: ICW
 title: Icw 055 Pixelometer Performance
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

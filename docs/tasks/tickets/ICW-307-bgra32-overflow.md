@@ -1,9 +1,19 @@
 ---
-status: proposed
+id: ICW-307-bgra32-overflow
+key: ICW-307
 title: Document Bgra32BufferLayout overflow behavior and validate dimensions earlier
-repo-area: src/InfiniteCanvas.Rendering
-severity: low
-assignee: rendering-team
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Summary:

@@ -1,15 +1,13 @@
 ---
 id: ICW-015-generateset-validation-and-parameter-semantics
-author: Copilot
 key: ICW
 title: Icw 015 Generateset Validation And Parameter Semantics
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

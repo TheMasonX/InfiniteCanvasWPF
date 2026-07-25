@@ -1,15 +1,13 @@
 ---
 id: ICW-040-background-tile-grid-overlay
-author: Copilot
 key: ICW
 title: Icw 040 Background Tile Grid Overlay
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

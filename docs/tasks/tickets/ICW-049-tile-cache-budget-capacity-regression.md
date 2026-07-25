@@ -1,15 +1,13 @@
 ---
 id: ICW-049-tile-cache-budget-capacity-regression
-author: Copilot
 key: ICW
 title: Icw 049 Tile Cache Budget Capacity Regression
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

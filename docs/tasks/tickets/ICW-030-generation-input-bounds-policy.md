@@ -1,15 +1,13 @@
 ---
 id: ICW-030-generation-input-bounds-policy
-author: Copilot
 key: ICW
 title: Icw 030 Generation Input Bounds Policy
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

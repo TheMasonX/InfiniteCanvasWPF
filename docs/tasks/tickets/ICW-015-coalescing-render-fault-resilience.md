@@ -1,9 +1,19 @@
 ---
-status: proposed
+id: ICW-015-coalescing-render-fault-resilience
+key: ICW-015
 title: Make CoalescingAsyncAction resilient to action faults and preserve coalesced requests
-repo-area: src/InfiniteCanvas.Core
-severity: high
-assignee: core-team
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Summary:

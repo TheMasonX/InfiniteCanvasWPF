@@ -1,15 +1,13 @@
 ---
 id: ICW-034-coalescing-render-fault-and-followup-preservation
-author: Copilot
 key: ICW
 title: Icw 034 Coalescing Render Fault And Followup Preservation
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

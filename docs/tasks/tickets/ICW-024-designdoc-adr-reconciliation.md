@@ -1,15 +1,13 @@
 ---
 id: ICW-024-designdoc-adr-reconciliation
-author: Copilot
 key: ICW
 title: Icw 024 Designdoc Adr Reconciliation
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

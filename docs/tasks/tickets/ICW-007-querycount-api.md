@@ -1,23 +1,19 @@
 ---
-status: draft
-summary: Add `QueryCount` API to `ISpatialIndexService<T>` and implement low-allocation count path
-scope: |
-  - Add `int QueryCount(SpatialBounds viewport)` to `ISpatialIndexService<T>` as an additive API.
-  - Implement `QueryCount` in existing index services (ImmutableSpatialIndexService, StrTreeSpatialIndexService, LiveSpatialIndexService).
-  - Migrate count-only call sites to use `QueryCount`.
-  - Add unit tests for `QueryCount` correctness and low-allocation expectations.
-files_to_change:
-  - src/InfiniteCanvas.Spatial/ISpatialIndexService.cs
-  - src/InfiniteCanvas.Spatial/ImmutableSpatialIndexService.cs
-  - src/InfiniteCanvas.Spatial/StrTreeSpatialIndexService.cs
-  - src/InfiniteCanvas.Spatial/LiveSpatialIndexService.cs
-  - src/InfiniteCanvas.ViewModels/* (migrate callers)
-validation_command: |
-  dotnet build InfiniteCanvasWPF.slnx --configuration Release
-  dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --filter QueryCount
-next_step: |
-  - Add `QueryCount` definition and implement efficient count-only paths where possible.
-  - Update consumers and add unit tests verifying counts match materialized queries.
+id: ICW-007-querycount-api
+key: ICW-007
+title: Icw 007 Querycount Api
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Background

@@ -1,17 +1,19 @@
 ---
-status: draft
-summary: Surface and log UnmapViewOfFile failures in ZeroCopyBitmapFactory.Dispose
-scope: |
-  - Check return value of `UnmapViewOfFile` and call `Marshal.GetLastWin32Error()` on failure.
-  - In DEBUG builds throw a `Win32Exception` to catch failures during development; in Release trace a `Trace.TraceError` line.
-  - Add unit test or instrumentation to verify error path is exercised.
-files_to_change:
-  - src/InfiniteCanvas.Rendering/ZeroCopyBitmapFactory.Windows.cs
-validation_command: |
-  dotnet build src/InfiniteCanvas.Rendering/InfiniteCanvas.Rendering.csproj -c Release
-  dotnet test tests/InfiniteCanvas.Windows.Tests/ZeroCopyBitmapFactoryTests.cs -c Release --filter "GenerateFrozenBitmap_RejectsUseAfterDispose"
-next_step: |
-  - Apply patch adding error handling + trace; run tests and manual Dispose stress to observe logging.
+id: ICW-002-unmapviewoffile-logging
+key: ICW-002
+title: Icw 002 Unmapviewoffile Logging
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Background

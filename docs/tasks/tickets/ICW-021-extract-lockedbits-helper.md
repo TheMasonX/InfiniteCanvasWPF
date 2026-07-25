@@ -1,8 +1,19 @@
 ---
-status: open
-summary: Extract `WithLockedBits` helper to remove duplicated LockBits/UnlockBits patterns
-assignee: TBD
-labels: [refactor, medium-risk, test]
+id: ICW-021-extract-lockedbits-helper
+key: ICW-021
+title: Icw 021 Extract Lockedbits Helper
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Problem

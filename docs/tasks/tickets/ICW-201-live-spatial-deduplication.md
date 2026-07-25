@@ -1,9 +1,19 @@
 ---
-status: proposed
+id: ICW-201-live-spatial-deduplication
+key: ICW-201
 title: Live spatial query deduplication & Count consistency
-repo-area: src/InfiniteCanvas.Spatial
-severity: high
-assignee: spatial-team
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Summary:

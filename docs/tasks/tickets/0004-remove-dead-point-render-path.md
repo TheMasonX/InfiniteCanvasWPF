@@ -1,15 +1,13 @@
 ---
 id: 0004-remove-dead-point-render-path
-author: Copilot
 key: ICW-999
 title: 0004 Remove Dead Point Render Path
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
-  - icw
   - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

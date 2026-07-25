@@ -1,15 +1,13 @@
 ---
 id: ICW-017-refreshcommand-dead-path-removal
-author: Copilot
 key: ICW
 title: Icw 017 Refreshcommand Dead Path Removal
 status: Done
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

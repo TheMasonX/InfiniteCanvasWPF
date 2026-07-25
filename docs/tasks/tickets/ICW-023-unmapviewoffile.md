@@ -1,8 +1,19 @@
 ---
-status: open
-summary: Check and log failure of `UnmapViewOfFile` in `ZeroCopyBitmapFactory`
-assignee: TBD
-labels: [interop, low-risk, cleanup]
+id: ICW-023-unmapviewoffile
+key: ICW-023
+title: Icw 023 Unmapviewoffile
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Problem

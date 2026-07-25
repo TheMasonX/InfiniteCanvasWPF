@@ -47,7 +47,14 @@ public partial class MainWindow : Window
     private TileCacheBudget _tileCacheBudget = new(TileCacheBudget.DefaultMaxBytes);
     private byte _backgroundNoise = 8;
     private int _backgroundCircleCount = 3;
-    private bool _showImageTiles = true;
+    private double _minimumSparseTilePixelSize = 96;
+    private ViewportScrollbarAxis? _scrollbarDragAxis;
+    private double _scrollbarDragPointerOffset;
+    private Canvas? _viewportScrollbarOverlay;
+    private Border? _horizontalScrollbarTrack;
+    private Border? _horizontalScrollbarThumb;
+    private Border? _verticalScrollbarTrack;
+    private Border? _verticalScrollbarThumb;
     private IReadOnlyList<FeatureDisplayItem> _selectedAnnotationFeatures = [];
 
     public IReadOnlyList<FeatureDisplayItem> SelectedAnnotationFeatures => _selectedAnnotationFeatures;
@@ -55,6 +62,12 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        _viewportScrollbarOverlay = (Canvas?)FindName("ViewportScrollbarOverlay");
+        _horizontalScrollbarTrack = (Border?)FindName("HorizontalScrollbarTrack");
+        _horizontalScrollbarThumb = (Border?)FindName("HorizontalScrollbarThumb");
+        _verticalScrollbarTrack = (Border?)FindName("VerticalScrollbarTrack");
+        _verticalScrollbarThumb = (Border?)FindName("VerticalScrollbarThumb");
 
         InitializeSpatialState();
         _renderAction = new CoalescingAsyncAction(DispatchRenderFrameAsync, OnRenderActionFaulted);
@@ -110,6 +123,15 @@ public partial class MainWindow : Window
         ObjectsPerTileTextBox.Text = _objectsPerTile.ToString();
     }
 
+    private void OnAboutButtonClicked(object sender, RoutedEventArgs e)
+    {
+        var dialog = new AboutDialog
+        {
+            Owner = this
+        };
+        dialog.ShowDialog();
+    }
+
     private void ApplySettingsToUi(CanvasUserSettings settings)
     {
         _tileColumns = settings.TileColumns;
@@ -121,11 +143,15 @@ public partial class MainWindow : Window
         LabelSizeSlider.Value = settings.LabelSize;
         LabelDisplayComboBox.SelectedIndex = settings.LabelDisplay;
         ShowLabelsCheckBox.IsChecked = settings.ShowLabels;
-        ShowImageTilesCheckBox.IsChecked = true;
+        ShowBoxesCheckBox.IsChecked = settings.ShowBoxes;
+        ShowSparseImageTilesCheckBox.IsChecked = settings.ShowSparseImageTiles;
+        ShowBackgroundImagesCheckBox.IsChecked = settings.ShowBackgroundImages;
         _backgroundNoise = settings.BackgroundNoise;
         _backgroundCircleCount = settings.BackgroundCircleCount;
+        _minimumSparseTilePixelSize = settings.MinimumSparseTilePixelSize;
         BackgroundNoiseSlider.Value = settings.BackgroundNoise;
         BackgroundCircleCountSlider.Value = settings.BackgroundCircleCount;
+        MinimumSparseTilePixelSizeSlider.Value = settings.MinimumSparseTilePixelSize;
     }
 
     private async Task RegenerateSceneAsync(bool fitToWidth)
@@ -291,7 +317,10 @@ public partial class MainWindow : Window
                 visibleTiles,
                 visibleItems,
                 camera,
-                _tileCacheBudget.TryReserve);
+                _tileCacheBudget.TryReserve,
+                _minimumSparseTilePixelSize,
+                _annotationDisplayOptions.ShowBackgroundImages,
+                _annotationDisplayOptions.ShowSparseImageTiles);
             return (Bitmap: bitmap, VisibleItems: visibleItems, VisibleTiles: visibleTiles);
         }, cancellationToken);
 
@@ -313,6 +342,7 @@ public partial class MainWindow : Window
             : completedTiles.Average(tile => tile.BitmapConversionDuration!.Value.TotalMilliseconds);
         StatusText.Text = $"Frame {width}x{height}  |  {stopwatch.Elapsed.TotalMilliseconds:F1} ms  |  Zoom {camera.ScaleX:F3}x  |  Backgrounds {visibleBackgroundTileCount}/{frame.VisibleTiles.Length} visible, {generatedTileCount} total  |  Queue {queuedTileCount}  |  Gen {averageGenerationMilliseconds:F1} ms  |  Gray8 {averageConversionMilliseconds:F1} ms";
         UpdateZoomDisplay(camera, width, height);
+        UpdateViewportScrollbars(camera, width, height);
 
         if (_hoverPointerPosition is Point hoverPointer)
         {
@@ -374,7 +404,7 @@ public partial class MainWindow : Window
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Top
         };
-        if (_showImageTiles)
+        if (_annotationDisplayOptions.ShowBackgroundImages)
         {
             frame.Children.Add(new Image
             {
@@ -401,32 +431,41 @@ public partial class MainWindow : Window
 
             var outlineBrush = new SolidColorBrush(ToMediaColor(annotation.Color));
             var fillBrush = CreateFillBrush(_annotationDisplayOptions.Mode, annotation.Color);
-            var outline = new Rectangle
+
+            if (_annotationDisplayOptions.ShowBoxes)
             {
-                Stroke = outlineBrush,
-                Fill = fillBrush,
-                StrokeThickness = _annotationDisplayOptions.OutlineThickness,
-                SnapsToDevicePixels = true,
-                StrokeDashCap = PenLineCap.Round,
-                StrokeLineJoin = PenLineJoin.Round
-            };
-            var annotationVisual = new Grid
-            {
-                Children = { outline }
-            };
-            var annotationElement = new Border
-            {
-                Width = width,
-                Height = height,
-                Background = Brushes.Transparent,
-                Child = annotationVisual,
-                Tag = annotation,
-                ToolTip = CreateAnnotationToolTip(annotation)
-            };
-            annotationElement.MouseLeftButtonDown += OnAnnotationMouseLeftButtonDown;
-            Canvas.SetLeft(annotationElement, topLeft.X);
-            Canvas.SetTop(annotationElement, topLeft.Y);
-            annotationLayer.Children.Add(annotationElement);
+                var outline = new Rectangle
+                {
+                    Stroke = outlineBrush,
+                    Fill = fillBrush,
+                    StrokeThickness = _annotationDisplayOptions.OutlineThickness,
+                    SnapsToDevicePixels = true,
+                    StrokeDashCap = PenLineCap.Round,
+                    StrokeLineJoin = PenLineJoin.Round
+                };
+                var annotationVisual = new Grid
+                {
+                    Children = { outline }
+                };
+                var annotationElement = new Border
+                {
+                    Width = width,
+                    Height = height,
+                    Background = Brushes.Transparent,
+                    Child = annotationVisual,
+                    Tag = annotation,
+                    ToolTip = CreateAnnotationToolTip(annotation)
+                };
+                annotationElement.MouseLeftButtonDown += OnAnnotationMouseLeftButtonDown;
+                Canvas.SetLeft(annotationElement, topLeft.X);
+                Canvas.SetTop(annotationElement, topLeft.Y);
+                annotationLayer.Children.Add(annotationElement);
+
+                if (annotation.Id == _selectedAnnotationId)
+                {
+                    _selectionOutlineAnimator.Apply(outline);
+                }
+            }
 
             if (_annotationDisplayOptions.ShowLabels)
             {
@@ -437,11 +476,6 @@ public partial class MainWindow : Window
                     _annotationDisplayOptions.LabelSize,
                     _annotationDisplayOptions.LabelDisplay);
                 annotationLayer.Children.Add(labelPanel);
-            }
-
-            if (annotation.Id == _selectedAnnotationId)
-            {
-                _selectionOutlineAnimator.Apply(outline);
             }
         }
 
@@ -734,6 +768,166 @@ public partial class MainWindow : Window
         Mouse.OverrideCursor = null;
     }
 
+    private async void OnScrollbarTrackMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not Border track || e.OriginalSource is Border { Name: "HorizontalScrollbarThumb" or "VerticalScrollbarThumb" })
+        {
+            return;
+        }
+
+        var axis = track == _horizontalScrollbarTrack
+            ? ViewportScrollbarAxis.Horizontal
+            : ViewportScrollbarAxis.Vertical;
+        var pointer = e.GetPosition(_viewportScrollbarOverlay);
+        var trackLength = axis == ViewportScrollbarAxis.Horizontal ? track.ActualWidth : track.ActualHeight;
+        var thumb = axis == ViewportScrollbarAxis.Horizontal ? _horizontalScrollbarThumb : _verticalScrollbarThumb;
+        var thumbLength = axis == ViewportScrollbarAxis.Horizontal ? thumb.ActualWidth : thumb.ActualHeight;
+        var pointerPosition = axis == ViewportScrollbarAxis.Horizontal ? pointer.X : pointer.Y;
+        var trackPosition = axis == ViewportScrollbarAxis.Horizontal
+            ? Canvas.GetLeft(track)
+            : Canvas.GetTop(track);
+        var target = (pointerPosition - trackPosition - (thumbLength / 2)) / Math.Max(1, trackLength - thumbLength);
+
+        await PanToScrollbarPositionAsync(axis, target);
+        e.Handled = true;
+    }
+
+    private void OnScrollbarThumbMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not Border thumb)
+        {
+            return;
+        }
+
+        _scrollbarDragAxis = thumb == _horizontalScrollbarThumb
+            ? ViewportScrollbarAxis.Horizontal
+            : ViewportScrollbarAxis.Vertical;
+        var track = _scrollbarDragAxis == ViewportScrollbarAxis.Horizontal
+            ? _horizontalScrollbarTrack
+            : _verticalScrollbarTrack;
+        var pointer = e.GetPosition(track);
+        var thumbPosition = _scrollbarDragAxis == ViewportScrollbarAxis.Horizontal
+            ? Canvas.GetLeft(thumb)
+            : Canvas.GetTop(thumb);
+        _scrollbarDragPointerOffset = (_scrollbarDragAxis == ViewportScrollbarAxis.Horizontal ? pointer.X : pointer.Y) - thumbPosition;
+        thumb.CaptureMouse();
+        e.Handled = true;
+    }
+
+    private async void OnScrollbarThumbMouseMove(object sender, MouseEventArgs e)
+    {
+        if (_scrollbarDragAxis is not ViewportScrollbarAxis axis || e.LeftButton != MouseButtonState.Pressed)
+        {
+            return;
+        }
+
+        var track = axis == ViewportScrollbarAxis.Horizontal ? _horizontalScrollbarTrack : _verticalScrollbarTrack;
+        var thumb = axis == ViewportScrollbarAxis.Horizontal ? _horizontalScrollbarThumb : _verticalScrollbarThumb;
+        var pointer = e.GetPosition(track);
+        var pointerPosition = axis == ViewportScrollbarAxis.Horizontal ? pointer.X : pointer.Y;
+        var trackLength = axis == ViewportScrollbarAxis.Horizontal ? track.ActualWidth : track.ActualHeight;
+        var thumbLength = axis == ViewportScrollbarAxis.Horizontal ? thumb.ActualWidth : thumb.ActualHeight;
+        var target = (pointerPosition - _scrollbarDragPointerOffset) / Math.Max(1, trackLength - thumbLength);
+
+        await PanToScrollbarPositionAsync(axis, target);
+        e.Handled = true;
+    }
+
+    private void OnScrollbarThumbMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is Border thumb)
+        {
+            thumb.ReleaseMouseCapture();
+        }
+
+        _scrollbarDragAxis = null;
+        e.Handled = true;
+    }
+
+    private async Task PanToScrollbarPositionAsync(ViewportScrollbarAxis axis, double targetPosition)
+    {
+        var width = Math.Max(1, ViewportHost.ActualWidth);
+        var height = Math.Max(1, ViewportHost.ActualHeight);
+        var camera = _camera.Capture();
+        var delta = ViewportScrollbarPolicy.ComputePanDelta(camera, _sceneBounds, width, height, axis, targetPosition);
+        if (delta == 0)
+        {
+            return;
+        }
+
+        _camera.Pan(
+            axis == ViewportScrollbarAxis.Horizontal ? delta : 0,
+            axis == ViewportScrollbarAxis.Vertical ? delta : 0);
+        ClampCameraToScene();
+        await RequestRenderAsync();
+    }
+
+    private void UpdateViewportScrollbars(CameraSnapshot camera, double viewportWidth, double viewportHeight)
+    {
+        const double margin = 10;
+        const double trackThickness = 10;
+        const double minimumThumbLength = 24;
+        var horizontalTrackLength = Math.Max(0, viewportWidth - (margin * 2) - trackThickness - 4);
+        var verticalTrackLength = Math.Max(0, viewportHeight - (margin * 2) - trackThickness - 4);
+
+        UpdateScrollbar(
+            ViewportScrollbarAxis.Horizontal,
+            ViewportScrollbarPolicy.ComputeMetrics(camera, _sceneBounds, viewportWidth, viewportHeight, ViewportScrollbarAxis.Horizontal),
+            _horizontalScrollbarTrack,
+            _horizontalScrollbarThumb,
+            margin,
+            viewportHeight - margin - trackThickness,
+            horizontalTrackLength,
+            minimumThumbLength);
+        UpdateScrollbar(
+            ViewportScrollbarAxis.Vertical,
+            ViewportScrollbarPolicy.ComputeMetrics(camera, _sceneBounds, viewportWidth, viewportHeight, ViewportScrollbarAxis.Vertical),
+            _verticalScrollbarTrack,
+            _verticalScrollbarThumb,
+            viewportWidth - margin - trackThickness,
+            margin,
+            verticalTrackLength,
+            minimumThumbLength);
+    }
+
+    private static void UpdateScrollbar(
+        ViewportScrollbarAxis axis,
+        ViewportScrollbarMetrics metrics,
+        Border track,
+        Border thumb,
+        double left,
+        double top,
+        double trackLength,
+        double minimumThumbLength)
+    {
+        if (!metrics.IsScrollable || trackLength <= minimumThumbLength)
+        {
+            track.Visibility = Visibility.Collapsed;
+            thumb.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        track.Visibility = Visibility.Visible;
+        thumb.Visibility = Visibility.Visible;
+        var thumbLength = Math.Clamp(trackLength * metrics.ViewportFraction, minimumThumbLength, trackLength);
+        var thumbPosition = (trackLength - thumbLength) * metrics.PositionFraction;
+        Canvas.SetLeft(track, left);
+        Canvas.SetTop(track, top);
+        // Position the thumb relative to the track's origin so it appears on the correct side
+        Canvas.SetLeft(thumb, axis == ViewportScrollbarAxis.Horizontal ? left + thumbPosition : left);
+        Canvas.SetTop(thumb, axis == ViewportScrollbarAxis.Vertical ? top + thumbPosition : top);
+        if (axis == ViewportScrollbarAxis.Horizontal)
+        {
+            track.Width = trackLength;
+            thumb.Width = thumbLength;
+        }
+        else
+        {
+            track.Height = trackLength;
+            thumb.Height = thumbLength;
+        }
+    }
+
     private void OnViewportMouseLeave(object sender, MouseEventArgs e)
     {
         _hoverPointerPosition = null;
@@ -741,14 +935,36 @@ public partial class MainWindow : Window
         PixelometerValueText.Text = "PIXEL --";
     }
 
-    private async void OnShowImageTilesChanged(object sender, RoutedEventArgs e)
+    private async void OnShowBoxesChanged(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded)
         {
             return;
         }
 
-        _showImageTiles = ShowImageTilesCheckBox.IsChecked ?? true;
+        ApplyDisplayOptionsFromUi();
+        await RequestRenderAsync();
+    }
+
+    private async void OnShowSparseImageTilesChanged(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        ApplyDisplayOptionsFromUi();
+        await RequestRenderAsync();
+    }
+
+    private async void OnShowBackgroundImagesChanged(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        ApplyDisplayOptionsFromUi();
         await RequestRenderAsync();
     }
 
@@ -772,6 +988,17 @@ public partial class MainWindow : Window
 
         _backgroundCircleCount = (int)Math.Round(BackgroundCircleCountSlider.Value);
         await RegenerateSceneAsync(fitToWidth: false);
+    }
+
+    private async void OnMinimumSparseTilePixelSizeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        _minimumSparseTilePixelSize = Math.Round(MinimumSparseTilePixelSizeSlider.Value, 2);
+        await RequestRenderAsync();
     }
 
     private async void OnViewportMouseWheel(object sender, MouseWheelEventArgs e)
@@ -1051,7 +1278,10 @@ public partial class MainWindow : Window
             Math.Round(OutlineThicknessSlider.Value, 2),
             Math.Round(LabelSizeSlider.Value, 2),
             LabelDisplayComboBox.SelectedIndex == 1 ? AnnotationLabelDisplay.Id : AnnotationLabelDisplay.Class,
-            ShowLabelsCheckBox.IsChecked ?? true);
+            ShowLabelsCheckBox.IsChecked ?? true,
+            ShowBoxesCheckBox.IsChecked ?? true,
+            ShowSparseImageTilesCheckBox.IsChecked ?? true,
+            ShowBackgroundImagesCheckBox.IsChecked ?? true);
     }
 
     private async void OnRegenerateClicked(object sender, RoutedEventArgs e)
@@ -1172,8 +1402,12 @@ public partial class MainWindow : Window
             LabelSize = LabelSizeSlider.Value,
             LabelDisplay = LabelDisplayComboBox.SelectedIndex,
             ShowLabels = ShowLabelsCheckBox.IsChecked ?? true,
+            ShowBoxes = ShowBoxesCheckBox.IsChecked ?? true,
+            ShowSparseImageTiles = ShowSparseImageTilesCheckBox.IsChecked ?? true,
+            ShowBackgroundImages = ShowBackgroundImagesCheckBox.IsChecked ?? true,
             BackgroundNoise = _backgroundNoise,
-            BackgroundCircleCount = _backgroundCircleCount
+            BackgroundCircleCount = _backgroundCircleCount,
+            MinimumSparseTilePixelSize = _minimumSparseTilePixelSize
         };
 
         if (!settings.IsValid)
@@ -1285,13 +1519,19 @@ public partial class MainWindow : Window
         double OutlineThickness,
         double LabelSize,
         AnnotationLabelDisplay LabelDisplay,
-        bool ShowLabels)
+        bool ShowLabels,
+        bool ShowBoxes,
+        bool ShowSparseImageTiles,
+        bool ShowBackgroundImages)
     {
         public static AnnotationDisplayOptions Default { get; } = new(
             AnnotationDisplayMode.Outline,
             2,
-                8.5,
-                AnnotationLabelDisplay.Class,
+            8.5,
+            AnnotationLabelDisplay.Class,
+            true,
+            true,
+            true,
             true);
     }
 

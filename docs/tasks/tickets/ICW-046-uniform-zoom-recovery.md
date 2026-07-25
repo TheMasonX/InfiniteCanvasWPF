@@ -1,15 +1,13 @@
 ---
 id: ICW-046-uniform-zoom-recovery
-author: Copilot
 key: ICW
 title: Icw 046 Uniform Zoom Recovery
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

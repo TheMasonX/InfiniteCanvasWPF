@@ -1,15 +1,13 @@
 ---
 id: ICW-069-phased-sprint-plan
-author: Copilot
 key: ICW
 title: Icw 069 Phased Sprint Plan
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

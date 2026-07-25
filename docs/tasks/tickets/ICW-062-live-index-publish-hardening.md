@@ -1,15 +1,13 @@
 ---
 id: ICW-062-live-index-publish-hardening
-author: Copilot
 key: ICW
 title: Icw 062 Live Index Publish Hardening
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

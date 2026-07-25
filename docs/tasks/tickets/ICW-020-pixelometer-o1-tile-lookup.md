@@ -1,15 +1,13 @@
 ---
 id: ICW-020-pixelometer-o1-tile-lookup
-author: Copilot
 key: ICW
 title: Icw 020 Pixelometer O1 Tile Lookup
 status: Done
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

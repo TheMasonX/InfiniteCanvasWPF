@@ -1,15 +1,13 @@
 ---
 id: ICW-007-overlay-element-pooling
-author: Copilot
 key: ICW
 title: Icw 007 Overlay Element Pooling
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

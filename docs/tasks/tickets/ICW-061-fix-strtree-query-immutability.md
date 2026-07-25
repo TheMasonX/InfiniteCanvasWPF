@@ -1,15 +1,13 @@
 ---
 id: ICW-061-fix-strtree-query-immutability
-author: Copilot
 key: ICW
 title: Icw 061 Fix Strtree Query Immutability
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

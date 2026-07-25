@@ -1,15 +1,13 @@
 ---
 id: ICW-056-bgra32-finalizer-and-lock
-author: Copilot
 key: ICW
 title: Icw 056 Bgra32 Finalizer And Lock
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

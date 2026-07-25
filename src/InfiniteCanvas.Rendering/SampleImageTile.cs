@@ -181,6 +181,33 @@ public sealed class SampleImageTile
 
     public IReadOnlyList<SampleAnnotation> Annotations { get; }
 
+    public bool ShouldGenerateForPixelSize(CameraSnapshot camera, double minimumPixelSize)
+    {
+        if (!double.IsFinite(minimumPixelSize) || minimumPixelSize <= 0)
+        {
+            return true;
+        }
+
+        if (IsImageGenerated)
+        {
+            return true;
+        }
+
+        if (!double.IsFinite(camera.ScaleX)
+            || !double.IsFinite(camera.ScaleY)
+            || camera.ScaleX <= 0
+            || camera.ScaleY <= 0)
+        {
+            return false;
+        }
+
+        var topLeft = camera.WorldToScreen(Bounds.X, Bounds.Y);
+        var bottomRight = camera.WorldToScreen(Bounds.Right, Bounds.Bottom);
+        var projectedWidth = Math.Max(0, bottomRight.X - topLeft.X);
+        var projectedHeight = Math.Max(0, bottomRight.Y - topLeft.Y);
+        return Math.Min(projectedWidth, projectedHeight) >= minimumPixelSize;
+    }
+
     public bool TryGetPixelValue(double worldX, double worldY, out byte value)
     {
         value = default;

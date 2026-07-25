@@ -1,15 +1,19 @@
 ---
-status: draft
-summary: Fix parameter attribution in `Bgra32BufferLayout.GetPixelOffset` guards
-scope: |
-  - Split compound Contains(x,y) guard into two explicit checks and throw `ArgumentOutOfRangeException` naming the offending parameter.
-  - Audit similar patterns across rendering code.
-files_to_change:
-  - src/InfiniteCanvas.Rendering/Bgra32BufferLayout.cs
-validation_command: |
-  dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --filter Bgra32BufferLayout
-next_step: |
-  - Implement the guard fixes and add tests validating per-parameter exceptions.
+id: ICW-011-bgra32-getpixeloffset
+key: ICW-011
+title: Icw 011 Bgra32 Getpixeloffset
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Background

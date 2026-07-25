@@ -1,15 +1,13 @@
 ---
 id: 0002-add-global-exception-handler
-author: Copilot
 key: ICW-999
 title: 0002 Add Global Exception Handler
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
-  - icw
   - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

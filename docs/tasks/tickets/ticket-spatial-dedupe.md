@@ -1,15 +1,13 @@
 ---
 id: ticket-spatial-dedupe
-author: Copilot
 key: ICW-999
 title: Ticket Spatial Dedupe
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
-  - icw
   - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

@@ -1,15 +1,13 @@
 ---
 id: ICW-021-backbuffer-reuse-safety
-author: Copilot
 key: ICW
 title: Icw 021 Backbuffer Reuse Safety
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

@@ -1,15 +1,13 @@
 ---
-id: ICW-065-viewport-scrollbars-and-zoom-navigation
-author: Copilot
-key: ICW
-title: Icw 065 Viewport Scrollbars And Zoom Navigation
-status: Proposed
-type: Task
-priority: P2
+id: ICW-065
+key: ICW-065
+title: Viewport scrollbars and zoom navigation
+status: Done
+type: Story
+priority: P1
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:
@@ -18,32 +16,34 @@ created: 2026-07-25
 updated: 2026-07-25
 ---
 
-# ICW-065-viewport-scrollbars-and-zoom-navigation
-
 ## Summary
 
-## Status
+Provide custom, camera-native horizontal and vertical scrollbars for scene navigation. They must behave like standard scrollbars while remaining independent from WPF layout measurement, so zoom and raster dimensions continue to use the fixed visible viewport.
 
 ## Scope
 
-- Review and update the relevant implementation area.
-- Capture the acceptance criteria and validation path.
+- Add a pure camera-to-scrollbar metrics policy in `InfiniteCanvas.Core`.
+- Render custom overlay tracks and thumbs without a `ScrollViewer` or layout-affecting extent.
+- Support thumb dragging and track clicks to pan the camera; refresh thumb geometry after pan, zoom, resize, and scene regeneration.
+- Make mouse-wheel and preset/custom zoom changes immediately update the navigation controls.
 
 ## Acceptance Criteria
 
-- The task has a clear implementation goal.
-- The task is linked to the relevant files or design notes.
-- The validation command and outcome are recorded.
+- Horizontal and vertical thumbs express the visible world fraction and camera location within scene bounds.
+- Dragging a thumb and clicking its track pans through the same bounded camera path as direct panning.
+- Zooming changes thumb size and position without changing `ViewportHost` measurement, zoom-floor calculations, or raster dimensions.
+- The controls hide their thumb interaction when an axis is not scrollable.
 
 ## Validation
 
-- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
-- Result: To be completed when implemented.
+- Command: `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release`; `dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release`
+- Result: `ViewportScrollbarPolicyTests` passed 3/3 and the Release WPF app build succeeded. The full core suite currently has two pre-existing failures in `CameraTransformTests.Zoom_RejectsScalesOutsideConfiguredBounds` and `ViewportZoomPolicyTests.ComputeWheelDeltas_ZoomInFromBothFloorsAdvancesEachAxisByOneNotch`; the scrollbar policy tests pass independently.
 
 ## Notes
 
-- Add implementation details, blockers, or follow-up questions here.
+- Native `ScrollViewer` integration was removed because its content extent replaced the fixed camera viewport and produced unreachable zoom-out plus oversized smeared frames. This implementation owns only an overlay visual and maps input directly to `CameraTransform`.
+- Delivered camera-native tracks and thumbs with click-to-position and drag navigation. The geometry is derived from `CameraSnapshot`, scene bounds, and fixed viewport dimensions after every rendered frame, including wheel and preset/custom zoom changes.
 
 ## Related Tasks
 
-- ICW-000
+- ICW-070

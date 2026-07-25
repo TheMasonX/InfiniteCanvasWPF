@@ -1,15 +1,13 @@
 ---
 id: ICW-039-startup-nonblocking-shared-defect-tiles
-author: Copilot
 key: ICW
 title: Icw 039 Startup Nonblocking Shared Defect Tiles
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

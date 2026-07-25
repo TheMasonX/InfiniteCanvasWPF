@@ -1,15 +1,13 @@
 ---
 id: ICW-012-configurable-material-and-display-panel
-author: Copilot
 key: ICW
 title: Icw 012 Configurable Material And Display Panel
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

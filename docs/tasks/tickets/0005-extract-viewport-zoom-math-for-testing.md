@@ -1,15 +1,13 @@
 ---
 id: 0005-extract-viewport-zoom-math-for-testing
-author: Copilot
 key: ICW-999
 title: 0005 Extract Viewport Zoom Math For Testing
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
-  - icw
   - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

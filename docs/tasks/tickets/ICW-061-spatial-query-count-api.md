@@ -1,19 +1,16 @@
 ---
 id: ICW-061
-author: Copilot
 key: ICW-061
 title: Strengthen spatial query API with count/streaming paths
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - spatial
-  - api
-  - performance
+  - icw
+  - task-tracker
 dependsOn: []
 related: []
 links:
-  - src/InfiniteCanvas.Spatial/
   - docs/tasks/README.md
 created: 2026-07-25
 updated: 2026-07-25

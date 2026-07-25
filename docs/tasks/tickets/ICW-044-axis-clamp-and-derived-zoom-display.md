@@ -1,15 +1,13 @@
 ---
 id: ICW-044-axis-clamp-and-derived-zoom-display
-author: Copilot
 key: ICW
 title: Icw 044 Axis Clamp And Derived Zoom Display
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

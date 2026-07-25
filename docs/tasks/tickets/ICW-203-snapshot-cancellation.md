@@ -1,9 +1,19 @@
 ---
-status: proposed
+id: ICW-203-snapshot-cancellation
+key: ICW-203
 title: Make snapshot build cooperative with cancellation and avoid unbounded blocking
-repo-area: src/InfiniteCanvas.Spatial
-severity: medium
-assignee: spatial-team
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Summary:

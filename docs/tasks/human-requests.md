@@ -8,6 +8,18 @@ Review the task [README](README.md) for further guidance on how to write and tra
 
 ## Outstanding Requests
 
+## Transcribed Requests
+
+* [ICW-065] Add viewport scrollbars and make zoom controls drive viewport navigation. See [docs/tasks/tickets/ICW-065-viewport-scrollbars-and-zoom-navigation.md](tickets/ICW-065-viewport-scrollbars-and-zoom-navigation.md).
+* [ICW-076] Add background tile mip-level fetching for zoomed-out views. See [docs/tasks/tickets/ICW-076-background-tile-mip-levels.md](tickets/ICW-076-background-tile-mip-levels.md).
+* [ICW-066] Expose background tile noise and defect-circle tuning through runtime settings. See [docs/tasks/tickets/ICW-066-configurable-background-noise-tuning.md](tickets/ICW-066-configurable-background-noise-tuning.md).
+* [ICW-067] Add a lightweight debug property editor for generator and display tuning. See [docs/tasks/tickets/ICW-067-debug-property-editor.md](tickets/ICW-067-debug-property-editor.md).
+* [ICW-068] Add an about/licensing dialog for third-party credits and project attribution. See [docs/tasks/tickets/ICW-068-about-and-licensing-dialog.md](tickets/ICW-068-about-and-licensing-dialog.md).
+* [ICW-073] Separate show settings for labels, boxes, sparse image tiles, and background images. See [docs/tasks/tickets/ICW-073-separate-show-settings.md](tickets/ICW-073-separate-show-settings.md).
+* [ICW-074] Add a minimum pixel size threshold for sparse tile generation. See [docs/tasks/tickets/ICW-074-min-pixel-size-sparse-tiles.md](tickets/ICW-074-min-pixel-size-sparse-tiles.md).
+* [ICW-075] Move object generation parameters to global settings and add margin/cross-tile support. See [docs/tasks/tickets/ICW-075-object-generation-settings.md](tickets/ICW-075-object-generation-settings.md).
+
+
 **Scrollbar and Zoom Controls:**
 
 * We need scrollbars for the canvas, and a zoom control that allows for both preset zoom levels and custom zoom levels. The zoom control should be integrated with the scrollbars, so that when the user zooms in or out, the scrollbars adjust accordingly to reflect the new viewport size. The zoom control should also support mouse wheel zooming, and should provide visual feedback to indicate the current zoom level.
@@ -22,20 +34,8 @@ Review the task [README](README.md) for further guidance on how to write and tra
 
 * The debug property editor allows developers to inspect and modify properties of various components at runtime. This should use a scrolling area with a single column of expander sections for each component or subsystem, and should support editing of properties with appropriate controls (e.g. text boxes, sliders, checkboxes). The editor should also support undo/redo functionality for property changes, and should be able to save and load property configurations to/from a file.
 
-**Background Tile Mip Levels:**
-
-* Add support for zoom levels in the background tile system, allowing for different levels of detail to be displayed at different zoom levels. The background tiles in a real application can be delivered from a resolution pyramid, and the system should be able to handle this by loading the appropriate mip level based on the current zoom level. This will improve performance and reduce memory usage when zoomed out.
-* Synthetic generator can be used to generate mip levels for testing, but the system should be designed to handle real-world scenarios where the background tiles are delivered from an external API.
-
 **About Page and Licensing:**
 
 * About page with all of the licensing and attribution information for the project, including third-party libraries and assets. This should be a single page that is easy to find and read, and should include links to the relevant licenses and attributions.
   * Add a `(?)` icon linked to a dialog window with the licensing in a scrollable text area, and a link to the full license text for each third-party library or asset used in the project.
   * Add a `licenses` folder that gets copied into the build output with the full license text for each third-party library or asset used in the project. Link to the full license text from the dialog window.
-
-## Transcribed Requests
-
-* [ICW-065] Add viewport scrollbars and make zoom controls drive viewport navigation. See [docs/tasks/tickets/ICW-065-viewport-scrollbars-and-zoom-navigation.md](tickets/ICW-065-viewport-scrollbars-and-zoom-navigation.md).
-* [ICW-066] Expose background tile noise and defect-circle tuning through runtime settings. See [docs/tasks/tickets/ICW-066-configurable-background-noise-tuning.md](tickets/ICW-066-configurable-background-noise-tuning.md).
-* [ICW-067] Add a lightweight debug property editor for generator and display tuning. See [docs/tasks/tickets/ICW-067-debug-property-editor.md](tickets/ICW-067-debug-property-editor.md).
-* [ICW-068] Add an about/licensing dialog for third-party credits and project attribution. See [docs/tasks/tickets/ICW-068-about-and-licensing-dialog.md](tickets/ICW-068-about-and-licensing-dialog.md).

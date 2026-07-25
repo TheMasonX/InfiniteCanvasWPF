@@ -1,15 +1,13 @@
 ---
 id: ICW-022-mainwindow-decomposition-and-tests
-author: Copilot
 key: ICW
 title: Icw 022 Mainwindow Decomposition And Tests
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

@@ -1,15 +1,13 @@
 ---
 id: ICW-066-configurable-background-noise-tuning
-author: Copilot
 key: ICW
 title: Icw 066 Configurable Background Noise Tuning
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

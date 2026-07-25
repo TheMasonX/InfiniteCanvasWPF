@@ -1,15 +1,13 @@
 ---
 id: ICW-013-zoom-presets-and-cache-debug
-author: Copilot
 key: ICW
 title: Icw 013 Zoom Presets And Cache Debug
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

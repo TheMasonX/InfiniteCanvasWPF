@@ -1,15 +1,13 @@
 ---
 id: 0006-hoist-constants-and-fix-finalizer
-author: Copilot
 key: ICW-999
 title: 0006 Hoist Constants And Fix Finalizer
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
-  - icw
   - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

@@ -1,15 +1,13 @@
 ---
 id: ICW-010-annotation-modes-defect-layer-and-anchor-pan
-author: Copilot
 key: ICW
 title: Icw 010 Annotation Modes Defect Layer And Anchor Pan
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

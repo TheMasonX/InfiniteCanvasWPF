@@ -1,3 +1,4 @@
+using InfiniteCanvas.Core;
 using InfiniteCanvas.Rendering;
 
 namespace InfiniteCanvas.Tests;
@@ -87,6 +88,21 @@ public class SampleImageGeneratorTests
             Assert.That(cacheBudget.TryReserve(tiles[1]), Is.False);
             Assert.That(cacheBudget.ResidentTileCount, Is.EqualTo(1));
             Assert.That(cacheBudget.UsedBytes, Is.EqualTo(tiles[0].PixelCost));
+        });
+    }
+
+    [Test]
+    public void Tile_ShouldSkipGenerationWhenViewportSizeFallsBelowThreshold()
+    {
+        var tile = SampleImageGenerator.GenerateSet(1, 64, 32, objectsPerTile: 0)[0];
+        var smallCamera = new CameraSnapshot(0.25, 0.25, 0, 0);
+        var largeCamera = new CameraSnapshot(4, 4, 0, 0);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tile.ShouldGenerateForPixelSize(smallCamera, 64), Is.False);
+            Assert.That(tile.ShouldGenerateForPixelSize(largeCamera, 64), Is.True);
+            Assert.That(tile.ShouldGenerateForPixelSize(largeCamera, 0), Is.True);
         });
     }
 

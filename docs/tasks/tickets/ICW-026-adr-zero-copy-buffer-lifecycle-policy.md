@@ -1,15 +1,13 @@
 ---
 id: ICW-026-adr-zero-copy-buffer-lifecycle-policy
-author: Copilot
 key: ICW
 title: Icw 026 Adr Zero Copy Buffer Lifecycle Policy
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

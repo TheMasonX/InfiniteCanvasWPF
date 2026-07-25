@@ -1,18 +1,19 @@
 ---
-status: draft
-summary: Unify SpatialBounds boundary semantics across index and renderer
-scope: |
-  - Define canonical boundary semantics (recommend closed intervals) in `SpatialBounds` XML docs and DesignDoc.md.
-  - Update renderer sampling and index query call sites to adopt canonical semantics or convert explicitly.
-  - Add edge-case unit tests verifying adjacency behavior at tile borders.
-files_to_change:
-  - src/InfiniteCanvas.Core/SpatialBounds.cs
-  - src/InfiniteCanvas.Rendering/* (sampling code)
-  - src/InfiniteCanvas.Spatial/* (query code)
-validation_command: |
-  dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --filter Boundary
-next_step: |
-  - Document chosen semantics, update code paths or add conversion helpers, and add tests for boundary edge cases.
+id: ICW-009-boundary-semantics
+key: ICW-009
+title: Icw 009 Boundary Semantics
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Background

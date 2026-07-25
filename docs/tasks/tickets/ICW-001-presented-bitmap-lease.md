@@ -1,19 +1,19 @@
 ---
-status: draft
-summary: Add presented-bitmap reference-tracking to ZeroCopyBitmapFactory to enforce mapping lifetime
-scope: |
-  - Add `PresentedBitmap : IDisposable` wrapper returned by `GenerateFrozenBitmap(...)` or add `AcquirePresentedBitmap` API that returns both `InteropBitmap` and a lease `IDisposable`.
-  - Track `_presentedCount` inside `ZeroCopyBitmapFactory` with `Interlocked` operations.
-  - Make `Dispose(bool)` check `_presentedCount` and either wait briefly (configurable timeout) or throw a clear exception in DEBUG; update ADR-0004.
-files_to_change:
-  - src/InfiniteCanvas.Rendering/ZeroCopyBitmapFactory.Windows.cs
-  - docs/ADR/0004-zero-copy-buffer-lifecycle-and-handoff-policy.md
-validation_command: |
-  dotnet build src/InfiniteCanvas.Rendering/InfiniteCanvas.Rendering.csproj -c Release
-  dotnet test tests/InfiniteCanvas.Windows.Tests/ --filter "ZeroCopyBitmapFactory*" -c Release
-next_step: |
-  - Implement `PresentedBitmap` wrapper and `_presentedCount` increment/decrement.
-  - Add unit tests: Present+Dispose race test and stress test simulating compositor lifetimes.
+id: ICW-001-presented-bitmap-lease
+key: ICW-001
+title: Icw 001 Presented Bitmap Lease
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Background

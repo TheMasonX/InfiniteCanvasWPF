@@ -1,15 +1,13 @@
 ---
 id: ICW-054-coalescing-render-ownership
-author: Copilot
 key: ICW
 title: Icw 054 Coalescing Render Ownership
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

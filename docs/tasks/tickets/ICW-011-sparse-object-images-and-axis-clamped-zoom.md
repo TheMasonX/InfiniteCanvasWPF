@@ -1,15 +1,13 @@
 ---
 id: ICW-011-sparse-object-images-and-axis-clamped-zoom
-author: Copilot
 key: ICW
 title: Icw 011 Sparse Object Images And Axis Clamped Zoom
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

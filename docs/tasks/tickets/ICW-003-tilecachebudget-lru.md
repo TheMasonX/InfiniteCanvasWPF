@@ -1,17 +1,19 @@
 ---
-status: draft
-summary: Replace Dictionary-only TileCacheBudget with deterministic LRU bookkeeping
-scope: |
-  - Add `LinkedList<string>` and `Dictionary<string, LinkedListNode<string>>` to `TileCacheBudget` for deterministic LRU eviction.
-  - Update `TrackTile`, `Remove`, and `Clear` to maintain the linked list and remove nodes in O(1).
-  - Update unit tests to assert eviction order and update cache description text if needed.
-files_to_change:
-  - src/InfiniteCanvas.Rendering/SampleImageTile.cs
-validation_command: |
-  dotnet build src/InfiniteCanvas.Rendering/InfiniteCanvas.Rendering.csproj -c Release
-  dotnet test tests/InfiniteCanvas.Tests/ --filter "TileCacheBudget*" -c Release
-next_step: |
-  - Implement LRU data structures, add explicit tests asserting LRU eviction, and run benchmarks to confirm memory usage.
+id: ICW-003-tilecachebudget-lru
+key: ICW-003
+title: Icw 003 Tilecachebudget Lru
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Background

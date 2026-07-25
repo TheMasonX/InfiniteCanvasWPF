@@ -1,15 +1,13 @@
 ---
 id: ICW-028-retain-frame-visual-shell
-author: Copilot
 key: ICW
 title: Icw 028 Retain Frame Visual Shell
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

@@ -1,15 +1,13 @@
 ---
 id: ICW-045-custom-zoom-entry-redesign
-author: Copilot
 key: ICW
 title: Icw 045 Custom Zoom Entry Redesign
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

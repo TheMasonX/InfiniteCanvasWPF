@@ -1,15 +1,13 @@
 ---
 id: ICW-060-spatial-index-audit-findings
-author: Copilot
 key: ICW
 title: Icw 060 Spatial Index Audit Findings
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

@@ -1,17 +1,19 @@
 ---
-status: draft
-summary: Harden LiveSpatialIndexService.PublishSnapshotAsync failure-recovery and interleavings
-scope: |
-  - Make failure recovery deterministic by using captured publishing state rather than current mutable state.
-  - Make publish status observable and add a single-publish guard with clear semantics.
-  - Add unit tests to exercise add-during-publish and failure-recovery interleavings.
-files_to_change:
-  - src/InfiniteCanvas.Spatial/LiveSpatialIndexService.cs
-  - tests/InfiniteCanvas.Tests/LiveSpatialIndexServiceTests.cs
-validation_command: |
-  dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --filter LiveSpatialIndexService
-next_step: |
-  - Implement deterministic recovery using publishing snapshot; add tests simulating failures.
+id: ICW-008-liveindex-publish-hardening
+key: ICW-008
+title: Icw 008 Liveindex Publish Hardening
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Background

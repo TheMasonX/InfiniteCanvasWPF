@@ -1,15 +1,13 @@
 ---
 id: ICW-016-readme-mvp-behavior-refresh
-author: Copilot
 key: ICW
 title: Icw 016 Readme Mvp Behavior Refresh
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

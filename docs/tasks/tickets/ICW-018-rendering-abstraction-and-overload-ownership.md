@@ -1,15 +1,13 @@
 ---
 id: ICW-018-rendering-abstraction-and-overload-ownership
-author: Copilot
 key: ICW
 title: Icw 018 Rendering Abstraction And Overload Ownership
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

@@ -1,15 +1,13 @@
 ---
 id: ICW-036-ci-and-nullability-enforcement-baseline
-author: Copilot
 key: ICW
 title: Icw 036 Ci And Nullability Enforcement Baseline
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

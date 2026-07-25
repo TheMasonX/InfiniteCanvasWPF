@@ -1,22 +1,17 @@
 ---
 id: ICW-071-dockable-annotation-feature-sidebar
-author: Copilot
 key: ICW-071
 title: Move annotation features into a collapsible dockable sidebar
 status: Proposed
 type: Story
 priority: P2
 tags:
-  - ui
-  - annotations
-  - inspection
-  - docking
+  - icw
+  - task-tracker
 dependsOn: []
-related:
-  - ICW-048
+related: []
 links:
-  - src/InfiniteCanvas.App/MainWindow.xaml
-  - src/InfiniteCanvas.App/MainWindow.xaml.cs
+  - docs/tasks/README.md
 created: 2026-07-25
 updated: 2026-07-25
 ---

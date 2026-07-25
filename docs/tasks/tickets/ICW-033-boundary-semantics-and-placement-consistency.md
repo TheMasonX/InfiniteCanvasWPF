@@ -1,15 +1,13 @@
 ---
 id: ICW-033-boundary-semantics-and-placement-consistency
-author: Copilot
 key: ICW
 title: Icw 033 Boundary Semantics And Placement Consistency
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

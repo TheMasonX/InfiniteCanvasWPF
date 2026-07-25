@@ -1,15 +1,13 @@
 ---
 id: 0003-fix-generate-set-argument-validation
-author: Copilot
 key: ICW-999
 title: 0003 Fix Generate Set Argument Validation
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
-  - icw
   - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

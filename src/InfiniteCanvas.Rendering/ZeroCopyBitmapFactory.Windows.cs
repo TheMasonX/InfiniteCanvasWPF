@@ -110,7 +110,10 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
         IReadOnlyList<SampleImageTile> tiles,
         IReadOnlyList<SampleAnnotation> annotations,
         CameraSnapshot camera,
-        Func<SampleImageTile, bool>? tryReserveCacheEntry = null)
+        Func<SampleImageTile, bool>? tryReserveCacheEntry = null,
+        double minimumSparseTilePixelSize = 0,
+        bool showBackgroundImages = true,
+        bool showSparseImageTiles = true)
     {
         ArgumentNullException.ThrowIfNull(tiles);
         ArgumentNullException.ThrowIfNull(annotations);
@@ -121,14 +124,20 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
             NativeMemory.Clear((void*)_view, (nuint)_layout.ByteCount);
 
             var pixels = (byte*)_view;
-            foreach (var tile in tiles)
+            if (showBackgroundImages)
             {
-                DrawTile(pixels, tile, camera, tryReserveCacheEntry);
+                foreach (var tile in tiles)
+                {
+                    DrawTile(pixels, tile, camera, tryReserveCacheEntry, minimumSparseTilePixelSize);
+                }
             }
 
-            foreach (var annotation in annotations)
+            if (showSparseImageTiles)
             {
-                DrawDefectPatch(pixels, annotation, camera);
+                foreach (var annotation in annotations)
+                {
+                    DrawDefectPatch(pixels, annotation, camera);
+                }
             }
 
             var bitmap = (InteropBitmap)Imaging.CreateBitmapSourceFromMemorySection(
@@ -148,7 +157,8 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
         byte* destination,
         SampleImageTile tile,
         CameraSnapshot camera,
-        Func<SampleImageTile, bool>? tryReserveCacheEntry)
+        Func<SampleImageTile, bool>? tryReserveCacheEntry,
+        double minimumSparseTilePixelSize)
     {
         var topLeft = camera.WorldToScreen(tile.Bounds.X, tile.Bounds.Y);
         var bottomRight = camera.WorldToScreen(tile.Bounds.Right, tile.Bounds.Bottom);
@@ -161,9 +171,12 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
             return;
         }
 
-        var hasSourcePixels = tile.TryGetPixelsNonBlocking(
-            out var sourcePixels,
-            tryReserveCacheEntry is null ? null : () => tryReserveCacheEntry(tile));
+        byte[]? sourcePixels = null;
+        var shouldGeneratePixels = tile.IsImageGenerated || tile.ShouldGenerateForPixelSize(camera, minimumSparseTilePixelSize);
+        var hasSourcePixels = shouldGeneratePixels
+            && tile.TryGetPixelsNonBlocking(
+                out sourcePixels,
+                tryReserveCacheEntry is null ? null : () => tryReserveCacheEntry(tile));
         var placeholder = tile.PlaceholderValue;
 
         for (var y = top; y < bottom; y++)

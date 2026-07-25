@@ -1,15 +1,13 @@
 ---
 id: ICW-043-persist-settings-on-close
-author: Copilot
 key: ICW
 title: Icw 043 Persist Settings On Close
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

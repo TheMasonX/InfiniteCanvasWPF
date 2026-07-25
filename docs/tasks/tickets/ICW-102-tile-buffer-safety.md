@@ -1,9 +1,19 @@
 ---
-status: proposed
+id: ICW-102-tile-buffer-safety
+key: ICW-102
 title: Harden tile pixel buffer contract (pin or copy) for background rendering
-repo-area: src/InfiniteCanvas.Spatial & src/InfiniteCanvas.Rendering
-severity: high
-assignee: spatial-team, rendering-team
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Summary:

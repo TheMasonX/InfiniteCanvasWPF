@@ -1,15 +1,13 @@
 ---
 id: ICW-031-typed-annotation-metrics
-author: Copilot
 key: ICW
 title: Icw 031 Typed Annotation Metrics
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

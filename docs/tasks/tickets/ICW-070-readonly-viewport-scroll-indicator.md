@@ -1,22 +1,17 @@
 ---
 id: ICW-070-readonly-viewport-scroll-indicator
-author: Copilot
 key: ICW-070
 title: Add a read-only camera scroll-position indicator
 status: Proposed
 type: Improvement
 priority: P1
 tags:
-  - ui
-  - viewport
-  - camera
-  - navigation
+  - icw
+  - task-tracker
 dependsOn: []
-related:
-  - ICW-065
+related: []
 links:
-  - src/InfiniteCanvas.App/MainWindow.xaml
-  - src/InfiniteCanvas.App/MainWindow.xaml.cs
+  - docs/tasks/README.md
 created: 2026-07-25
 updated: 2026-07-25
 ---

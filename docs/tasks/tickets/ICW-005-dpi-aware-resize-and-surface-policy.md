@@ -1,15 +1,13 @@
 ---
 id: ICW-005-dpi-aware-resize-and-surface-policy
-author: Copilot
 key: ICW
 title: Icw 005 Dpi Aware Resize And Surface Policy
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

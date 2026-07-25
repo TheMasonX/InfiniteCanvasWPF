@@ -1,9 +1,19 @@
 ---
-status: proposed
+id: ICW-306-pixel-format-assumptions
+key: ICW-306
 title: Harden pixel-format and stride handling in defect/mask rendering
-repo-area: src/InfiniteCanvas.Rendering
-severity: medium
-assignee: rendering-team
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Summary:

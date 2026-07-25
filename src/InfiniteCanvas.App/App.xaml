@@ -8,6 +8,7 @@
         <SolidColorBrush x:Key="BorderBrush" Color="#313A43" />
         <SolidColorBrush x:Key="PrimaryTextBrush" Color="#F3F7F8" />
         <SolidColorBrush x:Key="SecondaryTextBrush" Color="#AAB6BD" />
+        <SolidColorBrush x:Key="CheckBoxLabelBrush" Color="#F3F7F8" />
         <SolidColorBrush x:Key="AccentBrush" Color="#35D0BA" />
     </Application.Resources>
 </Application>

@@ -1,15 +1,13 @@
 ---
 id: ICW-027-gpu-pivot-criteria-spike
-author: Copilot
 key: ICW
 title: Icw 027 Gpu Pivot Criteria Spike
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

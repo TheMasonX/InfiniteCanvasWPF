@@ -1,9 +1,19 @@
 ---
-status: proposed
+id: ICW-202-spatial-query-api
+key: ICW-202
 title: Add count-only / streaming query API to ISpatialIndexService
-repo-area: src/InfiniteCanvas.Spatial
-severity: medium
-assignee: spatial-team
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Summary:

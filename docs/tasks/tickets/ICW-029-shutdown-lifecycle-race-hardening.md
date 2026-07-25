@@ -1,15 +1,13 @@
 ---
 id: ICW-029-shutdown-lifecycle-race-hardening
-author: Copilot
 key: ICW
 title: Icw 029 Shutdown Lifecycle Race Hardening
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

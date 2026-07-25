@@ -1,15 +1,13 @@
 ---
 id: ICW-032-spatial-query-interface-strengthening
-author: Copilot
 key: ICW
 title: Icw 032 Spatial Query Interface Strengthening
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

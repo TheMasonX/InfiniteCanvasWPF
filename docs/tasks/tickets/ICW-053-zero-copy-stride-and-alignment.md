@@ -1,15 +1,13 @@
 ---
 id: ICW-053-zero-copy-stride-and-alignment
-author: Copilot
 key: ICW
 title: Icw 053 Zero Copy Stride And Alignment
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

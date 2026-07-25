@@ -1,15 +1,13 @@
 ---
 id: ICW-019-overlay-animation-continuity
-author: Copilot
 key: ICW
 title: Icw 019 Overlay Animation Continuity
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

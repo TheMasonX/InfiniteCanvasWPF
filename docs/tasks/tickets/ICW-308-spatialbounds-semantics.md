@@ -1,9 +1,19 @@
 ---
-status: proposed
+id: ICW-308-spatialbounds-semantics
+key: ICW-308
 title: Clarify SpatialBounds intersection semantics (inclusive vs exclusive)
-repo-area: src/InfiniteCanvas.Core
-severity: low
-assignee: core-team
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Summary:

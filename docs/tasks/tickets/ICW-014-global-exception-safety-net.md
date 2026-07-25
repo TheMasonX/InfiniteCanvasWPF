@@ -1,9 +1,19 @@
 ---
-status: proposed
+id: ICW-014-global-exception-safety-net
+key: ICW-014
 title: Global UI exception safety net and harden async-void handlers
-repo-area: src/InfiniteCanvas.App
-severity: high
-assignee: app-team
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Summary:
@@ -27,7 +37,7 @@ Risk: Low
 Suggested owner: @app-team
 # ICW-014: Global Exception Safety Net for Async UI Pipeline
 
-- Status: To Do
+- Status: In Progress
 - Date: 2026-07-24
 - Owner: InfiniteCanvas Agent
 
@@ -50,8 +60,9 @@ Add application-level unhandled exception handling so async-void UI event failur
 
 ## Findings
 
-- Cross-validated audit finding: the app currently has no global Dispatcher/AppDomain/TaskScheduler unhandled exception safety hooks.
+- Cross-validated audit finding: the app initially lacked global Dispatcher/AppDomain/TaskScheduler unhandled exception safety hooks; the current worktree now registers and removes all three hooks in `App.xaml.cs`.
 - Coalesced render scheduling currently relies on fault-prone task propagation semantics, so unhandled render faults can surface through async-void event paths without centralized reporting.
+- Application-level hooks are now registered in `App.OnStartup`; dispatcher faults are logged and marked handled, unobserved task faults are logged and observed, and process-level faults are logged as fatal. Remaining validation is selected async-void handler coverage and close-time lifecycle stress.
 
 ## Dependencies
 
@@ -59,4 +70,4 @@ Add application-level unhandled exception handling so async-void UI event failur
 
 ## Next Step
 
-- Implement centralized exception handlers and define logging plus fail-safe user messaging policy, then validate no unhandled exceptions occur during close-time cancellation and disposal races.
+- Harden selected `MainWindow` async-void handlers with a shared safe wrapper, then validate close-time cancellation and disposal paths.

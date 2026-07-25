@@ -1,15 +1,13 @@
 ---
 id: ICW-052-tilecache-thread-safety
-author: Copilot
 key: ICW
 title: Icw 052 Tilecache Thread Safety
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

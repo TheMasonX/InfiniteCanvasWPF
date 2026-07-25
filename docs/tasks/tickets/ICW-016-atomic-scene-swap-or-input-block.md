@@ -1,9 +1,19 @@
 ---
-status: proposed
+id: ICW-016-atomic-scene-swap-or-input-block
+key: ICW-016
 title: Prevent torn scene frames during regeneration
-repo-area: src/InfiniteCanvas.App
-severity: medium
-assignee: app-team
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Summary:

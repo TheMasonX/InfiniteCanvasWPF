@@ -26,6 +26,12 @@ Keep these core project notes in mind:
 - camera and projection logic should be deterministic and testable
 - changes should preserve benchmark and test coverage where possible
 
+## Scripting
+
+Utility scripts should go under scripts/ and be callable from the command line.
+Create folders as needed to keep scripts organized, but don't overcomplicate the structure. Temporary scripts belong under `scripts/temp/`.
+Scripts should ideally be idempotent, deterministic, and safe to run multiple times. Scripts should not require user input or interactive prompts where possible.
+
 ## Documentation change policy
 
 - Treat any changes under `docs/` as safe, intentional non-code work by default.

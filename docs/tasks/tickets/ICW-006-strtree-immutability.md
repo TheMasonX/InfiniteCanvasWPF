@@ -1,17 +1,19 @@
 ---
-status: draft
-summary: Enforce unconditional copy-to-array in StrTreeSpatialIndexService.Query and document immutability
-scope: |
-  - Always copy STRtree query results to an immutable snapshot (call `.ToArray()` unconditionally) before returning.
-  - Document immutability expectation in `ISpatialIndexService` API contract.
-  - Add a unit test proving returned collection is independent from subsequent index changes.
-files_to_change:
-  - src/InfiniteCanvas.Spatial/StrTreeSpatialIndexService.cs
-  - src/InfiniteCanvas.Spatial/ISpatialIndexService.cs (XML docs)
-validation_command: |
-  dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --filter StrTree
-next_step: |
-  - Implement unconditional copy in Query and add `StrTreeSpatialIndexService_Query_ReturnsIndependentSnapshot` test.
+id: ICW-006-strtree-immutability
+key: ICW-006
+title: Icw 006 Strtree Immutability
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Background

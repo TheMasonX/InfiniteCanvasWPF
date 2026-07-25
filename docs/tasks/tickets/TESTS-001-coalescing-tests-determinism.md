@@ -1,9 +1,19 @@
 ---
-status: proposed
+id: TESTS-001-coalescing-tests-determinism
+key: TESTS-001
 title: Make CoalescingAsyncAction tests deterministic and avoid Timeout.InfiniteTimeSpan
-repo-area: tests
-severity: high
-assignee: test-maintainer
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - tests
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Summary:

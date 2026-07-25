@@ -1,15 +1,13 @@
 ---
 id: 0001-stabilize-benchmarks-windows-path
-author: Copilot
 key: ICW-999
 title: 0001 Stabilize Benchmarks Windows Path
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
-  - icw
   - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

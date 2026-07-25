@@ -1,8 +1,19 @@
 ---
-status: open
-summary: Attribute correct parameter in `Bgra32BufferLayout.GetPixelOffset` and similar guards
-assignee: TBD
-labels: [bug, low-risk, defensive]
+id: ICW-022-bgra32-getpixeloffset
+key: ICW-022
+title: Icw 022 Bgra32 Getpixeloffset
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Problem

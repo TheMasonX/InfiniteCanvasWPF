@@ -1,15 +1,13 @@
 ---
 id: ICW-063-boundary-semantics-and-tests
-author: Copilot
 key: ICW
 title: Icw 063 Boundary Semantics And Tests
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

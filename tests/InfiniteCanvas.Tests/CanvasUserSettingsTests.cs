@@ -19,7 +19,11 @@ public class CanvasUserSettingsTests
             OutlineThickness = 3.5,
             LabelSize = 9,
             LabelDisplay = 1,
-            ShowLabels = false
+            ShowLabels = false,
+            ShowBoxes = false,
+            ShowSparseImageTiles = false,
+            ShowBackgroundImages = false,
+            MinimumSparseTilePixelSize = 128
         };
 
         try

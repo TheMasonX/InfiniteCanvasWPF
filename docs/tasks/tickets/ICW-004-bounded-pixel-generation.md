@@ -1,17 +1,19 @@
 ---
-status: draft
-summary: Bound tile pixel generation concurrency to avoid threadpool saturation
-scope: |
-  - Add a shared bounded concurrency primitive (static `SemaphoreSlim`) to `SampleImageTile` generation path.
-  - In `EnsurePixelsGenerationStarted`, acquire semaphore before running generation body and release in finally block.
-  - Add a configuration point (internal constant or factory parameter) for maximum concurrent pixel generators (default Environment.ProcessorCount).
-files_to_change:
-  - src/InfiniteCanvas.Rendering/SampleImageTile.cs
-validation_command: |
-  dotnet build -c Release
-  dotnet test tests/InfiniteCanvas.Windows.Tests/ --filter "GenerateFrozenBitmap_GeneratesOnlyTilesWithVisiblePixels" -c Release
-next_step: |
-  - Implement bounded concurrency and add stress test simulating many concurrent tile generations; measure threadpool usage and generation latency.
+id: ICW-004-bounded-pixel-generation
+key: ICW-004
+title: Icw 004 Bounded Pixel Generation
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Background

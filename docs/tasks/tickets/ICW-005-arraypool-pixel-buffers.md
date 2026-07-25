@@ -1,19 +1,19 @@
 ---
-status: draft
-summary: Reduce allocation churn by using ArrayPool for tile pixel buffers
-scope: |
-  - Use `ArrayPool<byte>.Shared` to rent pixel buffers during generation.
-  - Store rented buffer inside tile and return it to the pool in `ResetImageCache()` (and on eviction).
-  - Ensure buffer lifetime is safe when exposing Pixels property; possibly wrap pooled buffer so callers aren't surprised.
-files_to_change:
-  - src/InfiniteCanvas.Rendering/SampleImageTile.cs
-  - tests/InfiniteCanvas.Windows.Tests/* (add micro-benchmark / allocation assertion)
-validation_command: |
-  dotnet build -c Release
-  dotnet test tests/InfiniteCanvas.Windows.Tests/ --filter "SampleImageTile*" -c Release
-  run benchmark: benchmarks\\InfiniteCanvas.Benchmarks\\InfiniteCanvas.Benchmarks.csproj (or a micro benchmark) to measure allocations before/after
-next_step: |
-  - Implement buffer renting and returning, add unit tests ensuring no leaks and validate with benchmark measuring managed allocations.
+id: ICW-005-arraypool-pixel-buffers
+key: ICW-005
+title: Icw 005 Arraypool Pixel Buffers
+status: Proposed
+type: Task
+priority: P2
+tags:
+  - icw
+  - task-tracker
+dependsOn: []
+related: []
+links:
+  - docs/tasks/README.md
+created: 2026-07-25
+updated: 2026-07-25
 ---
 
 Background

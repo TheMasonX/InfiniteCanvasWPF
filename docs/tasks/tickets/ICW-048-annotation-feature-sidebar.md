@@ -1,15 +1,13 @@
 ---
 id: ICW-048-annotation-feature-sidebar
-author: Copilot
 key: ICW
 title: Icw 048 Annotation Feature Sidebar
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

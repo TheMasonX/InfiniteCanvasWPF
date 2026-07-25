@@ -1,20 +1,16 @@
 ---
 id: ICW-064
-author: Copilot
 key: ICW-064
 title: Unify boundary semantics across SpatialBounds, renderer, and index queries
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - spatial
-  - boundaries
-  - renderer
+  - icw
+  - task-tracker
 dependsOn: []
 related: []
 links:
-  - src/InfiniteCanvas.Core/
-  - src/InfiniteCanvas.Rendering/
   - docs/tasks/README.md
 created: 2026-07-25
 updated: 2026-07-25

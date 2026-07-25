@@ -1,15 +1,13 @@
 ---
 id: ICW-004-zoomed-out-overdraw-spike
-author: Copilot
 key: ICW
 title: Icw 004 Zoomed Out Overdraw Spike
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - task-tracker
   - icw
-  - backlog
+  - task-tracker
 dependsOn: []
 related: []
 links:

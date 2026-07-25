@@ -1,20 +1,17 @@
 ---
 id: ICW-065
-author: Copilot
 key: ICW-065
 title: Add targeted concurrency and immutability tests for Spatial subsystem
 status: Proposed
 type: Task
 priority: P2
 tags:
-  - spatial
-  - tests
-  - docs
+  - icw
+  - task-tracker
 dependsOn: []
 related: []
 links:
-  - tests/InfiniteCanvas.Tests/
-  - docs/ADR/0003-live-hybrid-spatial-indexing.md
+  - docs/tasks/README.md
 created: 2026-07-25
 updated: 2026-07-25
 ---
