@@ -33,9 +33,21 @@ Keep these core project notes in mind:
 - Do not stop work because of unrelated or pre-existing `docs/` diffs; continue and isolate your own edits instead.
 - Only pause for user confirmation if unexpected changes affect source code outside `docs/` and conflict with the current task.
 
+## Requirements capture policy
+
+Treat every user statement as a potential product requirement, design constraint, use case, or user story unless it is clearly non-actionable chatter. Before implementing anything, review the relevant planning docs and current backlog, then capture any user-stated functional requirement, design constraint, acceptance criterion, use case, or user story that could affect implementation.
+
+Capture these items immediately in durable docs:
+
+- add or update a task entry in docs/tasks/active-tasks.md or a ticket under docs/tasks/tickets/
+- add or update docs/requirements/functional-requirements-and-invariants.md for recurring behavioral invariants, user-facing requirements, and use cases that should survive future refactors
+- if the note changes architecture, system boundaries, or a major implementation direction, add or update an ADR in docs/ADR/ and link it from the task entry
+
+This includes requirements that come from the chat user, handoff notes, recent tasks, DesignDoc.md, or prior regressions. Do not rely on memory alone; the requirement must be written down where future agents can find it.
+
 ## Durable capture rule
 
-If the user gives a requirement, bug report, task note, or implementation hint, capture it immediately as a durable record so it is not lost:
+If the user gives a requirement, bug report, task note, implementation hint, use case, or user story, capture it immediately as a durable record so it is not lost:
 
 - create or update a task entry in docs/tasks/active-tasks.md or a ticket under docs/tasks/tickets/
 - if the note changes architecture, constraints, or a major implementation direction, add or update an ADR in docs/ADR/ and link it from the task entry

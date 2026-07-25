@@ -38,7 +38,8 @@ public static class SampleImageGenerator
         int columns = 2,
         int seed = 1729,
         int? rows = null,
-        int defectPoolSize = 64)
+        int defectPoolSize = 64,
+        int circleCount = 3)
     {
         if (imageCount <= 0)
         {
@@ -78,7 +79,7 @@ public static class SampleImageGenerator
         var rowCount = rows ?? Math.Max(1, (int)Math.Ceiling(imageCount / (double)columns));
         var tileCount = rows.HasValue ? checked(columns * rowCount) : imageCount;
         var poolSeed = unchecked(seed + 48611);
-        var poolRandom = new Random(poolSeed);
+        var poolRandom = new DeterministicRandom(poolSeed);
         var defectTemplatePool = BuildDefectTemplatePool(defectPoolSize, poolRandom);
 
         var tiles = new SampleImageTile[tileCount];
@@ -95,7 +96,7 @@ public static class SampleImageGenerator
                 tileId,
                 bounds,
                 objectsPerTile,
-                new Random(annotationSeed),
+                new DeterministicRandom(annotationSeed),
                 defectTemplatePool);
 #if WINDOWS
             tiles[tileIndex] = new SampleImageTile(
@@ -103,7 +104,7 @@ public static class SampleImageGenerator
                 bounds,
                 pixelWidth,
                 pixelHeight,
-                () => GenerateMonochromeBitmap(pixelWidth, pixelHeight, targetValue, noise, pixelSeed),
+                () => GenerateMonochromeBitmap(pixelWidth, pixelHeight, targetValue, noise, pixelSeed, circleCount),
                 annotations,
                 targetValue);
 #else
@@ -112,7 +113,7 @@ public static class SampleImageGenerator
                 bounds,
                 pixelWidth,
                 pixelHeight,
-                () => GenerateMonochromePixels(pixelWidth, pixelHeight, targetValue, noise, pixelSeed),
+                () => GenerateMonochromePixels(pixelWidth, pixelHeight, targetValue, noise, pixelSeed, circleCount),
                 annotations,
                 targetValue);
 #endif
@@ -126,9 +127,10 @@ public static class SampleImageGenerator
         int height,
         byte targetValue,
         byte noise,
-        int seed = 1729)
+        int seed = 1729,
+        int circleCount = 3)
     {
-        return GenerateMonochromePixels(width, height, targetValue, noise, new Random(seed));
+        return GenerateMonochromePixels(width, height, targetValue, noise, new DeterministicRandom(seed), circleCount);
     }
 
     private static byte[] GenerateMonochromePixels(
@@ -136,7 +138,8 @@ public static class SampleImageGenerator
         int height,
         byte targetValue,
         byte noise,
-        Random random)
+        DeterministicRandom random,
+        int circleCount)
     {
         if (width <= 0 || height <= 0)
         {
@@ -144,16 +147,22 @@ public static class SampleImageGenerator
         }
 
         var pixels = new byte[checked(width * height)];
-        var noiseSpread = Math.Clamp(noise + 8, 8, 24);
-        for (var index = 0; index < pixels.Length; index++)
+        Array.Fill(pixels, targetValue);
+        if (noise > 0)
         {
-            var jitter = random.Next(-noiseSpread, noiseSpread + 1);
-            pixels[index] = (byte)Math.Clamp(targetValue + jitter, 0, 255);
+            var noiseSpread = Math.Clamp(noise + 8, 8, 24);
+            var noiseSampleCount = Math.Min(pixels.Length, Math.Max(64, pixels.Length / 1024));
+            for (var sampleIndex = 0; sampleIndex < noiseSampleCount; sampleIndex++)
+            {
+                var jitter = random.Next(-noiseSpread, noiseSpread + 1);
+                var pixelIndex = random.Next(pixels.Length);
+                pixels[pixelIndex] = (byte)Math.Clamp(targetValue + jitter, 0, 255);
+            }
         }
 
-        var circleCount = random.Next(2, 5);
+        var effectiveCircleCount = Math.Clamp(circleCount, 0, 8);
         var maxRadius = Math.Max(8, Math.Min(width, height) / 10);
-        for (var circleIndex = 0; circleIndex < circleCount; circleIndex++)
+        for (var circleIndex = 0; circleIndex < effectiveCircleCount; circleIndex++)
         {
             var centerX = random.Next(0, width);
             var centerY = random.Next(0, height);
@@ -186,7 +195,7 @@ public static class SampleImageGenerator
         string tileId,
         SpatialBounds tileBounds,
         int count,
-        Random random,
+        DeterministicRandom random,
         IReadOnlyList<DefectTemplate> defectTemplatePool)
     {
         var annotations = new SampleAnnotation[count];
@@ -245,7 +254,7 @@ public static class SampleImageGenerator
 
     private static IReadOnlyList<DefectTemplate> BuildDefectTemplatePool(
         int count,
-        Random random)
+        DeterministicRandom random)
     {
         var pool = new DefectTemplate[count];
         for (var index = 0; index < count; index++)
@@ -264,7 +273,7 @@ public static class SampleImageGenerator
         return pool;
     }
 
-    private static byte[] GenerateCenteredDefectPixels(int width, int height, Random random)
+    private static byte[] GenerateCenteredDefectPixels(int width, int height, DeterministicRandom random)
     {
         if (width <= 0 || height <= 0)
         {
@@ -335,9 +344,10 @@ public static class SampleImageGenerator
         int height,
         byte targetValue,
         byte noise,
-        int seed)
+        int seed,
+        int circleCount)
     {
-        var pixels = GenerateMonochromePixels(width, height, targetValue, noise, new Random(seed));
+        var pixels = GenerateMonochromePixels(width, height, targetValue, noise, new DeterministicRandom(seed), circleCount);
         var bitmap = new Bitmap(width, height, PixelFormat.Format24bppRgb);
         var bounds = new Rectangle(0, 0, width, height);
         var data = bitmap.LockBits(bounds, ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
@@ -369,7 +379,7 @@ public static class SampleImageGenerator
         return bitmap;
     }
 
-    private static Bitmap GenerateCenteredDefectBitmap(int width, int height, Random random)
+    private static Bitmap GenerateCenteredDefectBitmap(int width, int height, DeterministicRandom random)
     {
         var bitmap = new Bitmap(width, height, PixelFormat.Format24bppRgb);
         using var graphics = Graphics.FromImage(bitmap);
@@ -423,4 +433,47 @@ public static class SampleImageGenerator
         return new DefectTemplate(width, height, pixels, bitmap);
     }
 #endif
+
+    private struct DeterministicRandom
+    {
+        private ulong _state;
+
+        public DeterministicRandom(int seed)
+        {
+            _state = unchecked((uint)seed) + 0x9E3779B97F4A7C15UL;
+        }
+
+        public int Next(int maxValue) => Next(0, maxValue);
+
+        public int Next(int minValue, int maxValue)
+        {
+            if (minValue >= maxValue)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxValue));
+            }
+
+            return minValue + (int)(NextUInt64() % (uint)(maxValue - minValue));
+        }
+
+        public long NextInt64(long minValue, long maxValue)
+        {
+            if (minValue >= maxValue)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxValue));
+            }
+
+            return minValue + (long)(NextUInt64() % (ulong)(maxValue - minValue));
+        }
+
+        public double NextDouble() => (NextUInt64() >> 11) * (1.0 / (1UL << 53));
+
+        private ulong NextUInt64()
+        {
+            _state += 0x9E3779B97F4A7C15UL;
+            var value = _state;
+            value = (value ^ (value >> 30)) * 0xBF58476D1CE4E5B9UL;
+            value = (value ^ (value >> 27)) * 0x94D049BB133111EBUL;
+            return value ^ (value >> 31);
+        }
+    }
 }

@@ -31,7 +31,9 @@ public sealed class StrTreeSpatialIndexService<T> : ISpatialIndexService<T> wher
     public IReadOnlyList<T> Query(SpatialBounds viewport)
     {
         var results = _tree.Query(ToEnvelope(viewport));
-        return results as IReadOnlyList<T> ?? results.ToArray();
+        // NetTopologySuite returns a mutable `IList<T>`; copy to an array to ensure
+        // callers receive an immutable snapshot and to avoid exposing internal lists.
+        return results is T[] arr ? arr : results.ToArray();
     }
 
     private static Envelope ToEnvelope(SpatialBounds bounds)

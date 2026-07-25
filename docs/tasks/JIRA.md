@@ -51,6 +51,8 @@
 | ICW-047 | Done | Story | Generate taller sparse background image tiles with cache controls and metrics | Default tile height is doubled, background imagery now uses noisy sparse variation, pixel-budgeted cache tracking is active, and the UI exposes Show Image Tiles plus live cache diagnostics. |
 | ICW-048 | Done | Story | Inspect selected annotation features in a sidebar DataGrid | Selecting an annotation populates the sidebar DataGrid with formatted feature values; clearing the selection returns the panel to its empty state. |
 | ICW-049 | Done | Bug | Fix tile-cache default capacity below one generated tile | Default budget is now 134,217,728 pixels, retaining four 8192x4096 tiles; focused regression tests and Release app build passed. |
+| ICW-050 | Done | Bug | Make lazy tile generation deterministic and concurrency-safe from a master seed | Every tile and annotation stream derives reproducibly from the scene master seed without sharing mutable RNG state across tile-generation workers; parallel generation matches serial output and sparse background variation avoids 33.5M per-tile RNG calls. |
+| ICW-064 | In Progress | Story | Diagnose four-tile cache ceiling and establish benchmarked tile-generation/copy metrics | Tile cache now defaults to 32 full Gray8 tiles, with queue/generation/conversion/eviction diagnostics and a current-path materialization benchmark. Compare pooled 16x512x512 stamped patterns, 8bpp indexed/Gray8, SIMD/hardware, and copy APIs only against the baseline. |
 | REQ-001 | Done | Docs | Capture recurring functional requirements and invariants in a durable registry | Added a requirements-and-invariants registry covering zoom policy, tile generation, cache behavior, annotation inspection, and settings persistence so future work can reference the same contract. |
 
 ## Activity
@@ -121,3 +123,5 @@
 | 2026-07-24 | ICW-048 | Completed sidebar feature inspection wiring for selected annotations and added the empty-state DataGrid behavior. |
 | 2026-07-24 | ICW-049 | Completed cache-capacity fix: default budget now retains four full-size tiles; focused tests passed 7/7 and the Release app build succeeded. |
 | 2026-07-24 | ICW-034 | Completed scheduler fault containment: non-cancellation render faults are reported, pending coalesced redraws run, and core tests passed 35/35. |
+| 2026-07-25 | ICW-050 | Completed deterministic isolated random streams from the scene master seed, removed per-pixel RNG from lazy background generation, and added serial-versus-parallel regression coverage; core tests 36/36, Windows tests 5/5, and Release app build passed. |
+| 2026-07-25 | ICW-064 | Identified the explicit four-tile cache budget as the residency ceiling, raised it to 32 full Gray8 tiles, added runtime queue/generation/conversion/eviction metrics, and collected the current materialization baseline: one full tile 149.63 ms / 64.01 MiB and four 551.75 ms / 256 MiB. |

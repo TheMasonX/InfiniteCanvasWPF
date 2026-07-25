@@ -8,10 +8,10 @@ argument-hint: 'Audit focus area or depth (e.g., full repo, rendering pipeline, 
 
 ## Outcome
 
-Produce a high-signal, evidence-backed audit that:
+Produce a high-signal, evidence-backed audit for InfiniteCanvasWPF that:
 
-- finds defects, inconsistencies, weak abstractions, and risky assumptions
-- avoids duplicate backlog noise by cross-referencing existing ICW tasks
+- finds defects, inconsistencies, weak abstractions, and risky assumptions in the rendering, spatial, view-model, and WPF lifecycle layers
+- avoids duplicate backlog noise by cross-referencing existing ICW tasks, ADRs, and the repository task trackers
 - creates or updates durable work items with priority and acceptance direction
 - emits a findings-only audit file when prior audits already exist
 
@@ -29,8 +29,8 @@ Do not use this skill for simple bug fixes or single-file code edits.
 
 ## Inputs
 
-- Audit scope: full repository or specific modules
-- Baseline artifacts: existing audits, JIRA/task board, ticket files, ADRs
+- Audit scope: full repository or specific modules such as rendering, spatial indexing, bitmap lifecycle, or WPF app startup/shutdown
+- Baseline artifacts: existing audits, DesignDoc.md, README.md, docs/tasks/active-tasks.md, docs/tasks/JIRA.md, ticket files, ADRs
 - Constraint mode: net-new findings only vs full re-evaluation
 
 ## Procedure
@@ -42,8 +42,8 @@ Do not use this skill for simple bug fixes or single-file code edits.
 - Classify current backlog coverage so new findings can be de-duplicated.
 
 2. Gather code evidence by subsystem
-- Review src/InfiniteCanvas.Core, src/InfiniteCanvas.Spatial, src/InfiniteCanvas.Rendering, src/InfiniteCanvas.App, src/InfiniteCanvas.ViewModels.
-- Review tests and benchmarks for coverage gaps and representativeness.
+- Review src/InfiniteCanvas.Core, src/InfiniteCanvas.Spatial, src/InfiniteCanvas.Rendering, src/InfiniteCanvas.App, and src/InfiniteCanvas.ViewModels.
+- Review tests and benchmarks for coverage gaps and representativeness, especially where behavior is tied to zero-copy bitmap handling, spatial queries, or asynchronous view-model updates.
 - Track exact file and line references for each candidate finding.
 
 3. Run council-style challenge pass
@@ -81,6 +81,7 @@ Do not use this skill for simple bug fixes or single-file code edits.
 - Add or refine entries in docs/tasks/active-tasks.md.
 - Add matching keys and activity rows in docs/tasks/JIRA.md.
 - Ensure each new key has a ticket file under docs/tasks/tickets.
+- Prefer the repo’s existing ICW naming and task conventions so work stays consistent with the current backlog.
 
 8. Perform consistency check
 - Verify all new ICW keys exist in both trackers.

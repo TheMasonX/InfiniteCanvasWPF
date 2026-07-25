@@ -8,6 +8,7 @@ This folder contains lightweight markdown-based task tracking for the repository
 - Create a ticket file under docs/tasks/tickets/ for larger or multi-step work.
 - Capture every user requirement, bug report, or task note immediately in a task entry or ticket so it is not lost.
 - If a note materially affects architecture or project direction, add or update an ADR in docs/ADR/ and reference it from the task entry.
+- If a note captures recurring functional behavior or product invariants that should survive future refactors, add it to docs/requirements/functional-requirements-and-invariants.md and reference that registry from the task entry.
 - Each task should capture:
   - status
   - summary

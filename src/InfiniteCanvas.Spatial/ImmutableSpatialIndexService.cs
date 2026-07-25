@@ -18,7 +18,7 @@ public sealed class ImmutableSpatialIndexService<T> : ISpatialIndexService<T> wh
     {
         if (_items.IsDefaultOrEmpty)
         {
-            return [];
+            return System.Array.Empty<T>();
         }
 
         var results = new List<T>();

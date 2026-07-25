@@ -1,4 +1,5 @@
 using InfiniteCanvas.Core;
+using System.Diagnostics;
 #if WINDOWS
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -14,9 +15,12 @@ public sealed class SampleImageTile
     private readonly int _pixelCost;
     private byte[]? _pixels;
     private int _generationQueued;
+    private long _generationDurationTicks;
 #if WINDOWS
     private readonly Func<Bitmap>? _backgroundBitmapFactory;
     private int _backgroundFetched;
+    private long _bitmapGenerationDurationTicks;
+    private long _bitmapConversionDurationTicks;
 #endif
     public event EventHandler? PixelsGenerated;
 
@@ -76,8 +80,13 @@ public sealed class SampleImageTile
         _pixelCost = checked(pixelWidth * pixelHeight);
         _pixelFactory = () =>
         {
+            var bitmapGenerationStarted = Stopwatch.GetTimestamp();
             using var bitmap = _backgroundBitmapFactory();
-            return ConvertBitmapToGray8(bitmap, pixelWidth, pixelHeight);
+            Interlocked.Exchange(ref _bitmapGenerationDurationTicks, Stopwatch.GetTimestamp() - bitmapGenerationStarted);
+            var conversionStarted = Stopwatch.GetTimestamp();
+            var pixels = ConvertBitmapToGray8(bitmap, pixelWidth, pixelHeight);
+            Interlocked.Exchange(ref _bitmapConversionDurationTicks, Stopwatch.GetTimestamp() - conversionStarted);
+            return pixels;
         };
         Annotations = annotations;
     }
@@ -97,7 +106,21 @@ public sealed class SampleImageTile
 
     public bool IsImageGenerated => Volatile.Read(ref _pixels) is not null;
 
+    public bool IsGenerationQueued => Volatile.Read(ref _generationQueued) == 1 && !IsImageGenerated;
+
+    public TimeSpan? GenerationDuration => IsImageGenerated
+        ? DurationFromStopwatchTicks(Volatile.Read(ref _generationDurationTicks))
+        : null;
+
 #if WINDOWS
+    public TimeSpan? BitmapGenerationDuration => IsImageGenerated
+        ? DurationFromStopwatchTicks(Volatile.Read(ref _bitmapGenerationDurationTicks))
+        : null;
+
+    public TimeSpan? BitmapConversionDuration => IsImageGenerated
+        ? DurationFromStopwatchTicks(Volatile.Read(ref _bitmapConversionDurationTicks))
+        : null;
+
     public bool IsBackgroundFetched => Volatile.Read(ref _backgroundFetched) == 1;
 #else
     public bool IsBackgroundFetched => IsImageGenerated;
@@ -198,6 +221,7 @@ public sealed class SampleImageTile
 
         _ = Task.Run(() =>
         {
+            var generationStarted = Stopwatch.GetTimestamp();
             try
             {
                 var generated = _pixelFactory();
@@ -207,6 +231,7 @@ public sealed class SampleImageTile
                     if (_pixels is null)
                     {
                         _pixels = generated;
+                        Interlocked.Exchange(ref _generationDurationTicks, Stopwatch.GetTimestamp() - generationStarted);
                         shouldRaiseEvent = true;
                     }
                 }
@@ -237,6 +262,9 @@ public sealed class SampleImageTile
 
         return pixels;
     }
+
+    private static TimeSpan DurationFromStopwatchTicks(long ticks) =>
+        TimeSpan.FromSeconds(ticks / (double)Stopwatch.Frequency);
 
 #if WINDOWS
     private static unsafe byte[] ConvertBitmapToGray8(Bitmap bitmap, int expectedWidth, int expectedHeight)
@@ -338,7 +366,7 @@ public sealed record FeatureDisplayItem(string Name, string Value);
 
 public sealed class TileCacheBudget
 {
-    public const int DefaultRetainedTileCount = 4;
+    public const int DefaultRetainedTileCount = 32;
     public const long DefaultMaxPixels = DefaultRetainedTileCount
         * (long)SampleImageGenerator.DefaultPixelWidth
         * SampleImageGenerator.DefaultPixelHeight;
@@ -346,6 +374,7 @@ public sealed class TileCacheBudget
     private readonly long _maxPixels;
     private readonly Dictionary<string, SampleImageTile> _trackedTiles = new(StringComparer.OrdinalIgnoreCase);
     private long _usedPixels;
+    private int _evictionCount;
 
     public TileCacheBudget(long maxPixels)
     {
@@ -360,6 +389,8 @@ public sealed class TileCacheBudget
     public long MaxPixels => _maxPixels;
 
     public long UsedPixels => Volatile.Read(ref _usedPixels);
+
+    public int EvictionCount => Volatile.Read(ref _evictionCount);
 
     public bool CanAccept(int pixelCost) => UsedPixels + pixelCost <= _maxPixels;
 
@@ -412,6 +443,7 @@ public sealed class TileCacheBudget
                 _trackedTiles.Remove(evictedTile.Id);
                 Remove(evictedTile.PixelCost);
                 evictedTile.ResetImageCache();
+                Interlocked.Increment(ref _evictionCount);
             }
         }
     }
@@ -422,6 +454,7 @@ public sealed class TileCacheBudget
         {
             _trackedTiles.Clear();
             Interlocked.Exchange(ref _usedPixels, 0);
+            Interlocked.Exchange(ref _evictionCount, 0);
         }
     }
 
@@ -429,6 +462,6 @@ public sealed class TileCacheBudget
     {
         var generated = tiles.Count(tile => tile.IsImageGenerated);
         var used = UsedPixels;
-        return $"Budget {used:N0}/{_maxPixels:N0} pixels  |  {generated}/{tiles.Count} cached";
+        return $"Budget {used:N0}/{_maxPixels:N0} pixels  |  {generated}/{tiles.Count} cached  |  {EvictionCount:N0} evictions";
     }
 }

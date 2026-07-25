@@ -58,14 +58,22 @@
                     MouseWheel="OnViewportMouseWheel"
                     SizeChanged="OnViewportSizeChanged">
                 <Grid>
-                    <Viewbox x:Name="FramePresenter" Stretch="Fill" StretchDirection="Both" />
-                    <Canvas IsHitTestVisible="False">
-                        <Ellipse x:Name="PanAnchorVisual"
-                                 Width="16" Height="16"
-                                 Stroke="#D7FF3D3D" StrokeThickness="2"
-                                 Fill="#40FF3D3D"
-                                 Visibility="Collapsed" />
-                    </Canvas>
+                    <ScrollViewer x:Name="ViewportScrollViewer"
+                                  HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Auto"
+                                  CanContentScroll="False"
+                                  Background="Transparent">
+                        <Grid x:Name="ViewportContentHost" HorizontalAlignment="Left" VerticalAlignment="Top">
+                            <Viewbox x:Name="FramePresenter" Stretch="Fill" StretchDirection="Both" />
+                            <Canvas IsHitTestVisible="False">
+                                <Ellipse x:Name="PanAnchorVisual"
+                                         Width="16" Height="16"
+                                         Stroke="#D7FF3D3D" StrokeThickness="2"
+                                         Fill="#40FF3D3D"
+                                         Visibility="Collapsed" />
+                            </Canvas>
+                        </Grid>
+                    </ScrollViewer>
                     <TextBlock x:Name="LoadingOverlay" Text="BUILDING INITIAL SNAPSHOT"
                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold"
@@ -150,6 +158,16 @@
 
                         <CheckBox x:Name="ShowImageTilesCheckBox" Content="Show image tiles" IsChecked="True"
                                   Margin="0,8,0,0" Checked="OnShowImageTilesChanged" Unchecked="OnShowImageTilesChanged" />
+
+                        <TextBlock Text="Background noise" Margin="0,10,0,4" FontSize="12"
+                                   Foreground="{StaticResource SecondaryTextBrush}" />
+                        <Slider x:Name="BackgroundNoiseSlider" Minimum="0" Maximum="24" Value="8" TickFrequency="1"
+                                IsSnapToTickEnabled="True" ValueChanged="OnBackgroundNoiseChanged" />
+
+                        <TextBlock Text="Defect circles" Margin="0,10,0,4" FontSize="12"
+                                   Foreground="{StaticResource SecondaryTextBrush}" />
+                        <Slider x:Name="BackgroundCircleCountSlider" Minimum="0" Maximum="8" Value="3" TickFrequency="1"
+                                IsSnapToTickEnabled="True" ValueChanged="OnBackgroundCircleCountChanged" />
 
                         <Border Height="1" Margin="0,14,0,12" Background="{StaticResource BorderBrush}" />
 

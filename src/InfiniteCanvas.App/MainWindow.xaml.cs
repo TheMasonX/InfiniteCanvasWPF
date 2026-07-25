@@ -45,6 +45,8 @@ public partial class MainWindow : Window
     private int _generationSeed = 1729;
     private int _busyOperationCount;
     private TileCacheBudget _tileCacheBudget = new(TileCacheBudget.DefaultMaxPixels);
+    private byte _backgroundNoise = 8;
+    private int _backgroundCircleCount = 3;
     private bool _showImageTiles = true;
     private IReadOnlyList<FeatureDisplayItem> _selectedAnnotationFeatures = [];
 
@@ -120,6 +122,10 @@ public partial class MainWindow : Window
         LabelDisplayComboBox.SelectedIndex = settings.LabelDisplay;
         ShowLabelsCheckBox.IsChecked = settings.ShowLabels;
         ShowImageTilesCheckBox.IsChecked = true;
+        _backgroundNoise = settings.BackgroundNoise;
+        _backgroundCircleCount = settings.BackgroundCircleCount;
+        BackgroundNoiseSlider.Value = settings.BackgroundNoise;
+        BackgroundCircleCountSlider.Value = settings.BackgroundCircleCount;
     }
 
     private async Task RegenerateSceneAsync(bool fitToWidth)
@@ -149,7 +155,9 @@ public partial class MainWindow : Window
                     columns: _tileColumns,
                     rows: _tileRows,
                     seed: _generationSeed++,
-                    defectPoolSize: 64),
+                    defectPoolSize: 64,
+                    noise: _backgroundNoise,
+                    circleCount: _backgroundCircleCount),
                 _lifetime.Token);
             SubscribeTileGenerationEvents(_tiles);
             _sceneBounds = GetSceneBounds(_tiles);
@@ -250,7 +258,7 @@ public partial class MainWindow : Window
 
     private static void OnRenderActionFaulted(Exception exception)
     {
-        Debug.WriteLine($"Render action failed: {exception}");
+        Serilog.Log.Error(exception, "Render action failed");
     }
 
     private async Task RenderFrameAsync(CancellationToken cancellationToken)
@@ -280,11 +288,20 @@ public partial class MainWindow : Window
         var frameVisual = BuildFrameVisual(frame.Bitmap, frame.VisibleItems, camera, width, height);
         PublishFrame(factory, frameVisual);
         _viewModel.ApplyFrame(viewport, frame.VisibleItems.Count);
+        UpdateViewportScrollState(camera, width, height);
 
         stopwatch.Stop();
         var generatedTileCount = _tiles.Count(tile => tile.IsBackgroundFetched);
         UpdateCacheStatus(generatedTileCount);
-        StatusText.Text = $"Frame {width}x{height}  |  {stopwatch.Elapsed.TotalMilliseconds:F1} ms  |  Zoom {camera.ScaleX:F3}x  |  Images {generatedTileCount}/{_tiles.Count}";
+        var queuedTileCount = _tiles.Count(tile => tile.IsGenerationQueued);
+        var completedTiles = _tiles.Where(tile => tile.GenerationDuration.HasValue).ToArray();
+        var averageGenerationMilliseconds = completedTiles.Length == 0
+            ? 0
+            : completedTiles.Average(tile => tile.GenerationDuration!.Value.TotalMilliseconds);
+        var averageConversionMilliseconds = completedTiles.Length == 0
+            ? 0
+            : completedTiles.Average(tile => tile.BitmapConversionDuration!.Value.TotalMilliseconds);
+        StatusText.Text = $"Frame {width}x{height}  |  {stopwatch.Elapsed.TotalMilliseconds:F1} ms  |  Zoom {camera.ScaleX:F3}x  |  Images {generatedTileCount}/{_tiles.Count}  |  Queue {queuedTileCount}  |  Gen {averageGenerationMilliseconds:F1} ms  |  Gray8 {averageConversionMilliseconds:F1} ms";
         UpdateZoomDisplay(camera, width, height);
 
         if (_hoverPointerPosition is Point hoverPointer)
@@ -331,6 +348,34 @@ public partial class MainWindow : Window
     {
         ApplyFitToWidthZoom();
         ClampCameraToScene();
+    }
+
+    private void UpdateViewportScrollState(CameraSnapshot camera, double viewportWidth, double viewportHeight)
+    {
+        if (_sceneBounds.Width <= 0 || _sceneBounds.Height <= 0)
+        {
+            return;
+        }
+
+        var (contentWidth, contentHeight) = ViewportScrollPolicy.ComputeContentSize(
+            viewportWidth,
+            viewportHeight,
+            _sceneBounds.Width,
+            _sceneBounds.Height,
+            camera);
+
+        ViewportContentHost.Width = Math.Max(viewportWidth, contentWidth);
+        ViewportContentHost.Height = Math.Max(viewportHeight, contentHeight);
+
+        var (horizontalOffset, verticalOffset) = ViewportScrollPolicy.ComputeScrollOffsets(
+            viewportWidth,
+            viewportHeight,
+            ViewportContentHost.Width,
+            ViewportContentHost.Height,
+            camera);
+
+        ViewportScrollViewer.ScrollToHorizontalOffset(horizontalOffset);
+        ViewportScrollViewer.ScrollToVerticalOffset(verticalOffset);
     }
 
     private Grid BuildFrameVisual(
@@ -725,6 +770,28 @@ public partial class MainWindow : Window
         await RequestRenderAsync();
     }
 
+    private async void OnBackgroundNoiseChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        _backgroundNoise = (byte)Math.Round(BackgroundNoiseSlider.Value);
+        await RegenerateSceneAsync(fitToWidth: false);
+    }
+
+    private async void OnBackgroundCircleCountChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        _backgroundCircleCount = (int)Math.Round(BackgroundCircleCountSlider.Value);
+        await RegenerateSceneAsync(fitToWidth: false);
+    }
+
     private async void OnViewportMouseWheel(object sender, MouseWheelEventArgs e)
     {
         var origin = e.GetPosition(ViewportHost);
@@ -1022,7 +1089,7 @@ public partial class MainWindow : Window
     {
         var fetchedTiles = _tiles.Where(tile => tile.IsBackgroundFetched).Select(tile => tile.Id).ToArray();
         var dump = $"Cache fetched {fetchedTiles.Length}/{_tiles.Count}: {string.Join(", ", fetchedTiles.Take(10))}{(fetchedTiles.Length > 10 ? "..." : string.Empty)}";
-        Debug.WriteLine(dump);
+        Serilog.Log.Debug(dump);
 
         foreach (var tile in _tiles)
         {
@@ -1041,7 +1108,7 @@ public partial class MainWindow : Window
         var cacheSummary = _tileCacheBudget.DescribeStatus(_tiles);
         CacheStatusText.Text = cacheSummary;
         StatusText.Text = $"Frame {Math.Max(1, _tiles.Count)} tiles  |  Cache {cacheSummary}";
-        Debug.WriteLine($"[Cache] {cacheSummary}  |  generated {generatedCount}/{_tiles.Count}");
+        Serilog.Log.Debug("Cache summary: {Summary} (generated {Generated}/{Total})", cacheSummary, generatedCount, _tiles.Count);
     }
 
     private void UpdateSelectedAnnotationFeatures(SampleAnnotation? annotation = null)
@@ -1121,7 +1188,9 @@ public partial class MainWindow : Window
             OutlineThickness = OutlineThicknessSlider.Value,
             LabelSize = LabelSizeSlider.Value,
             LabelDisplay = LabelDisplayComboBox.SelectedIndex,
-            ShowLabels = ShowLabelsCheckBox.IsChecked ?? true
+            ShowLabels = ShowLabelsCheckBox.IsChecked ?? true,
+            BackgroundNoise = _backgroundNoise,
+            BackgroundCircleCount = _backgroundCircleCount
         };
 
         if (!settings.IsValid)
@@ -1140,11 +1209,11 @@ public partial class MainWindow : Window
         }
         catch (System.IO.IOException exception)
         {
-            Debug.WriteLine($"Unable to save canvas settings: {exception.Message}");
+            Serilog.Log.Warning(exception, "Unable to save canvas settings to {Path}", _settingsPath);
         }
         catch (UnauthorizedAccessException exception)
         {
-            Debug.WriteLine($"Unable to save canvas settings: {exception.Message}");
+            Serilog.Log.Warning(exception, "Unable to save canvas settings to {Path}", _settingsPath);
         }
     }
 

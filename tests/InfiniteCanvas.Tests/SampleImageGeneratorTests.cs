@@ -26,6 +26,18 @@ public class SampleImageGeneratorTests
     }
 
     [Test]
+    public async Task GenerateSet_UsesIndependentDeterministicStreamsDuringParallelTileGeneration()
+    {
+        var serialTiles = SampleImageGenerator.GenerateSet(8, 128, 64, objectsPerTile: 0, seed: 42);
+        var serialPixels = serialTiles.Select(tile => tile.Pixels).ToArray();
+
+        var parallelTiles = SampleImageGenerator.GenerateSet(8, 128, 64, objectsPerTile: 0, seed: 42);
+        var parallelPixels = await Task.WhenAll(parallelTiles.Select(tile => Task.Run(() => tile.Pixels)));
+
+        Assert.That(parallelPixels, Is.EqualTo(serialPixels));
+    }
+
+    [Test]
     public void GenerateSet_CreatesDefaultLayoutWithoutGeneratingImages()
     {
         var tiles = SampleImageGenerator.GenerateSet(objectsPerTile: 1);
@@ -57,6 +69,7 @@ public class SampleImageGeneratorTests
 
         Assert.Multiple(() =>
         {
+            Assert.That(TileCacheBudget.DefaultRetainedTileCount, Is.EqualTo(32));
             Assert.That(defaultBudget, Is.GreaterThanOrEqualTo((long)defaultTileCost));
             Assert.That(cacheBudget.CanAccept(defaultTileCost), Is.True);
         });
@@ -142,6 +155,15 @@ public class SampleImageGeneratorTests
             Assert.That(pixels.Any(value => value < 110), Is.True, "Background tiles should contain darker defect-like circles near the target gray.");
             Assert.That(pixels.Any(value => value > 140), Is.True, "Background tiles should contain brighter noise variation.");
         });
+    }
+
+    [Test]
+    public void GenerateSet_RespectsConfiguredNoiseAndCircleCount()
+    {
+        var tile = SampleImageGenerator.GenerateSet(1, 64, 32, targetValue: 128, noise: 0, objectsPerTile: 0, seed: 42, circleCount: 0)[0];
+        var pixels = tile.Pixels;
+
+        Assert.That(pixels, Has.All.EqualTo(128));
     }
 
     [Test]

@@ -24,6 +24,10 @@ public sealed record CanvasUserSettings
 
     public bool ShowLabels { get; init; } = true;
 
+    public byte BackgroundNoise { get; init; } = 8;
+
+    public int BackgroundCircleCount { get; init; } = 3;
+
     public bool IsValid =>
         Version == CurrentVersion
         && TileColumns > 0
@@ -33,7 +37,8 @@ public sealed record CanvasUserSettings
         && AnnotationDisplayMode is >= 0 and <= 2
         && OutlineThickness is >= 1 and <= 6
         && LabelSize is >= 8 and <= 20
-        && LabelDisplay is >= 0 and <= 1;
+        && LabelDisplay is >= 0 and <= 1
+        && BackgroundCircleCount is >= 0 and <= 8;
 }
 
 public static class CanvasUserSettingsStore
