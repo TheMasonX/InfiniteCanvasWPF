@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     private CanvasViewportViewModel<SampleAnnotation> _viewModel = null!;
     private CameraTransform _camera = new();
     private readonly CoalescingAsyncAction _renderAction;
+    private readonly RenderRequestTracker _renderRequestTracker = new();
     private readonly DispatcherTimer _resizeTimer;
     private readonly DispatcherTimer _anchorPanTimer;
     private readonly ISelectionOutlineAnimator _selectionOutlineAnimator;
@@ -45,6 +46,7 @@ public partial class MainWindow : Window
     private int _generationSeed = 1729;
     private int _busyOperationCount;
     private TileCacheBudget _tileCacheBudget = new(TileCacheBudget.DefaultMaxBytes);
+    private bool _showBackgroundImages = true;
     private byte _backgroundNoise = 8;
     private int _backgroundCircleCount = 3;
     private bool _showImageTiles = true;
@@ -143,7 +145,10 @@ public partial class MainWindow : Window
         LabelSizeSlider.Value = settings.LabelSize;
         LabelDisplayComboBox.SelectedIndex = settings.LabelDisplay;
         ShowLabelsCheckBox.IsChecked = settings.ShowLabels;
-        ShowImageTilesCheckBox.IsChecked = true;
+        ShowImageTilesCheckBox.IsChecked = settings.ShowSparseImageTiles;
+        ShowBackgroundImagesCheckBox.IsChecked = settings.ShowBackgroundImages;
+        _showImageTiles = settings.ShowSparseImageTiles;
+        _showBackgroundImages = settings.ShowBackgroundImages;
         _backgroundNoise = settings.BackgroundNoise;
         _backgroundCircleCount = settings.BackgroundCircleCount;
         BackgroundNoiseSlider.Value = settings.BackgroundNoise;
@@ -295,6 +300,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        var requestVersion = _renderRequestTracker.BeginRequest();
         var width = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualWidth), 1, 4096);
         var height = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualHeight), 1, 4096);
         EnforceZoomFloor(width, height);
@@ -316,6 +322,11 @@ public partial class MainWindow : Window
                 _tileCacheBudget.TryReserve);
             return (Bitmap: bitmap, VisibleItems: visibleItems, VisibleTiles: visibleTiles);
         }, cancellationToken);
+
+        if (!_renderRequestTracker.IsCurrent(requestVersion))
+        {
+            return;
+        }
 
         var frameVisual = BuildFrameVisual(frame.Bitmap, frame.VisibleItems, camera, width, height);
         PublishFrame(factory, frameVisual);
@@ -397,7 +408,7 @@ public partial class MainWindow : Window
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Top
         };
-        if (_showImageTiles)
+        if (_showBackgroundImages && _showImageTiles)
         {
             frame.Children.Add(new Image
             {
@@ -618,11 +629,9 @@ public partial class MainWindow : Window
 
     private static ToolTip CreateAnnotationToolTip(SampleAnnotation annotation)
     {
-        var confidence = annotation.Features["Confidence"];
-        var severity = annotation.Features["Severity"];
         return new ToolTip
         {
-            Content = $"{annotation.Id}\n{annotation.Classification}\nConfidence {confidence:P1}  |  Severity {severity:P1}"
+            Content = AnnotationFeaturePresenter.BuildTooltipContent(annotation)
         };
     }
 
@@ -680,6 +689,7 @@ public partial class MainWindow : Window
         _lastPointerPosition = current;
         _camera.Pan(current.X - previous.X, current.Y - previous.Y);
         ClampCameraToScene();
+        _renderRequestTracker.Advance();
         await RequestRenderAsync();
     }
 
@@ -727,6 +737,7 @@ public partial class MainWindow : Window
 
         _camera.Pan(-(adjustedX * gain), -(adjustedY * gain));
         ClampCameraToScene();
+        _renderRequestTracker.Advance();
         await RequestRenderAsync();
     }
 
@@ -954,6 +965,17 @@ public partial class MainWindow : Window
         await RequestRenderAsync();
     }
 
+    private async void OnShowBackgroundImagesChanged(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        _showBackgroundImages = ShowBackgroundImagesCheckBox.IsChecked ?? true;
+        await RequestRenderAsync();
+    }
+
     private async void OnBackgroundNoiseChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (!IsLoaded)
@@ -1001,6 +1023,7 @@ public partial class MainWindow : Window
         if (_camera.Zoom(zoomDeltas.ScaleX, zoomDeltas.ScaleY, new ScreenPoint(origin.X, origin.Y)))
         {
             ClampCameraToScene();
+            _renderRequestTracker.Advance();
             await RequestRenderAsync();
         }
     }
@@ -1072,6 +1095,7 @@ public partial class MainWindow : Window
 
         ApplyPercentZoom(percent);
         ClampCameraToScene();
+        _renderRequestTracker.Advance();
         await RequestRenderAsync();
     }
 
@@ -1110,6 +1134,7 @@ public partial class MainWindow : Window
         }
 
         ClampCameraToScene();
+        _renderRequestTracker.Advance();
         await RequestRenderAsync();
     }
 
@@ -1177,6 +1202,7 @@ public partial class MainWindow : Window
         try
         {
             ClampCameraToScene();
+            _renderRequestTracker.Advance();
             await RequestRenderAsync();
         }
         catch (OperationCanceledException)
@@ -1265,6 +1291,7 @@ public partial class MainWindow : Window
         }
 
         _selectedAnnotationId = null;
+        _renderRequestTracker.Advance();
         UpdateSelectedAnnotationFeatures();
         await RegenerateSceneAsync(fitToWidth: true);
     }
@@ -1374,6 +1401,8 @@ public partial class MainWindow : Window
             LabelSize = LabelSizeSlider.Value,
             LabelDisplay = LabelDisplayComboBox.SelectedIndex,
             ShowLabels = ShowLabelsCheckBox.IsChecked ?? true,
+            ShowSparseImageTiles = ShowImageTilesCheckBox.IsChecked ?? true,
+            ShowBackgroundImages = ShowBackgroundImagesCheckBox.IsChecked ?? true,
             BackgroundNoise = _backgroundNoise,
             BackgroundCircleCount = _backgroundCircleCount
         };
