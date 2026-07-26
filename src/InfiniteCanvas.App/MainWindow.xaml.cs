@@ -3,6 +3,7 @@ using InfiniteCanvas.Rendering;
 using InfiniteCanvas.Spatial;
 using InfiniteCanvas.ViewModels;
 using System.Diagnostics;
+using Serilog;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -114,8 +115,9 @@ public partial class MainWindow : Window
             ApplyDisplayOptionsFromUi();
             await RegenerateSceneAsync(fitToWidth: true);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
+            Log.Debug(ex, "OnLoaded canceled");
         }
         catch (Exception exception)
         {

@@ -7,6 +7,44 @@ namespace InfiniteCanvas.Tests;
 public class SampleImageTileTests
 {
     [Test]
+    public void ResidentMipFallback_PrefersClosestResidentMipOverNativeLevelZero()
+    {
+        var mipThreeGenerationStarted = new ManualResetEventSlim(false);
+        var releaseMipThreeGeneration = new ManualResetEventSlim(false);
+        var tile = new SampleImageTile(
+            "tile-mip-fallback",
+            new SpatialBounds(0, 0, 8, 8),
+            8,
+            8,
+            () => Enumerable.Repeat((byte)0, 64).ToArray(),
+            [],
+            mipPixelFactory: mipLevel =>
+            {
+                if (mipLevel == 3)
+                {
+                    mipThreeGenerationStarted.Set();
+                    releaseMipThreeGeneration.Wait();
+                }
+
+                var dimensions = BackgroundTileMipPolicy.GetDimensions(8, 8, mipLevel);
+                return Enumerable.Repeat((byte)mipLevel, dimensions.Width * dimensions.Height).ToArray();
+            });
+
+        var nativePixels = tile.Pixels;
+        Assert.That(nativePixels.Length, Is.EqualTo(64));
+
+        Assert.That(tile.TryGetPixelsNonBlocking(2, out _, out _), Is.True);
+        Assert.That(mipThreeGenerationStarted.Wait(TimeSpan.FromSeconds(2)), Is.False);
+
+        Assert.That(tile.TryGetPixelsNonBlocking(3, out var fallbackPixels, out var residentMipLevel), Is.True);
+        Assert.That(residentMipLevel, Is.EqualTo(2));
+        Assert.That(fallbackPixels, Is.Not.SameAs(nativePixels));
+        Assert.That(fallbackPixels[0], Is.EqualTo((byte)2));
+
+        releaseMipThreeGeneration.Set();
+    }
+
+    [Test]
     public void ResetImageCache_PreventsInFlightGenerationFromPublishingStalePixels()
     {
         var generationStarted = new ManualResetEventSlim(false);

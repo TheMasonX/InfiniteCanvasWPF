@@ -174,18 +174,15 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
         var mipLevel = BackgroundTileMipPolicy.SelectMipLevel(camera);
         byte[]? sourcePixels = null;
         var residentMipLevel = mipLevel;
-        var shouldGeneratePixels = tile.IsMipGenerated(mipLevel)
-            || tile.ShouldGenerateForPixelSize(camera, minimumSparseTilePixelSize);
-        var hasSourcePixels = shouldGeneratePixels
-            && (mipLevel == 0
-                ? tile.TryGetPixelsNonBlocking(
-                    out sourcePixels,
-                    tryReserveCacheEntry is null ? null : () => tryReserveCacheEntry(tile))
-                : tile.TryGetPixelsNonBlocking(
-                    mipLevel,
-                    out sourcePixels,
-                    out residentMipLevel,
-                    tryReserveCacheEntry is null ? null : () => tryReserveCacheEntry(tile)));
+        var hasSourcePixels = mipLevel == 0
+            ? tile.TryGetPixelsNonBlocking(
+                out sourcePixels,
+                tryReserveCacheEntry is null ? null : () => tryReserveCacheEntry(tile))
+            : tile.TryGetPixelsNonBlocking(
+                mipLevel,
+                out sourcePixels,
+                out residentMipLevel,
+                tryReserveCacheEntry is null ? null : () => tryReserveCacheEntry(tile));
         var sourceDimensions = BackgroundTileMipPolicy.GetDimensions(tile.PixelWidth, tile.PixelHeight, residentMipLevel);
         var placeholder = tile.PlaceholderValue;
 

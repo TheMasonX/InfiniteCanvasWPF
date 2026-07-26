@@ -170,20 +170,22 @@ public sealed class SampleImageTile
         EnsureMipPixelsGenerationStarted(mipLevel, tryReserveCacheEntry);
         lock (_cacheGate)
         {
+            var fallbackCandidates = new List<(int MipLevel, byte[] Pixels)>();
             if (_pixels is not null)
             {
-                pixels = _pixels;
-                residentMipLevel = 0;
-                return true;
+                fallbackCandidates.Add((0, _pixels));
             }
 
-            var fallback = _mipPixels
-                .OrderBy(pair => Math.Abs(pair.Key - mipLevel))
-                .FirstOrDefault();
-            if (fallback.Value is not null)
+            fallbackCandidates.AddRange(_mipPixels.Select(pair => (pair.Key, pair.Value)));
+
+            var fallback = fallbackCandidates
+                .OrderBy(candidate => Math.Abs(candidate.MipLevel - mipLevel))
+                .ThenBy(candidate => candidate.MipLevel)
+                .FirstOrDefault(candidate => candidate.Pixels is not null);
+            if (fallback.Pixels is not null)
             {
-                pixels = fallback.Value;
-                residentMipLevel = fallback.Key;
+                pixels = fallback.Pixels;
+                residentMipLevel = fallback.MipLevel;
                 return true;
             }
         }
@@ -322,9 +324,14 @@ public sealed class SampleImageTile
                     PixelsGenerated?.Invoke(this, EventArgs.Empty);
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 Interlocked.Exchange(ref _generationQueued, 0);
+                try
+                {
+                    Serilog.Log.Error(ex, "Pixel generation failed for tile {TileId}", Id);
+                }
+                catch { }
                 PixelsGenerationFailed?.Invoke(this, EventArgs.Empty);
             }
         });
@@ -373,13 +380,17 @@ public sealed class SampleImageTile
                     PixelsGenerated?.Invoke(this, EventArgs.Empty);
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 lock (_cacheGate)
                 {
                     _mipGenerationQueued.Remove(mipLevel);
                 }
-
+                try
+                {
+                    Serilog.Log.Error(ex, "Mip generation failed for tile {TileId} mip {MipLevel}", Id, mipLevel);
+                }
+                catch { }
                 PixelsGenerationFailed?.Invoke(this, EventArgs.Empty);
             }
         });
