@@ -1,6 +1,6 @@
 ---
 id: ICW-027-gpu-pivot-criteria-spike
-key: ICW
+key: ICW-027
 title: Icw 027 Gpu Pivot Criteria Spike
 status: Proposed
 type: Task

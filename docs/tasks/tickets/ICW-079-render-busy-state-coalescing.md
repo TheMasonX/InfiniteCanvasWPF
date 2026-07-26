@@ -1,4 +1,3 @@
----
 id: ICW-079-render-busy-state-coalescing
 key: ICW-079
 title: Make busy-state updates and render coalescing resilient to rapid input churn

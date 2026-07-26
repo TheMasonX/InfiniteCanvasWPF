@@ -1,6 +1,6 @@
 ---
 id: ICW-041-label-size-and-display-mode
-key: ICW
+key: ICW-041
 title: Icw 041 Label Size And Display Mode
 status: Proposed
 type: Task

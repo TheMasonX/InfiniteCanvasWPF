@@ -1,6 +1,6 @@
 ---
 id: ICW-046-uniform-zoom-recovery
-key: ICW
+key: ICW-046
 title: Icw 046 Uniform Zoom Recovery
 status: Proposed
 type: Task

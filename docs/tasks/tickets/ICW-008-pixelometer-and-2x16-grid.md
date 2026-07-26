@@ -1,6 +1,6 @@
 ---
 id: ICW-008-pixelometer-and-2x16-grid
-key: ICW
+key: ICW-008
 title: Icw 008 Pixelometer And 2X16 Grid
 status: Proposed
 type: Task

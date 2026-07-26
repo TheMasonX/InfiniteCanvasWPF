@@ -1,6 +1,6 @@
 ---
 id: ICW-009-resize-overlay-sync
-key: ICW
+key: ICW-009
 title: Icw 009 Resize Overlay Sync
 status: Proposed
 type: Task

@@ -1,6 +1,6 @@
 ---
 id: ICW-030-generation-input-bounds-policy
-key: ICW
+key: ICW-030
 title: Icw 030 Generation Input Bounds Policy
 status: Proposed
 type: Task

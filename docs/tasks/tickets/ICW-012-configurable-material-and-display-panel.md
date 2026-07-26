@@ -1,6 +1,6 @@
 ---
 id: ICW-012-configurable-material-and-display-panel
-key: ICW
+key: ICW-012
 title: Icw 012 Configurable Material And Display Panel
 status: Proposed
 type: Task

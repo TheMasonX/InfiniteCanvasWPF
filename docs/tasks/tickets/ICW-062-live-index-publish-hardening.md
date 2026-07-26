@@ -1,6 +1,6 @@
 ---
 id: ICW-062-live-index-publish-hardening
-key: ICW
+key: ICW-062
 title: Icw 062 Live Index Publish Hardening
 status: Proposed
 type: Task

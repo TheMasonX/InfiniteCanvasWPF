@@ -1,6 +1,6 @@
 ---
 id: ICW-075-object-generation-settings
-key: ICW
+key: ICW-075
 title: Global Object Generation Settings
 status: Proposed
 type: Task

@@ -1,6 +1,6 @@
 ---
 id: ICW-060-spatial-index-audit-findings
-key: ICW
+key: ICW-060
 title: Icw 060 Spatial Index Audit Findings
 status: Proposed
 type: Task

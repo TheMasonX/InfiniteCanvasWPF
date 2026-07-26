@@ -1,6 +1,6 @@
 ---
 id: ICW-043-persist-settings-on-close
-key: ICW
+key: ICW-043
 title: Icw 043 Persist Settings On Close
 status: Proposed
 type: Task

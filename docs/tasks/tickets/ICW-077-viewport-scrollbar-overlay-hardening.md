@@ -1,4 +1,3 @@
----
 id: ICW-077-viewport-scrollbar-overlay-hardening
 key: ICW-077
 title: Harden viewport scrollbar overlay geometry and initialization state

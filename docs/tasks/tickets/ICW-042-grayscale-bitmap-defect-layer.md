@@ -1,6 +1,6 @@
 ---
 id: ICW-042-grayscale-bitmap-defect-layer
-key: ICW
+key: ICW-042
 title: Icw 042 Grayscale Bitmap Defect Layer
 status: Proposed
 type: Task

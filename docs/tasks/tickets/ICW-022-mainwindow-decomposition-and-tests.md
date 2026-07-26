@@ -1,6 +1,6 @@
 ---
 id: ICW-022-mainwindow-decomposition-and-tests
-key: ICW
+key: ICW-022
 title: Icw 022 Mainwindow Decomposition And Tests
 status: Proposed
 type: Task

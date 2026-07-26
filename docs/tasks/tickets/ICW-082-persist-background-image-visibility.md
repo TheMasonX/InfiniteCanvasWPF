@@ -1,4 +1,3 @@
----
 id: ICW-082
 key: ICW-082
 title: Persist the background-image visibility toggle

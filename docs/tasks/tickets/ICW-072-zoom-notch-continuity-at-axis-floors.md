@@ -1,6 +1,6 @@
 ---
 id: ICW-072-zoom-notch-continuity-at-axis-floors
-key: ICW
+key: ICW-072
 title: Icw 072 Preserve Uniform Width Clamped Zoom Round Trip
 status: Reverted
 type: Bug

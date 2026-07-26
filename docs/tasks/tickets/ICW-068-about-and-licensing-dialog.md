@@ -1,6 +1,6 @@
 ---
 id: ICW-068-about-and-licensing-dialog
-key: ICW
+key: ICW-068
 title: Icw 068 About And Licensing Dialog
 status: Proposed
 type: Task

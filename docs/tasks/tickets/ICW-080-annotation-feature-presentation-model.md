@@ -1,4 +1,3 @@
----
 id: ICW-080-annotation-feature-presentation-model
 key: ICW-080
 title: Extract annotation feature formatting from MainWindow into a dedicated presentation model

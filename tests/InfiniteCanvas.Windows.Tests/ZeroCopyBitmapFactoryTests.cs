@@ -71,6 +71,20 @@ public class ZeroCopyBitmapFactoryTests
     }
 
     [Test]
+    public void GenerateSet_UsesNativeGray8PixelsWithoutBitmapConversion()
+    {
+        var tile = SampleImageGenerator.GenerateSet(1, 64, 32, objectsPerTile: 0, seed: 42)[0];
+
+        _ = tile.Pixels;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tile.BitmapGenerationDuration, Is.Null);
+            Assert.That(tile.BitmapConversionDuration, Is.Null);
+        });
+    }
+
+    [Test]
     public void GenerateFrozenBitmap_RendersDefectBitmapUnalteredOutsideLogicalBounds()
     {
         using var defectBitmap = new Bitmap(4, 4, PixelFormat.Format24bppRgb);

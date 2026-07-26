@@ -1,6 +1,6 @@
 ---
 id: ICW-052-tilecache-thread-safety
-key: ICW
+key: ICW-052
 title: Icw 052 Tilecache Thread Safety
 status: Proposed
 type: Task

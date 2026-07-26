@@ -1,6 +1,6 @@
 ---
 id: ICW-048-annotation-feature-sidebar
-key: ICW
+key: ICW-048
 title: Icw 048 Annotation Feature Sidebar
 status: Proposed
 type: Task

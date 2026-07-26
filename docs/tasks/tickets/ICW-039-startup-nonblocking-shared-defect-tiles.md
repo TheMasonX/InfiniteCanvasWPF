@@ -1,6 +1,6 @@
 ---
 id: ICW-039-startup-nonblocking-shared-defect-tiles
-key: ICW
+key: ICW-039
 title: Icw 039 Startup Nonblocking Shared Defect Tiles
 status: Proposed
 type: Task

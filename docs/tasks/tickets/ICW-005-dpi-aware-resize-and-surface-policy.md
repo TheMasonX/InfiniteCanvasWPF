@@ -1,6 +1,6 @@
 ---
 id: ICW-005-dpi-aware-resize-and-surface-policy
-key: ICW
+key: ICW-005
 title: Icw 005 Dpi Aware Resize And Surface Policy
 status: Proposed
 type: Task

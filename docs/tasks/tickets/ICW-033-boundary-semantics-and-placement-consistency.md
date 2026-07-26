@@ -1,6 +1,6 @@
 ---
 id: ICW-033-boundary-semantics-and-placement-consistency
-key: ICW
+key: ICW-033
 title: Icw 033 Boundary Semantics And Placement Consistency
 status: Proposed
 type: Task

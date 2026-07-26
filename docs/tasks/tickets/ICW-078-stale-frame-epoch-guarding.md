@@ -44,6 +44,11 @@ The render pipeline currently publishes frames from a shared coalescer without a
 - This is distinct from the existing fault-handling work in ICW-034 because the concern here is stale output publication rather than exception containment.
 - The current implementation already exposes multiple asynchronous entry points for render work in MainWindow and the coalescing action.
 
+## Council Notes (2026-07-26)
+
+- Council scan of recent audits found a regression where `RenderRequestTracker` wiring was reverted and similar `async void` handler patterns that increase crash surface. Related tasks created: ICW-110 (async-void safety), ICW-111 (annotation metrics migration), ICW-112 (tilecache diagnostics snapshot). Link cross-references and owners when assigning.
+
+
 ## Related Tasks
 
 - ICW-014

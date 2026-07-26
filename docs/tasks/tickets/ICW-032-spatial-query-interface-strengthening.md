@@ -1,6 +1,6 @@
 ---
 id: ICW-032-spatial-query-interface-strengthening
-key: ICW
+key: ICW-032
 title: Icw 032 Spatial Query Interface Strengthening
 status: Proposed
 type: Task

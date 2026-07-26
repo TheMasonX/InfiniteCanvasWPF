@@ -1,6 +1,6 @@
 ---
 id: ICW-056-bgra32-finalizer-and-lock
-key: ICW
+key: ICW-056
 title: Icw 056 Bgra32 Finalizer And Lock
 status: Proposed
 type: Task

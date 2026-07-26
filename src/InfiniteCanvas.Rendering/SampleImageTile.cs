@@ -2,7 +2,6 @@ using InfiniteCanvas.Core;
 using System.Diagnostics;
 #if WINDOWS
 using System.Drawing;
-using System.Drawing.Imaging;
 #endif
 
 namespace InfiniteCanvas.Rendering;
@@ -21,10 +20,7 @@ public sealed class SampleImageTile
     private int _generationEpoch;
     private long _generationDurationTicks;
 #if WINDOWS
-    private readonly Func<Bitmap>? _backgroundBitmapFactory;
     private int _backgroundFetched;
-    private long _bitmapGenerationDurationTicks;
-    private long _bitmapConversionDurationTicks;
 #endif
     public event EventHandler? PixelsGenerated;
     public event EventHandler? PixelsGenerationFailed;
@@ -61,50 +57,6 @@ public sealed class SampleImageTile
         Annotations = annotations;
     }
 
-#if WINDOWS
-    public SampleImageTile(
-        string id,
-        SpatialBounds bounds,
-        int pixelWidth,
-        int pixelHeight,
-        Func<Bitmap> backgroundBitmapFactory,
-        IReadOnlyList<SampleAnnotation> annotations,
-        byte placeholderValue = 128,
-        Func<int, byte[]>? mipPixelFactory = null)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(id);
-        ArgumentNullException.ThrowIfNull(backgroundBitmapFactory);
-        ArgumentNullException.ThrowIfNull(annotations);
-
-        if (pixelWidth <= 0 || pixelHeight <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(pixelWidth));
-        }
-
-        Id = id;
-        Bounds = bounds;
-        PixelWidth = pixelWidth;
-        PixelHeight = pixelHeight;
-        _placeholderValue = placeholderValue;
-        _backgroundBitmapFactory = backgroundBitmapFactory;
-        _pixelCost = checked(pixelWidth * pixelHeight);
-        _mipPixelFactory = mipPixelFactory is null
-            ? null
-            : mipLevel => ValidateMipPixels(mipPixelFactory(mipLevel), pixelWidth, pixelHeight, mipLevel);
-        _pixelFactory = () =>
-        {
-            var bitmapGenerationStarted = Stopwatch.GetTimestamp();
-            using var bitmap = _backgroundBitmapFactory();
-            Interlocked.Exchange(ref _bitmapGenerationDurationTicks, Stopwatch.GetTimestamp() - bitmapGenerationStarted);
-            var conversionStarted = Stopwatch.GetTimestamp();
-            var pixels = ConvertBitmapToGray8(bitmap, pixelWidth, pixelHeight);
-            Interlocked.Exchange(ref _bitmapConversionDurationTicks, Stopwatch.GetTimestamp() - conversionStarted);
-            return pixels;
-        };
-        Annotations = annotations;
-    }
-#endif
-
     public string Id { get; }
 
     public SpatialBounds Bounds { get; }
@@ -135,13 +87,9 @@ public sealed class SampleImageTile
         : null;
 
 #if WINDOWS
-    public TimeSpan? BitmapGenerationDuration => IsImageGenerated
-        ? DurationFromStopwatchTicks(Volatile.Read(ref _bitmapGenerationDurationTicks))
-        : null;
+    public TimeSpan? BitmapGenerationDuration => null;
 
-    public TimeSpan? BitmapConversionDuration => IsImageGenerated
-        ? DurationFromStopwatchTicks(Volatile.Read(ref _bitmapConversionDurationTicks))
-        : null;
+    public TimeSpan? BitmapConversionDuration => null;
 
     public bool IsBackgroundFetched => Volatile.Read(ref _backgroundFetched) == 1;
 #else
@@ -464,40 +412,6 @@ public sealed class SampleImageTile
         TimeSpan.FromSeconds(ticks / (double)Stopwatch.Frequency);
 
 #if WINDOWS
-    private static unsafe byte[] ConvertBitmapToGray8(Bitmap bitmap, int expectedWidth, int expectedHeight)
-    {
-        if (bitmap.Width != expectedWidth || bitmap.Height != expectedHeight)
-        {
-            throw new InvalidOperationException("Generated bitmap dimensions must match tile dimensions.");
-        }
-
-        var pixels = new byte[checked(expectedWidth * expectedHeight)];
-        var bounds = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
-        var data = bitmap.LockBits(bounds, ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
-        try
-        {
-            var source = (byte*)data.Scan0;
-            for (var y = 0; y < expectedHeight; y++)
-            {
-                var row = source + (y * data.Stride);
-                var rowOffset = y * expectedWidth;
-                for (var x = 0; x < expectedWidth; x++)
-                {
-                    var channelOffset = x * 3;
-                    var blue = row[channelOffset];
-                    var green = row[channelOffset + 1];
-                    var red = row[channelOffset + 2];
-                    pixels[rowOffset + x] = (byte)((red + green + blue) / 3);
-                }
-            }
-        }
-        finally
-        {
-            bitmap.UnlockBits(data);
-        }
-
-        return pixels;
-    }
 #endif
 }
 

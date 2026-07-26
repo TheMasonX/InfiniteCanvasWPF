@@ -1,6 +1,6 @@
 ---
 id: ICW-073-separate-show-settings
-key: ICW
+key: ICW-073
 title: Separate Show Settings for Labels/Boxes/Images
 status: In Review
 type: Task

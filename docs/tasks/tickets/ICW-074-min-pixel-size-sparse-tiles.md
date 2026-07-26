@@ -1,6 +1,6 @@
 ---
 id: ICW-074-min-pixel-size-sparse-tiles
-key: ICW
+key: ICW-074
 title: Minimum Pixel Size for Sparse Tiles
 status: Done
 type: Task
