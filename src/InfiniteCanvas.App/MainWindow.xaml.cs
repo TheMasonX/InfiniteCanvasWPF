@@ -57,6 +57,7 @@ public partial class MainWindow : Window
     private Border? _verticalScrollbarTrack;
     private Border? _verticalScrollbarThumb;
     private IReadOnlyList<FeatureDisplayItem> _selectedAnnotationFeatures = [];
+    private TileWorkCoordinator _tileCoordinator = null!;
 
     public IReadOnlyList<FeatureDisplayItem> SelectedAnnotationFeatures => _selectedAnnotationFeatures;
 
@@ -71,6 +72,7 @@ public partial class MainWindow : Window
         _verticalScrollbarThumb = (Border?)FindName("VerticalScrollbarThumb");
 
         InitializeSpatialState();
+        _tileCoordinator = new TileWorkCoordinator();
         _renderAction = new CoalescingAsyncAction(DispatchRenderFrameAsync, OnRenderActionFaulted);
         _selectionOutlineAnimator = SelectionOutlineAnimatorFactory.Create(SelectionOutlineAnimationMode.MarchingDash);
 
@@ -171,6 +173,9 @@ public partial class MainWindow : Window
             // Dispose defect template pools from the previous scene. The pool is
             // shared across all tiles in a generation set, so we collect unique
             // references and dispose them once at the scene boundary.
+            // Cancel any in-flight tile generation from the previous scene.
+            _tileCoordinator.CancelAll();
+
             SampleImageTile.DisposeDefectTemplatePools(_tiles);
 
             var tileCount = checked(_tileColumns * _tileRows);
@@ -195,6 +200,13 @@ public partial class MainWindow : Window
                     noiseGain: backgroundNoiseSettings.NoiseGain,
                     noiseAmplitude: backgroundNoiseSettings.NoiseAmplitude),
                 _lifetime.Token);
+            // Assign the coordinator to all tiles so lazy generation is
+            // bounded and cancellable via the coordinator.
+            for (var i = 0; i < _tiles.Count; i++)
+            {
+                _tiles[i].Coordinator = _tileCoordinator;
+            }
+
             SubscribeTileGenerationEvents(_tiles);
             _sceneBounds = GetSceneBounds(_tiles);
 
@@ -353,7 +365,14 @@ public partial class MainWindow : Window
         var averageConversionMilliseconds = completedConversionTiles.Length == 0
             ? 0
             : completedConversionTiles.Average(tile => tile.BitmapConversionDuration!.Value.TotalMilliseconds);
-        StatusText.Text = $"Frame {width}x{height}  |  {stopwatch.Elapsed.TotalMilliseconds:F1} ms  |  Zoom {camera.ScaleX:F3}x  |  Backgrounds {visibleBackgroundTileCount}/{frame.VisibleTiles.Length} visible, {generatedTileCount} total  |  Queue {queuedTileCount}  |  Gen {averageGenerationMilliseconds:F1} ms  |  Gray8 {averageConversionMilliseconds:F1} ms";
+        var coordinatorCounters = _tileCoordinator.GetCounters();
+        StatusText.Text = $"Frame {width}x{height}  |  {stopwatch.Elapsed.TotalMilliseconds:F1} ms  |  " +
+            $"Zoom {camera.ScaleX:F3}x  |  " +
+            $"Backgrounds {visibleBackgroundTileCount}/{frame.VisibleTiles.Length} visible, {generatedTileCount} total  |  " +
+            $"Queue {queuedTileCount}  |  Gen {averageGenerationMilliseconds:F1} ms  |  " +
+            $"Coord {{A{coordinatorCounters.ActiveCount} Q{coordinatorCounters.QueuedCount} " +
+            $"C{coordinatorCounters.CompletedCount} X{coordinatorCounters.CanceledCount} " +
+            $"F{coordinatorCounters.FailedCount}}}";
         UpdateZoomDisplay(camera, width, height);
         UpdateViewportScrollbars(camera, width, height);
 
@@ -1337,6 +1356,7 @@ public partial class MainWindow : Window
         FramePresenter.Child = null;
         _frontBitmapFactory?.Dispose();
         _backBitmapFactory?.Dispose();
+        _tileCoordinator.Dispose();
         _generationGate.Dispose();
         _lifetime.Dispose();
     }

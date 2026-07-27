@@ -22,6 +22,8 @@ public sealed class SampleImageTile
 #if WINDOWS
     private int _backgroundFetched;
 #endif
+    private TileWorkCoordinator? _coordinator;
+    private static readonly object CoordinatorClaimant = new();
     public event EventHandler? PixelsGenerated;
     public event EventHandler? PixelsGenerationFailed;
 
@@ -286,17 +288,42 @@ public sealed class SampleImageTile
 
     public void ResetImageCache()
     {
+        var epoch = Interlocked.Increment(ref _generationEpoch);
+
+        // Notify the coordinator that work for this tile at the old revision
+        // is no longer needed. We remove by tile ID across all old revisions.
+        if (_coordinator is not null)
+        {
+            var oldRevision = epoch - 1;
+            for (var mip = 0; mip <= BackgroundTileMipPolicy.MaxMipLevel; mip++)
+            {
+                var oldKey = new BackgroundTileCacheKey("synthetic", Id, oldRevision, mip);
+                _coordinator.RemoveClaimant(oldKey, CoordinatorClaimant);
+            }
+        }
+
         lock (_cacheGate)
         {
             _pixels = null;
             _mipPixels.Clear();
             _mipGenerationQueued.Clear();
-            Interlocked.Increment(ref _generationEpoch);
             Interlocked.Exchange(ref _generationQueued, 0);
 #if WINDOWS
             Interlocked.Exchange(ref _backgroundFetched, 0);
 #endif
         }
+    }
+
+    /// <summary>
+    /// Optional coordinator for bounded, cancellable tile generation.
+    /// When set, <see cref="EnsurePixelsGenerationStarted"/> and
+    /// <see cref="EnsureMipPixelsGenerationStarted"/> route work through
+    /// the coordinator instead of using bare <c>Task.Run</c>.
+    /// </summary>
+    public TileWorkCoordinator? Coordinator
+    {
+        get => _coordinator;
+        set => _coordinator = value;
     }
 
     public IReadOnlyList<SampleAnnotation> Annotations { get; }
@@ -367,6 +394,32 @@ public sealed class SampleImageTile
             return;
         }
 
+        if (_coordinator is not null)
+        {
+            var key = new BackgroundTileCacheKey("synthetic", Id, Volatile.Read(ref _generationEpoch), 0);
+            var admitted = _coordinator.Request(
+                key,
+                async token =>
+                {
+                    var generationStarted = Stopwatch.GetTimestamp();
+                    var result = _pixelFactory();
+                    Interlocked.Exchange(ref _generationDurationTicks, Stopwatch.GetTimestamp() - generationStarted);
+                    return result;
+                },
+                CoordinatorClaimant,
+                CancellationToken.None,
+                onCompleted: OnCoordinatorPixelsGenerated,
+                onFailed: OnCoordinatorPixelsGenerationFailed,
+                tryReserve: tryReserveCacheEntry);
+
+            if (!admitted)
+            {
+                Interlocked.Exchange(ref _generationQueued, 0);
+            }
+
+            return;
+        }
+
         if (tryReserveCacheEntry is not null && !tryReserveCacheEntry())
         {
             Interlocked.Exchange(ref _generationQueued, 0);
@@ -413,6 +466,45 @@ public sealed class SampleImageTile
         });
     }
 
+    private void OnCoordinatorPixelsGenerated(BackgroundTileCacheKey key, byte[] pixels)
+    {
+        var generationEpoch = long.Parse(key.TileId.Split('-').Last(),
+            System.Globalization.NumberStyles.Integer,
+            System.Globalization.CultureInfo.InvariantCulture);
+
+        // Extract the actual epoch from the key's ContentRevision.
+        var expectedEpoch = key.ContentRevision;
+        var shouldRaiseEvent = false;
+        lock (_cacheGate)
+        {
+            if (_pixels is null && expectedEpoch == Volatile.Read(ref _generationEpoch))
+            {
+                _pixels = pixels;
+                shouldRaiseEvent = true;
+            }
+        }
+
+#if WINDOWS
+        Interlocked.Exchange(ref _backgroundFetched, 1);
+#endif
+
+        if (shouldRaiseEvent)
+        {
+            PixelsGenerated?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private void OnCoordinatorPixelsGenerationFailed(BackgroundTileCacheKey key, Exception ex)
+    {
+        Interlocked.Exchange(ref _generationQueued, 0);
+        try
+        {
+            Serilog.Log.Error(ex, "Pixel generation failed for tile {TileId} via coordinator", Id);
+        }
+        catch { }
+        PixelsGenerationFailed?.Invoke(this, EventArgs.Empty);
+    }
+
     private void EnsureMipPixelsGenerationStarted(int mipLevel, Func<bool>? tryReserveCacheEntry)
     {
         lock (_cacheGate)
@@ -421,6 +513,35 @@ public sealed class SampleImageTile
             {
                 return;
             }
+        }
+
+        if (_coordinator is not null)
+        {
+            var capturedMipLevel = mipLevel;
+            var key = new BackgroundTileCacheKey("synthetic", Id, Volatile.Read(ref _generationEpoch), mipLevel);
+            var admitted = _coordinator.Request(
+                key,
+                async token =>
+                {
+                    var result = _mipPixelFactory!(capturedMipLevel);
+                    token.ThrowIfCancellationRequested();
+                    return result;
+                },
+                CoordinatorClaimant,
+                CancellationToken.None,
+                onCompleted: OnCoordinatorMipGenerated,
+                onFailed: OnCoordinatorPixelsGenerationFailed,
+                tryReserve: tryReserveCacheEntry);
+
+            if (!admitted)
+            {
+                lock (_cacheGate)
+                {
+                    _mipGenerationQueued.Remove(mipLevel);
+                }
+            }
+
+            return;
         }
 
         if (tryReserveCacheEntry is not null && !tryReserveCacheEntry())
@@ -470,6 +591,24 @@ public sealed class SampleImageTile
                 PixelsGenerationFailed?.Invoke(this, EventArgs.Empty);
             }
         });
+    }
+
+    private void OnCoordinatorMipGenerated(BackgroundTileCacheKey key, byte[] pixels)
+    {
+        var expectedEpoch = key.ContentRevision;
+        var mipLevel = key.MipLevel;
+
+        lock (_cacheGate)
+        {
+            if (expectedEpoch == Volatile.Read(ref _generationEpoch))
+            {
+                _mipPixels[mipLevel] = pixels;
+            }
+
+            _mipGenerationQueued.Remove(mipLevel);
+        }
+
+        PixelsGenerated?.Invoke(this, EventArgs.Empty);
     }
 
     private static byte[] ValidatePixels(byte[] pixels, int width, int height)
