@@ -3,7 +3,7 @@ id: ICW-146
 author: Copilot
 key: ICW-146
 title: Show loading indicator during lazy background tile generation
-status: Proposed
+status: Done
 type: Bug
 priority: P2
 tags:
