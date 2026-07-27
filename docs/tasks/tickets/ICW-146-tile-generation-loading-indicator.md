@@ -62,4 +62,8 @@ Outcome: Pending implementation.
 
 ## Notes
 
-This is related to ICW-079 (busy-state coalescing under rapid input) but is a distinct gap: ICW-079 addresses counter churn from rapid input events, while this task addresses the complete absence of any loading signal for per-tile background generation. The viewport-aware tile work scheduling (ICW-142/ICW-143) may change the generation ownership model, which could affect the design of this indicator. Consider implementing after or in coordination with ICW-142.
+This is related to ICW-079 (busy-state coalescing under rapid input) but is a distinct gap: ICW-079 addresses counter churn from rapid input events, while this task addresses the complete absence of any loading signal for per-tile background generation. The viewport-aware tile work scheduling (ICW-142/ICW-143) may change the generation ownership model, which could affect the design of this indicator.
+
+## Integration note
+
+ICW-142 has been implemented and the `TileWorkCoordinator` now exposes `GetCounters()` with `ActiveCount` — the number of concurrently running tile generation operations. This counter is already displayed in the status bar. ICW-146 can use the same counter to drive `RenderBusyBar` visibility: show the bar when `ActiveCount > 0`, hide when `ActiveCount == 0`, debounced to avoid flicker during rapid viewport changes.

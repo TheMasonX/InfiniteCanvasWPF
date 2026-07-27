@@ -72,13 +72,23 @@ Do not use `CancellationTokenSource.Dispose` from a viewport-culling loop while 
   - `CancelAll()` for shutdown/reset
   - Structured diagnostic counters: admitted, coalesced, completed, canceled, failed, reservation releases
   - `IDisposable` with proper cleanup
-- Both Debug and Release builds succeed (only FastNoise2 submodule warnings)
+- 19 focused unit tests covering cancellation, shared-waiter survival, queue drain, callbacks
+- Wired into `SampleImageTile`:
+  - New `Coordinator` property
+  - `EnsurePixelsGenerationStarted` routes through coordinator when available (with fallback to direct Task.Run)
+  - `EnsureMipPixelsGenerationStarted` routes through coordinator when available (with fallback)
+  - `ResetImageCache` notifies coordinator to cancel old-revision work
+- Wired into `MainWindow`:
+  - Coordinator instance created in constructor
+  - `CancelAll()` called at start of scene regeneration
+  - Coordinator assigned to all tiles after `GenerateSet`
+  - Coordinator counters displayed in status bar
+  - Coordinator disposed in `OnClosed`
+- All 86 core tests pass; Debug and Release builds succeed
 
 ### Next steps
-1. Write focused unit tests for `TileWorkCoordinator` (cancellation before start, during generation, shared waiter survival, failure cleanup)
-2. Wire coordinator into `SampleImageTile.EnsurePixelsGenerationStarted` and `EnsureMipPixelsGenerationStarted`
-3. Wire into `MainWindow` render pipeline (create coordinator instance, integrate with render/regeneration lifecycle)
-4. Update status text to show coordinator counters
+1. Proceed to **ICW-143**: viewport interest snapshots, culling stale requests, and priority ordering
+2. Coordinate with **ICW-146**: wire coordinator active-count into a visible loading indicator (RenderBusyBar)
 
 ## Related Tasks
 
