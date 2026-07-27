@@ -286,6 +286,18 @@ public partial class MainWindow : Window
         {
             _tileCacheBudget.Release(tile);
         }
+
+        // Trigger a re-render so the pipeline can retry generation for tiles
+        // that failed. Without this, a generation failure would silently end
+        // the render loop if no other event triggers a frame.
+        if (!_lifetime.IsCancellationRequested)
+        {
+            _ = Dispatcher.InvokeAsync(async () =>
+            {
+                if (!IsLoaded || _lifetime.IsCancellationRequested) return;
+                await RequestRenderAsync();
+            });
+        }
     }
 
     private async Task RequestRenderAsync()

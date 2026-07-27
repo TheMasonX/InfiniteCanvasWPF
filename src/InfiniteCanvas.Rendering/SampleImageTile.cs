@@ -485,7 +485,6 @@ public sealed class SampleImageTile
     private void OnCoordinatorPixelsGenerated(BackgroundTileCacheKey key, byte[] pixels)
     {
         var expectedEpoch = key.ContentRevision;
-        var shouldRaiseEvent = false;
         lock (_cacheGate)
         {
             if (_pixels is null && expectedEpoch == Volatile.Read(ref _generationEpoch))
@@ -494,7 +493,6 @@ public sealed class SampleImageTile
 #if WINDOWS
                 Interlocked.Exchange(ref _backgroundFetched, 1);
 #endif
-                shouldRaiseEvent = true;
             }
             else
             {
@@ -505,10 +503,10 @@ public sealed class SampleImageTile
             }
         }
 
-        if (shouldRaiseEvent)
-        {
-            PixelsGenerated?.Invoke(this, EventArgs.Empty);
-        }
+        // Always fire the event so the render pipeline stays active and can
+        // retry generation for tiles that were discarded. Without this, a
+        // frame where all completions are stale would stop the render loop.
+        PixelsGenerated?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnCoordinatorPixelsGenerationFailed(BackgroundTileCacheKey key, Exception ex)
@@ -614,23 +612,20 @@ public sealed class SampleImageTile
     {
         var expectedEpoch = key.ContentRevision;
         var mipLevel = key.MipLevel;
-        var shouldRaiseEvent = false;
 
         lock (_cacheGate)
         {
             if (expectedEpoch == Volatile.Read(ref _generationEpoch))
             {
                 _mipPixels[mipLevel] = pixels;
-                shouldRaiseEvent = true;
             }
 
             _mipGenerationQueued.Remove(mipLevel);
         }
 
-        if (shouldRaiseEvent)
-        {
-            PixelsGenerated?.Invoke(this, EventArgs.Empty);
-        }
+        // Always fire the event so the render pipeline stays active and can
+        // retry mip generation if the epoch mismatched.
+        PixelsGenerated?.Invoke(this, EventArgs.Empty);
     }
 
     private static byte[] ValidatePixels(byte[] pixels, int width, int height)

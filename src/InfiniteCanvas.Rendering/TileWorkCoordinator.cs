@@ -301,6 +301,9 @@ public sealed class TileWorkCoordinator : IDisposable
             catch (OperationCanceledException)
             {
                 HandleWorkStopped(item, TileWorkItemState.Canceled);
+                // Notify tile that work was canceled so it can reset flags.
+                item.DispatchFailed(new OperationCanceledException(
+                    "Tile work was canceled during generation"));
                 DrainQueue();
             }
             catch (Exception ex)
