@@ -9,8 +9,8 @@ public class SampleImageGeneratorTests
     [Test]
     public void GenerateSet_CreatesDeterministicTiledImagesAndAnnotations()
     {
-        var first = SampleImageGenerator.GenerateSet(2, 64, 32, 128, 8, 3, 2, 42);
-        var second = SampleImageGenerator.GenerateSet(2, 64, 32, 128, 8, 3, 2, 42);
+        var first = SampleImageGenerator.GenerateSet(2, 64, 32, 128, 8, objectsPerTile: 3, columns: 2, seed: 42);
+        var second = SampleImageGenerator.GenerateSet(2, 64, 32, 128, 8, objectsPerTile: 3, columns: 2, seed: 42);
 
         Assert.Multiple(() =>
         {
@@ -211,7 +211,7 @@ public class SampleImageGeneratorTests
     [Test]
     public void GenerateMonochromePixels_AppliesDeterministicOffsetToEveryPixel()
     {
-        var pixels = SampleImageGenerator.GenerateMonochromePixels(32, 32, 128, 8, seed: 42, circleCount: 0);
+        var pixels = SampleImageGenerator.GenerateMonochromePixels(32, 32, 128, 8, seed: 42, circleCount: 0, SampleImageGenerator.NoiseSettings.Default);
 
         Assert.Multiple(() =>
         {
@@ -224,10 +224,23 @@ public class SampleImageGeneratorTests
     [Test]
     public void GenerateMonochromePixels_IsStableForTheSameSeed()
     {
-        var first = SampleImageGenerator.GenerateMonochromePixels(32, 32, 128, 8, seed: 42, circleCount: 0);
-        var second = SampleImageGenerator.GenerateMonochromePixels(32, 32, 128, 8, seed: 42, circleCount: 0);
+        var first = SampleImageGenerator.GenerateMonochromePixels(32, 32, 128, 8, seed: 42, circleCount: 0, SampleImageGenerator.NoiseSettings.Default);
+        var second = SampleImageGenerator.GenerateMonochromePixels(32, 32, 128, 8, seed: 42, circleCount: 0, SampleImageGenerator.NoiseSettings.Default);
 
         Assert.That(second, Is.EqualTo(first));
+    }
+
+    [Test]
+    public void GenerateSet_UsesWorldspaceOriginsForDeterministicTileVariation()
+    {
+        var firstSet = SampleImageGenerator.GenerateSet(2, 32, 32, targetValue: 128, noise: 8, objectsPerTile: 0, columns: 2, rows: 1, seed: 42);
+        var secondSet = SampleImageGenerator.GenerateSet(2, 32, 32, targetValue: 128, noise: 8, objectsPerTile: 0, columns: 2, rows: 1, seed: 42);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstSet[0].Pixels, Is.EqualTo(secondSet[0].Pixels));
+            Assert.That(firstSet[1].Pixels, Is.Not.EqualTo(firstSet[0].Pixels));
+        });
     }
 
     [Test]

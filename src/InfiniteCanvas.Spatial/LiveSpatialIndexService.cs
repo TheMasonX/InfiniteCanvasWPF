@@ -74,7 +74,7 @@ public sealed class LiveSpatialIndexService<T> : ISpatialIndexService<T> where T
 
                 var next = current with
                 {
-                    HotItems = ImmutableArray<T>.Empty,
+                    HotItems = [],
                     PublishingItems = current.HotItems
                 };
 
@@ -91,7 +91,7 @@ public sealed class LiveSpatialIndexService<T> : ISpatialIndexService<T> where T
             {
                 SnapshotItems = mergedItems,
                 SnapshotIndex = rebuiltIndex,
-                PublishingItems = ImmutableArray<T>.Empty,
+                PublishingItems = [],
                 PublishedAtUtc = DateTimeOffset.UtcNow
             });
         }
@@ -102,7 +102,7 @@ public sealed class LiveSpatialIndexService<T> : ISpatialIndexService<T> where T
                 UpdateState(state => state with
                 {
                     HotItems = state.PublishingItems.AddRange(state.HotItems),
-                    PublishingItems = ImmutableArray<T>.Empty
+                    PublishingItems = []
                 });
             }
 
@@ -141,10 +141,10 @@ public sealed class LiveSpatialIndexService<T> : ISpatialIndexService<T> where T
         DateTimeOffset? PublishedAtUtc)
     {
         public static LiveState Empty { get; } = new(
-            ImmutableArray<T>.Empty,
+            [],
             new ImmutableSpatialIndexService<T>([]),
-            ImmutableArray<T>.Empty,
-            ImmutableArray<T>.Empty,
+            [],
+            [],
             null);
     }
 }

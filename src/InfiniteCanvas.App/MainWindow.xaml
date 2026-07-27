@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:controls="clr-namespace:InfiniteCanvas.App.Controls"
         mc:Ignorable="d"
         Title="Infinite Canvas" Width="1600" Height="1024"
         MinWidth="760" MinHeight="520"
@@ -222,6 +223,9 @@
                                    Foreground="{StaticResource SecondaryTextBrush}" />
                         <Slider x:Name="BackgroundCircleCountSlider" Minimum="0" Maximum="8" Value="3" TickFrequency="1"
                                 IsSnapToTickEnabled="True" ValueChanged="OnBackgroundCircleCountChanged" />
+
+                        <controls:TileBackgroundNoiseSettingsView Margin="0,12,0,0"
+                                                                  ViewModel="{Binding TileBackgroundNoiseSettings}" />
 
                         <Border Height="1" Margin="0,14,0,12" Background="{StaticResource BorderBrush}" />
 

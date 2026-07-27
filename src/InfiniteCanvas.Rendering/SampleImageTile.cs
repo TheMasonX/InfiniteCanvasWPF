@@ -8,7 +8,7 @@ namespace InfiniteCanvas.Rendering;
 
 public sealed class SampleImageTile
 {
-    private readonly object _cacheGate = new();
+    private readonly Lock _cacheGate = new();
     private readonly Func<byte[]> _pixelFactory;
     private readonly Func<int, byte[]>? _mipPixelFactory;
     private readonly byte _placeholderValue;
@@ -132,7 +132,7 @@ public sealed class SampleImageTile
         }
 
         EnsurePixelsGenerationStarted(tryReserveCacheEntry);
-        pixels = Array.Empty<byte>();
+        pixels = [];
         return false;
     }
 
@@ -162,7 +162,7 @@ public sealed class SampleImageTile
 
         if (_mipPixelFactory is null)
         {
-            pixels = Array.Empty<byte>();
+            pixels = [];
             residentMipLevel = 0;
             return TryGetNativePixels(out pixels);
         }
@@ -190,7 +190,7 @@ public sealed class SampleImageTile
             }
         }
 
-        pixels = Array.Empty<byte>();
+        pixels = [];
         residentMipLevel = 0;
         return false;
     }
@@ -204,7 +204,7 @@ public sealed class SampleImageTile
             return true;
         }
 
-        pixels = Array.Empty<byte>();
+        pixels = [];
         return false;
     }
 

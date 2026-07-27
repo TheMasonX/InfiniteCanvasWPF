@@ -4,6 +4,21 @@
     <ProjectReference Include="..\InfiniteCanvas.Core\InfiniteCanvas.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\..\submodules\FastNoise2Bindings\CSharp\FastNoise2.cs" Link="FastNoise2.cs" />
+    <Compile Include="..\..\submodules\FastNoise2Bindings\CSharp\FastNoiseNodeEditorIpc.cs" Link="FastNoiseNodeEditorIpc.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\inc\FastNoise2\bin\FastNoise.dll" Link="FastNoise.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Drawing.Common" Version="10.0.10" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFrameworks>net10.0;net10.0-windows</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>

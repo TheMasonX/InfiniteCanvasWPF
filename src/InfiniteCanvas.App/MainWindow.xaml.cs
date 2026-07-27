@@ -23,6 +23,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _resizeTimer;
     private readonly DispatcherTimer _anchorPanTimer;
     private readonly ISelectionOutlineAnimator _selectionOutlineAnimator;
+    private MainViewModel _mainViewModel = null!;
     private readonly CancellationTokenSource _lifetime = new();
     private readonly SemaphoreSlim _generationGate = new(1, 1);
     private readonly string _settingsPath = System.IO.Path.Combine(
@@ -98,7 +99,8 @@ public partial class MainWindow : Window
     {
         _spatialIndex = new LiveSpatialIndexService<SampleAnnotation>(new StrTreeSpatialIndexBuilder<SampleAnnotation>());
         _viewModel = new CanvasViewportViewModel<SampleAnnotation>(_spatialIndex);
-        DataContext = _viewModel;
+        _mainViewModel = new MainViewModel();
+        DataContext = _mainViewModel;
     }
 
     private void OnAboutButtonClicked(object sender, RoutedEventArgs e)
@@ -156,6 +158,7 @@ public partial class MainWindow : Window
         BackgroundTargetSlider.Value = settings.BackgroundTargetValue;
         BackgroundNoiseSlider.Value = settings.BackgroundNoise;
         BackgroundCircleCountSlider.Value = settings.BackgroundCircleCount;
+        _mainViewModel.ApplySettings(settings);
     }
 
     private async Task RegenerateSceneAsync(bool fitToWidth)
@@ -178,6 +181,7 @@ public partial class MainWindow : Window
             StatusText.Text = $"Generating metadata for {tileCount:N0} inspection tiles";
             SceneSummaryText.Text = $"{tileCount:N0} TILE INSPECTION SCENE ({_tileColumns} x {_tileRows})";
 
+            var backgroundNoiseSettings = _mainViewModel.CreateBackgroundNoiseSnapshot();
             _tiles = await Task.Run(
                 () => SampleImageGenerator.GenerateSet(
                     imageCount: tileCount,
@@ -186,9 +190,9 @@ public partial class MainWindow : Window
                     rows: _tileRows,
                     seed: _generationSeed,
                     defectPoolSize: 64,
-                    targetValue: _backgroundTargetValue,
-                    noise: _backgroundNoise,
-                    circleCount: _backgroundCircleCount),
+                    targetValue: backgroundNoiseSettings.TargetValue,
+                    noise: backgroundNoiseSettings.Noise,
+                    circleCount: backgroundNoiseSettings.CircleCount),
                 _lifetime.Token);
             SubscribeTileGenerationEvents(_tiles);
             _sceneBounds = GetSceneBounds(_tiles);
@@ -331,6 +335,7 @@ public partial class MainWindow : Window
         var frameVisual = BuildFrameVisual(frame.Bitmap, frame.VisibleItems, camera, width, height);
         PublishFrame(factory, frameVisual);
         _viewModel.ApplyFrame(viewport, frame.VisibleItems.Count);
+        _mainViewModel.ApplyViewportState(frame.VisibleItems.Count, _spatialIndex.Count);
 
         stopwatch.Stop();
         var generatedTileCount = _tiles.Count(tile => tile.IsBackgroundFetched);
@@ -341,9 +346,12 @@ public partial class MainWindow : Window
         var averageGenerationMilliseconds = completedTiles.Length == 0
             ? 0
             : completedTiles.Average(tile => tile.GenerationDuration!.Value.TotalMilliseconds);
-        var averageConversionMilliseconds = completedTiles.Length == 0
+        var completedConversionTiles = completedTiles
+            .Where(tile => tile.BitmapConversionDuration.HasValue)
+            .ToArray();
+        var averageConversionMilliseconds = completedConversionTiles.Length == 0
             ? 0
-            : completedTiles.Average(tile => tile.BitmapConversionDuration!.Value.TotalMilliseconds);
+            : completedConversionTiles.Average(tile => tile.BitmapConversionDuration!.Value.TotalMilliseconds);
         StatusText.Text = $"Frame {width}x{height}  |  {stopwatch.Elapsed.TotalMilliseconds:F1} ms  |  Zoom {camera.ScaleX:F3}x  |  Backgrounds {visibleBackgroundTileCount}/{frame.VisibleTiles.Length} visible, {generatedTileCount} total  |  Queue {queuedTileCount}  |  Gen {averageGenerationMilliseconds:F1} ms  |  Gray8 {averageConversionMilliseconds:F1} ms";
         UpdateZoomDisplay(camera, width, height);
         UpdateViewportScrollbars(camera, width, height);
@@ -943,14 +951,32 @@ public partial class MainWindow : Window
 
     private void OnBackgroundTargetChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        _mainViewModel.TileBackgroundNoiseSettings.TargetValue = BackgroundTargetSlider.Value;
     }
 
     private void OnBackgroundNoiseChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        _mainViewModel.TileBackgroundNoiseSettings.Noise = BackgroundNoiseSlider.Value;
     }
 
     private void OnBackgroundCircleCountChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        _mainViewModel.TileBackgroundNoiseSettings.CircleCount = BackgroundCircleCountSlider.Value;
     }
 
     private async void OnViewportMouseWheel(object sender, MouseWheelEventArgs e)
@@ -1328,6 +1354,9 @@ public partial class MainWindow : Window
         _backgroundTargetValue = (byte)Math.Round(BackgroundTargetSlider.Value);
         _backgroundNoise = (byte)Math.Round(BackgroundNoiseSlider.Value);
         _backgroundCircleCount = (int)Math.Round(BackgroundCircleCountSlider.Value);
+        _mainViewModel.TileBackgroundNoiseSettings.TargetValue = _backgroundTargetValue;
+        _mainViewModel.TileBackgroundNoiseSettings.Noise = _backgroundNoise;
+        _mainViewModel.TileBackgroundNoiseSettings.CircleCount = _backgroundCircleCount;
         return true;
     }
 
@@ -1364,9 +1393,9 @@ public partial class MainWindow : Window
             ShowLabels = ShowLabelsCheckBox.IsChecked ?? true,
             ShowImageTiles = _showImageTiles,
             ShowBackgroundImages = _showBackgroundImages,
-            BackgroundTargetValue = (byte)Math.Round(BackgroundTargetSlider.Value),
-            BackgroundNoise = (byte)Math.Round(BackgroundNoiseSlider.Value),
-            BackgroundCircleCount = (int)Math.Round(BackgroundCircleCountSlider.Value)
+            BackgroundTargetValue = (byte)Math.Round(_mainViewModel.TileBackgroundNoiseSettings.TargetValue),
+            BackgroundNoise = (byte)Math.Round(_mainViewModel.TileBackgroundNoiseSettings.Noise),
+            BackgroundCircleCount = (int)Math.Round(_mainViewModel.TileBackgroundNoiseSettings.CircleCount)
         };
 
         if (!settings.IsValid)

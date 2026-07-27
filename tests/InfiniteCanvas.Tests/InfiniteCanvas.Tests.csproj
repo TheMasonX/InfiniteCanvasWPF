@@ -33,4 +33,10 @@
     <ProjectReference Include="..\..\src\InfiniteCanvas.ViewModels\InfiniteCanvas.ViewModels.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\inc\FastNoise2\bin\FastNoise.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
