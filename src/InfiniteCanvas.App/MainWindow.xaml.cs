@@ -58,6 +58,12 @@ public partial class MainWindow : Window
     private Border? _verticalScrollbarThumb;
     private IReadOnlyList<FeatureDisplayItem> _selectedAnnotationFeatures = [];
     private TileWorkCoordinator _tileCoordinator = null!;
+    private int _frameClaimantId;
+    private int _diagnosticsFrameCount;
+    private readonly Stopwatch _diagnosticsStopwatch = Stopwatch.StartNew();
+    private long _lastFrameTicks;
+    private long _totalFrameTicks;
+    private int _frameCount;
 
     public IReadOnlyList<FeatureDisplayItem> SelectedAnnotationFeatures => _selectedAnnotationFeatures;
 
@@ -200,11 +206,13 @@ public partial class MainWindow : Window
                     noiseGain: backgroundNoiseSettings.NoiseGain,
                     noiseAmplitude: backgroundNoiseSettings.NoiseAmplitude),
                 _lifetime.Token);
-            // Assign the coordinator to all tiles so lazy generation is
-            // bounded and cancellable via the coordinator.
+            // Assign the coordinator and frame-aware claimant provider to all
+            // tiles so lazy generation is bounded, cancellable, and attributed
+            // to the current frame for viewport-aware cancellation.
             for (var i = 0; i < _tiles.Count; i++)
             {
                 _tiles[i].Coordinator = _tileCoordinator;
+                _tiles[i].ClaimantIdProvider = () => _frameClaimantId;
             }
 
             SubscribeTileGenerationEvents(_tiles);
@@ -329,6 +337,12 @@ public partial class MainWindow : Window
         var viewport = camera.GetViewportBounds(width, height);
         var stopwatch = Stopwatch.StartNew();
 
+        // Advance frame claimant: remove stale tile work from the previous
+        // frame, then attribute new tile requests to this frame.
+        var previousClaimant = _frameClaimantId;
+        _frameClaimantId++;
+        _tileCoordinator.RemoveAllClaimants(previousClaimant);
+
         var factory = AcquireBackBuffer(width, height);
         var frame = await Task.Run(() =>
         {
@@ -366,6 +380,19 @@ public partial class MainWindow : Window
             ? 0
             : completedConversionTiles.Average(tile => tile.BitmapConversionDuration!.Value.TotalMilliseconds);
         var coordinatorCounters = _tileCoordinator.GetCounters();
+
+        // Update loading indicator: show RenderBusyBar when tile generation
+        // is actively running or queued.
+        var hasPendingTileWork = coordinatorCounters.PendingCount > 0;
+        if (hasPendingTileWork && RenderBusyBar.Visibility != Visibility.Visible)
+        {
+            RenderBusyBar.Visibility = Visibility.Visible;
+        }
+        else if (!hasPendingTileWork && RenderBusyBar.Visibility == Visibility.Visible)
+        {
+            RenderBusyBar.Visibility = Visibility.Collapsed;
+        }
+
         StatusText.Text = $"Frame {width}x{height}  |  {stopwatch.Elapsed.TotalMilliseconds:F1} ms  |  " +
             $"Zoom {camera.ScaleX:F3}x  |  " +
             $"Backgrounds {visibleBackgroundTileCount}/{frame.VisibleTiles.Length} visible, {generatedTileCount} total  |  " +
@@ -375,6 +402,40 @@ public partial class MainWindow : Window
             $"F{coordinatorCounters.FailedCount}}}";
         UpdateZoomDisplay(camera, width, height);
         UpdateViewportScrollbars(camera, width, height);
+
+        // Accumulate frame timing for periodic diagnostics logging.
+        var frameElapsed = stopwatch.Elapsed;
+        _lastFrameTicks = frameElapsed.Ticks;
+        _totalFrameTicks += frameElapsed.Ticks;
+        _frameCount++;
+        _diagnosticsFrameCount++;
+
+        // Log diagnostics every 120 frames (~2 seconds at 60 fps).
+        if (_diagnosticsFrameCount >= 120 && _diagnosticsStopwatch.Elapsed.TotalSeconds >= 1.0)
+        {
+            var avgMs = _totalFrameTicks / (double)_frameCount / TimeSpan.TicksPerMillisecond;
+            var totalTiles = _tiles.Count;
+            var fetchedTiles = _tiles.Count(t => t.IsBackgroundFetched);
+            var generatedMs = completedTiles.Length == 0
+                ? 0.0
+                : completedTiles.Average(t => t.GenerationDuration?.TotalMilliseconds ?? 0);
+
+            Serilog.Log.Information(
+                "FrameDiag: {FrameCount,6}f | avg {AvgMs,7:F1}ms | " +
+                "coord {CoordActive,3}a/{CoordQueued,3}q/{CoordCompleted,6}c/{CoordCanceled,4}x/{CoordFailed,3}f | " +
+                "tiles {FetchedTiles,4}/{TotalTiles,4} fetched | " +
+                "avgGen {AvgGenMs,6:F1}ms | " +
+                "budget {BudgetBytes,10:N0}b",
+                _frameCount, avgMs,
+                coordinatorCounters.ActiveCount, coordinatorCounters.QueuedCount,
+                coordinatorCounters.CompletedCount, coordinatorCounters.CanceledCount,
+                coordinatorCounters.FailedCount,
+                fetchedTiles, totalTiles, generatedMs,
+                _tileCacheBudget.MaxBytes);
+
+            _diagnosticsFrameCount = 0;
+            _diagnosticsStopwatch.Restart();
+        }
 
         if (_hoverPointerPosition is Point hoverPointer)
         {
@@ -1356,6 +1417,7 @@ public partial class MainWindow : Window
         FramePresenter.Child = null;
         _frontBitmapFactory?.Dispose();
         _backBitmapFactory?.Dispose();
+        _tileCoordinator.CancelAll();
         _tileCoordinator.Dispose();
         _generationGate.Dispose();
         _lifetime.Dispose();

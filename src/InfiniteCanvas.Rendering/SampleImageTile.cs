@@ -23,7 +23,15 @@ public sealed class SampleImageTile
     private int _backgroundFetched;
 #endif
     private TileWorkCoordinator? _coordinator;
-    private static readonly object CoordinatorClaimant = new();
+    private static readonly object DefaultCoordinatorClaimant = new();
+
+    /// <summary>
+    /// Optional provider that returns the current frame's claimant ID for
+    /// coordinator requests. When set, tile generation is attributed to the
+    /// current frame, allowing per-frame viewport-aware cancellation.
+    /// If null, a static default claimant is used.
+    /// </summary>
+    public Func<object>? ClaimantIdProvider { get; set; }
     public event EventHandler? PixelsGenerated;
     public event EventHandler? PixelsGenerationFailed;
 
@@ -295,10 +303,11 @@ public sealed class SampleImageTile
         if (_coordinator is not null)
         {
             var oldRevision = epoch - 1;
+            var claimant = GetClaimantId();
             for (var mip = 0; mip <= BackgroundTileMipPolicy.MaxMipLevel; mip++)
             {
                 var oldKey = new BackgroundTileCacheKey("synthetic", Id, oldRevision, mip);
-                _coordinator.RemoveClaimant(oldKey, CoordinatorClaimant);
+                _coordinator.RemoveClaimant(oldKey, claimant);
             }
         }
 
@@ -320,11 +329,19 @@ public sealed class SampleImageTile
     /// <see cref="EnsureMipPixelsGenerationStarted"/> route work through
     /// the coordinator instead of using bare <c>Task.Run</c>.
     /// </summary>
+    /// <summary>
+    /// Optional coordinator for bounded, cancellable tile generation.
+    /// When set, <see cref="EnsurePixelsGenerationStarted"/> and
+    /// <see cref="EnsureMipPixelsGenerationStarted"/> route work through
+    /// the coordinator instead of using bare <c>Task.Run</c>.
+    /// </summary>
     public TileWorkCoordinator? Coordinator
     {
         get => _coordinator;
         set => _coordinator = value;
     }
+
+    private object GetClaimantId() => ClaimantIdProvider?.Invoke() ?? DefaultCoordinatorClaimant;
 
     public IReadOnlyList<SampleAnnotation> Annotations { get; }
 
@@ -406,7 +423,7 @@ public sealed class SampleImageTile
                     Interlocked.Exchange(ref _generationDurationTicks, Stopwatch.GetTimestamp() - generationStarted);
                     return result;
                 },
-                CoordinatorClaimant,
+                GetClaimantId(),
                 CancellationToken.None,
                 onCompleted: OnCoordinatorPixelsGenerated,
                 onFailed: OnCoordinatorPixelsGenerationFailed,
@@ -440,13 +457,12 @@ public sealed class SampleImageTile
                     {
                         _pixels = generated;
                         Interlocked.Exchange(ref _generationDurationTicks, Stopwatch.GetTimestamp() - generationStarted);
+#if WINDOWS
+                        Interlocked.Exchange(ref _backgroundFetched, 1);
+#endif
                         shouldRaiseEvent = true;
                     }
                 }
-
-#if WINDOWS
-                Interlocked.Exchange(ref _backgroundFetched, 1);
-#endif
 
                 if (shouldRaiseEvent)
                 {
@@ -468,11 +484,6 @@ public sealed class SampleImageTile
 
     private void OnCoordinatorPixelsGenerated(BackgroundTileCacheKey key, byte[] pixels)
     {
-        var generationEpoch = long.Parse(key.TileId.Split('-').Last(),
-            System.Globalization.NumberStyles.Integer,
-            System.Globalization.CultureInfo.InvariantCulture);
-
-        // Extract the actual epoch from the key's ContentRevision.
         var expectedEpoch = key.ContentRevision;
         var shouldRaiseEvent = false;
         lock (_cacheGate)
@@ -480,13 +491,12 @@ public sealed class SampleImageTile
             if (_pixels is null && expectedEpoch == Volatile.Read(ref _generationEpoch))
             {
                 _pixels = pixels;
+#if WINDOWS
+                Interlocked.Exchange(ref _backgroundFetched, 1);
+#endif
                 shouldRaiseEvent = true;
             }
         }
-
-#if WINDOWS
-        Interlocked.Exchange(ref _backgroundFetched, 1);
-#endif
 
         if (shouldRaiseEvent)
         {
@@ -527,7 +537,7 @@ public sealed class SampleImageTile
                     token.ThrowIfCancellationRequested();
                     return result;
                 },
-                CoordinatorClaimant,
+                GetClaimantId(),
                 CancellationToken.None,
                 onCompleted: OnCoordinatorMipGenerated,
                 onFailed: OnCoordinatorPixelsGenerationFailed,
