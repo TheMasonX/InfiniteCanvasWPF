@@ -1,5 +1,5 @@
-using InfiniteCanvas.Core;
 using System.Collections.Immutable;
+using InfiniteCanvas.Core;
 
 namespace InfiniteCanvas.Spatial;
 

@@ -1,5 +1,3 @@
-using System.Threading;
-
 namespace InfiniteCanvas.Core;
 
 public sealed class CameraTransform

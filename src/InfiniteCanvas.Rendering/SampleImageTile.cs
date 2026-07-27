@@ -1,5 +1,5 @@
-using InfiniteCanvas.Core;
 using System.Diagnostics;
+using InfiniteCanvas.Core;
 #if WINDOWS
 using System.Drawing;
 #endif

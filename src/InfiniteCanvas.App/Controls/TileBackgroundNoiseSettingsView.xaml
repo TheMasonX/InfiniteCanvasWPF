@@ -5,7 +5,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
              d:DesignWidth="220"
-             d:DesignHeight="180">
+             d:DesignHeight="180"
+             DataContext="{Binding ViewModel, RelativeSource={RelativeSource Self}}">
         <Expander Header="TILE BACKGROUND NOISE" IsExpanded="True" Padding="8"
                           Background="#151A20" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
         <StackPanel>

@@ -37,21 +37,21 @@ public static class SampleImageGenerator
         public static NoiseSettings Default => new NoiseSettings(scale: 1, octaves: 3, lacunarity: 2.5, gain: 0.6, amplitude: 1.0);
     }
 
-    private static readonly string[] Classifications = ["Scratch", "Inclusion", "Stain", "Edge defect"];
-    private static readonly IReadOnlyDictionary<string, Bgra32Color> ClassificationColors = new Dictionary<string, Bgra32Color>
+    public static readonly string[] Classifications = ["Scratch", "Inclusion", "Stain", "Edge defect"];
+    public static readonly IReadOnlyDictionary<string, Bgra32Color> ClassificationColors = new Dictionary<string, Bgra32Color>
     {
         ["Scratch"] = new(60, 90, 245, 255),
         ["Inclusion"] = new(70, 205, 255, 255),
         ["Stain"] = new(120, 220, 120, 255),
         ["Edge defect"] = new(90, 160, 255, 255)
     };
-    private sealed record DefectTemplate(
+    public sealed record DefectTemplate(
         int Width,
         int Height,
         byte[] Pixels
-    #if WINDOWS
+#if WINDOWS
         , Bitmap Bitmap
-    #endif
+#endif
     );
 
     public static IReadOnlyList<SampleImageTile> GenerateSet(
@@ -72,64 +72,89 @@ public static class SampleImageGenerator
         int defectPoolSize = 64,
         int circleCount = 3)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(imageCount);
+        // Forwarding overload preserved for backward compatibility.
+        var options = new GeneratorOptions(
+            ImageCount: imageCount,
+            PixelWidth: pixelWidth,
+            PixelHeight: pixelHeight,
+            TargetValue: targetValue,
+            Noise: noise,
+            NoiseScale: noiseScale,
+            NoiseOctaves: noiseOctaves,
+            NoiseLacunarity: noiseLacunarity,
+            NoiseGain: noiseGain,
+            NoiseAmplitude: noiseAmplitude,
+            ObjectsPerTile: objectsPerTile,
+            Columns: columns,
+            Seed: seed,
+            Rows: rows,
+            DefectPoolSize: defectPoolSize,
+            CircleCount: circleCount);
 
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pixelWidth);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pixelHeight);
+        return GenerateSet(options);
+    }
 
-        if (objectsPerTile is < 0 or > MaxObjectsPerTile)
+    public static IReadOnlyList<SampleImageTile> GenerateSet(GeneratorOptions options)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.ImageCount);
+
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.PixelWidth);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.PixelHeight);
+
+        if (options.ObjectsPerTile is < 0 or > MaxObjectsPerTile)
         {
-            throw new ArgumentOutOfRangeException(nameof(objectsPerTile));
+            throw new ArgumentOutOfRangeException(nameof(options.ObjectsPerTile));
         }
 
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(columns);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.Columns);
 
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(defectPoolSize);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.DefectPoolSize);
 
-        if (rows is <= 0)
+        if (options.Rows is <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(rows));
+            throw new ArgumentOutOfRangeException(nameof(options.Rows));
         }
 
-        var rowCount = rows ?? Math.Max(1, (int)Math.Ceiling(imageCount / (double)columns));
-        var tileCount = checked(columns * rowCount);
-        if (rows.HasValue && imageCount != tileCount)
+        var rowCount = options.Rows ?? Math.Max(1, (int)Math.Ceiling(options.ImageCount / (double)options.Columns));
+        var tileCount = checked(options.Columns * rowCount);
+        if (options.Rows.HasValue && options.ImageCount != tileCount)
         {
             throw new ArgumentException(
                 "imageCount must equal columns multiplied by rows when rows is specified.",
-                nameof(imageCount));
+                nameof(options.ImageCount));
         }
-        var poolSeed = unchecked(seed + 48611);
+
+        var poolSeed = unchecked(options.Seed + 48611);
         var poolRandom = new DeterministicRandom(poolSeed);
-        var defectTemplatePool = BuildDefectTemplatePool(defectPoolSize, poolRandom);
+        var defectTemplatePool = DefectTemplateFactory.Build(options.DefectPoolSize, poolRandom);
 
         var tiles = new SampleImageTile[tileCount];
 
         for (var tileIndex = 0; tileIndex < tileCount; tileIndex++)
         {
             var tileId = $"TILE-{tileIndex + 1:D2}";
-            var tileX = (tileIndex % columns) * (double)pixelWidth;
-            var tileY = (tileIndex / columns) * (double)pixelHeight;
-            var bounds = new SpatialBounds(tileX, tileY, pixelWidth, pixelHeight);
-            var pixelSeed = seed + 3 * tileIndex;
-            var annotationSeed = unchecked(seed + (tileIndex * 130363) + 7919);
-            var noiseSettings = new NoiseSettings { Scale = noiseScale, Octaves = noiseOctaves, Lacunarity = noiseLacunarity, Gain = noiseGain, Amplitude = noiseAmplitude };
-            var annotations = GenerateAnnotations(
+            var tileX = (tileIndex % options.Columns) * (double)options.PixelWidth;
+            var tileY = (tileIndex / options.Columns) * (double)options.PixelHeight;
+            var bounds = new SpatialBounds(tileX, tileY, options.PixelWidth, options.PixelHeight);
+            var pixelSeed = options.Seed + 3 * tileIndex;
+            var annotationSeed = unchecked(options.Seed + (tileIndex * 130363) + 7919);
+            var noiseSettings = new NoiseSettings { Scale = options.NoiseScale, Octaves = options.NoiseOctaves, Lacunarity = options.NoiseLacunarity, Gain = options.NoiseGain, Amplitude = options.NoiseAmplitude };
+            var annotations = AnnotationGenerator.GenerateAnnotations(
                 tileId,
                 bounds,
-                objectsPerTile,
+                options.ObjectsPerTile,
                 new DeterministicRandom(annotationSeed),
                 defectTemplatePool);
             // Synthetic backgrounds are Gray8 by definition; only the circle mask uses GDI+.
             tiles[tileIndex] = new SampleImageTile(
                 tileId,
                 bounds,
-                pixelWidth,
-                pixelHeight,
-                () => GenerateMonochromeMipPixelsSeeded(pixelWidth, pixelHeight, targetValue, noise, 0, pixelSeed, circleCount, noiseSettings, (float)bounds.X, (float)bounds.Y, tileId),
+                options.PixelWidth,
+                options.PixelHeight,
+                () => GenerateMonochromeMipPixelsSeeded(options.PixelWidth, options.PixelHeight, options.TargetValue, options.Noise, 0, pixelSeed, options.CircleCount, noiseSettings, (float)bounds.X, (float)bounds.Y, tileId),
                 annotations,
-                targetValue,
-                mipLevel => GenerateMonochromeMipPixelsSeeded(pixelWidth, pixelHeight, targetValue, noise, mipLevel, pixelSeed, circleCount, noiseSettings, (float)bounds.X, (float)bounds.Y, tileId));
+                options.TargetValue,
+                mipLevel => GenerateMonochromeMipPixelsSeeded(options.PixelWidth, options.PixelHeight, options.TargetValue, options.Noise, mipLevel, pixelSeed, options.CircleCount, noiseSettings, (float)bounds.X, (float)bounds.Y, tileId));
         }
 
         return tiles;
@@ -247,7 +272,7 @@ public static class SampleImageGenerator
         }
 
 #if WINDOWS
-    ApplyDetailsWithGdiPlus(pixels, width, height, circles, tileLabel);
+        ApplyDetailsWithGdiPlus(pixels, width, height, circles, tileLabel);
 #else
         ApplyCirclesWithRasterizer(pixels, width, height, circles);
 #endif
@@ -545,7 +570,7 @@ public static class SampleImageGenerator
         return annotations;
     }
 
-    private static (double Min, double Max) GetClassAspectRange(string classification)
+    public static (double Min, double Max) GetClassAspectRange(string classification)
     {
         return classification switch
         {
@@ -557,32 +582,9 @@ public static class SampleImageGenerator
         };
     }
 
-    private static IReadOnlyList<DefectTemplate> BuildDefectTemplatePool(
-        int count,
-        DeterministicRandom random)
-    {
-        var pool = new DefectTemplate[count];
-        for (var index = 0; index < count; index++)
-        {
-            var aspect = 0.45 + (random.NextDouble() * 1.95);
-            var templateWidth = random.Next(156, 276);
-            var templateHeight = Math.Clamp((int)Math.Round(templateWidth / aspect), 132, 304);
-            var pixels = GenerateCenteredDefectPixels(templateWidth, templateHeight, random);
-#if WINDOWS
-            pool[index] = new DefectTemplate(
-                templateWidth,
-                templateHeight,
-                pixels,
-                CreateBitmapFromPixels(templateWidth, templateHeight, pixels));
-#else
-            pool[index] = new DefectTemplate(templateWidth, templateHeight, pixels);
-#endif
-        }
+    // Defect template pool creation moved to DefectTemplateFactory.
 
-        return pool;
-    }
-
-    private static byte[] GenerateCenteredDefectPixels(int width, int height, DeterministicRandom random)
+    public static byte[] GenerateCenteredDefectPixels(int width, int height, DeterministicRandom random)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
@@ -630,40 +632,11 @@ public static class SampleImageGenerator
         return pixels;
     }
 
- #if WINDOWS
-    private static unsafe Bitmap CreateBitmapFromPixels(int width, int height, byte[] pixels)
-    {
-        var bounds = new Rectangle(0, 0, width, height);
-        var bitmap = new Bitmap(width, height, PixelFormat.Format24bppRgb);
-        var data = bitmap.LockBits(bounds, ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
-        try
-        {
-            var destination = (byte*)data.Scan0;
-            for (var y = 0; y < height; y++)
-            {
-                var row = destination + (y * data.Stride);
-                var rowOffset = y * width;
-                for (var x = 0; x < width; x++)
-                {
-                    var value = pixels[rowOffset + x];
-                    row[x * 3] = value;
-                    row[(x * 3) + 1] = value;
-                    row[(x * 3) + 2] = value;
-                }
-            }
-        }
-        finally
-        {
-            bitmap.UnlockBits(data);
-        }
-
-        return bitmap;
-    }
-    #endif
+    // Bitmap creation helper moved to DefectTemplateFactory for platform isolation.
 
     private static double Lerp(double a, double b, double t) => a + ((b - a) * t);
 
-    private struct DeterministicRandom(int seed)
+    public struct DeterministicRandom(int seed)
     {
         private ulong _state = unchecked((uint)seed) + 0x9E3779B97F4A7C15UL;
 

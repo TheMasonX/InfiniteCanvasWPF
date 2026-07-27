@@ -1,9 +1,4 @@
-using InfiniteCanvas.Core;
-using InfiniteCanvas.Rendering;
-using InfiniteCanvas.Spatial;
-using InfiniteCanvas.ViewModels;
 using System.Diagnostics;
-using Serilog;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -11,6 +6,11 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using InfiniteCanvas.Core;
+using InfiniteCanvas.Rendering;
+using InfiniteCanvas.Spatial;
+using InfiniteCanvas.ViewModels;
+using Serilog;
 
 namespace InfiniteCanvas.App;
 

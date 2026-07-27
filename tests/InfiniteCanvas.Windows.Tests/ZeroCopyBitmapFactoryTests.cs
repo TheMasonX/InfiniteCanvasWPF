@@ -1,8 +1,7 @@
-using InfiniteCanvas.Core;
-using InfiniteCanvas.Rendering;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Threading;
+using InfiniteCanvas.Core;
+using InfiniteCanvas.Rendering;
 
 namespace InfiniteCanvas.Windows.Tests;
 
