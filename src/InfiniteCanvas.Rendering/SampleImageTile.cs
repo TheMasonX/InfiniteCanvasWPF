@@ -618,20 +618,28 @@ public sealed class SampleImageTile
     private void OnCoordinatorMipGenerated(BackgroundTileCacheKey key, byte[] pixels)
     {
         var expectedEpoch = key.ContentRevision;
+        var currentEpoch = Volatile.Read(ref _generationEpoch);
         var mipLevel = key.MipLevel;
+        var published = false;
 
         lock (_cacheGate)
         {
-            if (expectedEpoch == Volatile.Read(ref _generationEpoch))
+            if (expectedEpoch == currentEpoch)
             {
                 _mipPixels[mipLevel] = pixels;
+                published = true;
             }
 
             _mipGenerationQueued.Remove(mipLevel);
         }
 
-        // Always fire the event so the render pipeline stays active and can
-        // retry mip generation if the epoch mismatched.
+        if (!published)
+        {
+            Log.Debug("TileGen DISCARD mip {TileId} mip{MipLevel} expectedEpoch={ExpectedEpoch} currentEpoch={CurrentEpoch}",
+                Id, mipLevel, expectedEpoch, currentEpoch);
+        }
+
+        // Always fire the event so the render pipeline stays active.
         PixelsGenerated?.Invoke(this, EventArgs.Empty);
     }
 
