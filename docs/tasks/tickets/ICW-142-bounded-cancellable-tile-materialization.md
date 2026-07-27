@@ -84,11 +84,18 @@ Do not use `CancellationTokenSource.Dispose` from a viewport-culling loop while 
   - Coordinator assigned to all tiles after `GenerateSet`
   - Coordinator counters displayed in status bar
   - Coordinator disposed in `OnClosed`
+- **Critical fix**: `OnCoordinatorPixelsGenerated` always resets `_generationQueued` when discarding pixels (epoch mismatch), preventing stuck flag
+- **Critical fix**: Coordinator always dispatches completion/failure callbacks even when item was canceled, so tiles can retry
+- **Critical fix**: Removed per-frame claimant advance (`RemoveAllClaimants`) which caused cancel thrashing — every frame was canceling previous frame's in-flight work before generation could complete
+- **Critical fix**: `TileCacheBudget.TryReserve` eviction now falls back to un-generated tiles when no generated tiles are available, preventing cache deadlock when all 128 tracked slots are filled with tiles whose generation never completed
+- Comprehensive Serilog logging added to coordinator (every START/QUEUE/COALESCE/REJECTED/COMPLETE/CANCEL/FAILED), cache eviction (EVICT/REJECTED), and tile discard (DISCARD)
 - All 86 core tests pass; Debug and Release builds succeed
+- ICW-146 (loading indicator) completed: `RenderBusyBar` shows when coordinator `PendingCount > 0`
 
 ### Next steps
 1. Proceed to **ICW-143**: viewport interest snapshots, culling stale requests, and priority ordering
-2. Coordinate with **ICW-146**: wire coordinator active-count into a visible loading indicator (RenderBusyBar)
+2. Consider increasing `TileWorkCoordinator.DefaultMaxConcurrency` (currently 4) for faster initial tile flood
+3. Consider increasing `TileCacheBudget.DefaultMaxBytes` (currently 4 GiB) to reduce thrashing on large scenes
 
 ## Related Tasks
 

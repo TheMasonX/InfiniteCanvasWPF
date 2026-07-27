@@ -791,10 +791,18 @@ public sealed class TileCacheBudget
 
             while (UsedBytes > _maxBytes)
             {
+                // Prefer evicting generated tiles (they can be regenerated).
+                // Fall back to un-generated tiles if no generated ones are
+                // available — un-generated tiles hold budget but provide
+                // nothing to display.
                 var evictedTile = _trackedTiles.Values.FirstOrDefault(candidate =>
                     !string.Equals(candidate.Id, tile.Id, StringComparison.OrdinalIgnoreCase)
                     && !_pinnedTileIds.Contains(candidate.Id)
-                    && candidate.IsImageGenerated);
+                    && candidate.IsImageGenerated)
+                    ?? _trackedTiles.Values.FirstOrDefault(candidate =>
+                        !string.Equals(candidate.Id, tile.Id, StringComparison.OrdinalIgnoreCase)
+                        && !_pinnedTileIds.Contains(candidate.Id));
+
                 if (evictedTile is null)
                 {
                     _trackedTiles.Remove(tile.Id);
@@ -806,8 +814,8 @@ public sealed class TileCacheBudget
 
                 _trackedTiles.Remove(evictedTile.Id);
                 Interlocked.Add(ref _usedBytes, -evictedTile.PixelCost);
-                Log.Debug("Cache EVICT {EvictedTileId} cost={EvictedCost} (to admit {NewTileId} cost={NewCost}) used={UsedBytes} max={MaxBytes} evictions={EvictionCount}",
-                    evictedTile.Id, evictedTile.PixelCost, tile.Id, cost, UsedBytes, _maxBytes, _evictionCount + 1);
+                Log.Debug("Cache EVICT {EvictedTileId} cost={EvictedCost} generated={WasGenerated} (to admit {NewTileId} cost={NewCost}) used={UsedBytes} max={MaxBytes} evictions={EvictionCount}",
+                    evictedTile.Id, evictedTile.PixelCost, evictedTile.IsImageGenerated, tile.Id, cost, UsedBytes, _maxBytes, _evictionCount + 1);
                 evictedTile.ResetImageCache();
                 Interlocked.Increment(ref _evictionCount);
             }
