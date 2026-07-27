@@ -1,3 +1,5 @@
+using Serilog;
+
 namespace InfiniteCanvas.Rendering;
 
 /// <summary>
@@ -124,12 +126,16 @@ public sealed class TileWorkCoordinator : IDisposable
             {
                 existing.AddClaimant(claimantId, claimantToken, onCompleted, onFailed);
                 Interlocked.Increment(ref _coalescedCount);
+                Log.Debug("CoordReq COALESCE {SourceId}/{TileId} mip{MipLevel} rev{Rev} claimant={Claimant} active={Active} queued={Queued}",
+                    key.SourceId, key.TileId, key.MipLevel, key.ContentRevision, claimantId, _activeCount, _queue.Count);
                 return true;
             }
 
             // Attempt reservation before admission.
             if (tryReserve is not null && !tryReserve())
             {
+                Log.Warning("CoordReq REJECTED {SourceId}/{TileId} mip{MipLevel} rev{Rev} — reservation failed (budget full/no evictable tiles)",
+                    key.SourceId, key.TileId, key.MipLevel, key.ContentRevision);
                 return false;
             }
 
@@ -140,10 +146,14 @@ public sealed class TileWorkCoordinator : IDisposable
 
             if (_activeCount < _maxConcurrency)
             {
+                Log.Debug("CoordReq START {SourceId}/{TileId} mip{MipLevel} rev{Rev} active={Active}",
+                    key.SourceId, key.TileId, key.MipLevel, key.ContentRevision, _activeCount);
                 StartWorkItem(item);
             }
             else
             {
+                Log.Debug("CoordReq QUEUE {SourceId}/{TileId} mip{MipLevel} rev{Rev} queueDepth={QueueDepth}",
+                    key.SourceId, key.TileId, key.MipLevel, key.ContentRevision, _queue.Count);
                 _queue.Enqueue(key);
             }
 
@@ -170,11 +180,10 @@ public sealed class TileWorkCoordinator : IDisposable
                 return;
 
             // Cancel the work only if no claimants remain.
-            // The item-level RemoveClaimant already cancels the work token
-            // when the last claimant is removed; this coordinator-level method
-            // handles cleanup and counter updates.
             if (item.ClaimantCount == 0)
             {
+                Log.Information("Coord CANCEL {SourceId}/{TileId} mip{MipLevel} rev{Rev} — last claimant {Claimant} removed",
+                    key.SourceId, key.TileId, key.MipLevel, key.ContentRevision, claimantId);
                 CancelWorkItem(key, item);
             }
         }
@@ -193,18 +202,24 @@ public sealed class TileWorkCoordinator : IDisposable
             if (_disposed) return;
 
             // Collect keys whose last claimant was removed.
-            var toCancel = new List<BackgroundTileCacheKey>();
+            var toCancel = new List<(BackgroundTileCacheKey Key, TileWorkItem Item)>();
             foreach (var (key, item) in _items)
             {
                 if (item.RemoveClaimant(claimantId) && item.ClaimantCount == 0)
                 {
-                    toCancel.Add(key);
+                    toCancel.Add((key, item));
                 }
             }
 
-            foreach (var key in toCancel)
+            if (toCancel.Count > 0)
             {
-                CancelWorkItem(key, _items[key]);
+                Log.Information("Coord RemoveAllClaimants {Claimant}: canceling {Count} orphaned work items",
+                    claimantId, toCancel.Count);
+            }
+
+            foreach (var (key, item) in toCancel)
+            {
+                CancelWorkItem(key, item);
             }
         }
     }
@@ -218,6 +233,9 @@ public sealed class TileWorkCoordinator : IDisposable
         lock (_lock)
         {
             if (_disposed) return;
+
+            var count = _items.Count;
+            Log.Information("Coord CancelAll: canceling {Count} active/queued work items", count);
 
             var keys = _items.Keys.ToArray();
             foreach (var key in keys)
@@ -269,6 +287,10 @@ public sealed class TileWorkCoordinator : IDisposable
         item.SetRunning(); // Mark as running for atomic cancel detection.
         _activeCount++;
 
+        Log.Debug("Coord START {SourceId}/{TileId} mip{MipLevel} rev{Rev} (active now {Active})",
+            item.CacheKey.SourceId, item.CacheKey.TileId, item.CacheKey.MipLevel,
+            item.CacheKey.ContentRevision, _activeCount);
+
         _ = Task.Run(async () =>
         {
             try
@@ -288,6 +310,9 @@ public sealed class TileWorkCoordinator : IDisposable
                         Interlocked.Increment(ref _completedCount);
                         _activeCount--;
                         _items.Remove(item.CacheKey);
+                        Log.Debug("Coord COMPLETE {SourceId}/{TileId} mip{MipLevel} rev{Rev} (active now {Active})",
+                            item.CacheKey.SourceId, item.CacheKey.TileId, item.CacheKey.MipLevel,
+                            item.CacheKey.ContentRevision, _activeCount);
                     }
                 }
 
@@ -300,6 +325,9 @@ public sealed class TileWorkCoordinator : IDisposable
             }
             catch (OperationCanceledException)
             {
+                Log.Warning("Coord CANCELED (inflight) {SourceId}/{TileId} mip{MipLevel} rev{Rev}",
+                    item.CacheKey.SourceId, item.CacheKey.TileId, item.CacheKey.MipLevel,
+                    item.CacheKey.ContentRevision);
                 HandleWorkStopped(item, TileWorkItemState.Canceled);
                 // Notify tile that work was canceled so it can reset flags.
                 item.DispatchFailed(new OperationCanceledException(
@@ -308,6 +336,9 @@ public sealed class TileWorkCoordinator : IDisposable
             }
             catch (Exception ex)
             {
+                Log.Error(ex, "Coord FAILED {SourceId}/{TileId} mip{MipLevel} rev{Rev}",
+                    item.CacheKey.SourceId, item.CacheKey.TileId, item.CacheKey.MipLevel,
+                    item.CacheKey.ContentRevision);
                 HandleWorkStopped(item, TileWorkItemState.Failed);
                 item.DispatchFailed(ex);
                 DrainQueue();
@@ -339,10 +370,15 @@ public sealed class TileWorkCoordinator : IDisposable
         if (item.State is TileWorkItemState.Completed or TileWorkItemState.Failed or TileWorkItemState.Canceled)
             return;
 
+        var wasRunning = !item.SetRunning() && _activeCount > 0;
         item.State = TileWorkItemState.Canceled;
         Interlocked.Increment(ref _canceledCount);
 
-        if (!item.SetRunning() && _activeCount > 0)
+        Log.Warning("Coord CANCEL {SourceId}/{TileId} mip{MipLevel} rev{Rev} state={WasRunning}",
+            key.SourceId, key.TileId, key.MipLevel, key.ContentRevision,
+            wasRunning ? "in-flight" : "queued");
+
+        if (wasRunning)
         {
             // In-flight work: signal cancellation via the work token source.
             item.CancelWork();

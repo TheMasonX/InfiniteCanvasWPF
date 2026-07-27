@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using InfiniteCanvas.Core;
+using Serilog;
 #if WINDOWS
 using System.Drawing;
 #endif
@@ -485,14 +486,17 @@ public sealed class SampleImageTile
     private void OnCoordinatorPixelsGenerated(BackgroundTileCacheKey key, byte[] pixels)
     {
         var expectedEpoch = key.ContentRevision;
+        var currentEpoch = Volatile.Read(ref _generationEpoch);
+        var published = false;
         lock (_cacheGate)
         {
-            if (_pixels is null && expectedEpoch == Volatile.Read(ref _generationEpoch))
+            if (_pixels is null && expectedEpoch == currentEpoch)
             {
                 _pixels = pixels;
 #if WINDOWS
                 Interlocked.Exchange(ref _backgroundFetched, 1);
 #endif
+                published = true;
             }
             else
             {
@@ -501,6 +505,12 @@ public sealed class SampleImageTile
                 // generation-queued flag so the tile can retry generation.
                 Interlocked.Exchange(ref _generationQueued, 0);
             }
+        }
+
+        if (!published)
+        {
+            Log.Debug("TileGen DISCARD {TileId} mip{MipLevel} expectedEpoch={ExpectedEpoch} currentEpoch={CurrentEpoch} pixelsAlreadySet={PixelsSet}",
+                Id, key.MipLevel, expectedEpoch, currentEpoch, _pixels is not null);
         }
 
         // Always fire the event so the render pipeline stays active and can
@@ -512,11 +522,8 @@ public sealed class SampleImageTile
     private void OnCoordinatorPixelsGenerationFailed(BackgroundTileCacheKey key, Exception ex)
     {
         Interlocked.Exchange(ref _generationQueued, 0);
-        try
-        {
-            Serilog.Log.Error(ex, "Pixel generation failed for tile {TileId} via coordinator", Id);
-        }
-        catch { }
+        Log.Warning(ex, "TileGen FAIL {TileId} mip{MipLevel} rev{Rev}: {Reason}",
+            Id, key.MipLevel, key.ContentRevision, ex.Message);
         PixelsGenerationFailed?.Invoke(this, EventArgs.Empty);
     }
 
@@ -771,7 +778,8 @@ public sealed class TileCacheBudget
             }
 
             _trackedTiles[tile.Id] = tile;
-            Interlocked.Add(ref _usedBytes, tile.PixelCost);
+            var cost = tile.PixelCost;
+            Interlocked.Add(ref _usedBytes, cost);
 
             while (UsedBytes > _maxBytes)
             {
@@ -782,17 +790,16 @@ public sealed class TileCacheBudget
                 if (evictedTile is null)
                 {
                     _trackedTiles.Remove(tile.Id);
-                    Interlocked.Add(ref _usedBytes, -tile.PixelCost);
+                    Interlocked.Add(ref _usedBytes, -cost);
+                    Log.Warning("Cache EVICT REJECTED: no evictable tiles. Tile={TileId} cost={Cost} used={UsedBytes} max={MaxBytes} pinned={PinnedCount} tracked={TrackedCount}",
+                        tile.Id, cost, UsedBytes, _maxBytes, _pinnedTileIds.Count, _trackedTiles.Count);
                     return false;
                 }
 
                 _trackedTiles.Remove(evictedTile.Id);
                 Interlocked.Add(ref _usedBytes, -evictedTile.PixelCost);
-                // Reset pixel caches. The defect template pool is NOT disposed here
-                // because it is shared across all tiles in a generation set; disposing
-                // it on eviction of any single tile would invalidate the other tiles'
-                // annotation bitmaps. Pool disposal is managed at the scene-regeneration
-                // boundary (see RegenerateSceneAsync).
+                Log.Debug("Cache EVICT {EvictedTileId} cost={EvictedCost} (to admit {NewTileId} cost={NewCost}) used={UsedBytes} max={MaxBytes} evictions={EvictionCount}",
+                    evictedTile.Id, evictedTile.PixelCost, tile.Id, cost, UsedBytes, _maxBytes, _evictionCount + 1);
                 evictedTile.ResetImageCache();
                 Interlocked.Increment(ref _evictionCount);
             }

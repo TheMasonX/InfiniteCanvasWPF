@@ -206,13 +206,12 @@ public partial class MainWindow : Window
                     noiseGain: backgroundNoiseSettings.NoiseGain,
                     noiseAmplitude: backgroundNoiseSettings.NoiseAmplitude),
                 _lifetime.Token);
-            // Assign the coordinator and frame-aware claimant provider to all
-            // tiles so lazy generation is bounded, cancellable, and attributed
-            // to the current frame for viewport-aware cancellation.
+            // Assign the coordinator to all tiles so lazy generation is
+            // bounded and cancellable via the coordinator.
             for (var i = 0; i < _tiles.Count; i++)
             {
                 _tiles[i].Coordinator = _tileCoordinator;
-                _tiles[i].ClaimantIdProvider = () => _frameClaimantId;
+                _tiles[i].ClaimantIdProvider = null; // Use default stable claimant
             }
 
             SubscribeTileGenerationEvents(_tiles);
@@ -348,12 +347,6 @@ public partial class MainWindow : Window
         var camera = _camera.Capture();
         var viewport = camera.GetViewportBounds(width, height);
         var stopwatch = Stopwatch.StartNew();
-
-        // Advance frame claimant: remove stale tile work from the previous
-        // frame, then attribute new tile requests to this frame.
-        var previousClaimant = _frameClaimantId;
-        _frameClaimantId++;
-        _tileCoordinator.RemoveAllClaimants(previousClaimant);
 
         var factory = AcquireBackBuffer(width, height);
         var frame = await Task.Run(() =>
