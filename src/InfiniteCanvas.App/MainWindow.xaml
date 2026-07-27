@@ -209,23 +209,8 @@
                         <CheckBox x:Name="ShowBackgroundImagesCheckBox" Content="Show background images" IsChecked="True"
                                   Margin="0,8,0,0" Checked="OnShowBackgroundImagesChanged" Unchecked="OnShowBackgroundImagesChanged" />
 
-                        <TextBlock Text="Background target" Margin="0,10,0,4" FontSize="12"
-                                   Foreground="{StaticResource SecondaryTextBrush}" />
-                        <Slider x:Name="BackgroundTargetSlider" Minimum="0" Maximum="255" Value="128" TickFrequency="1"
-                                IsSnapToTickEnabled="True" ValueChanged="OnBackgroundTargetChanged" />
-
-                        <TextBlock Text="Background noise" Margin="0,10,0,4" FontSize="12"
-                                   Foreground="{StaticResource SecondaryTextBrush}" />
-                        <Slider x:Name="BackgroundNoiseSlider" Minimum="0" Maximum="24" Value="8" TickFrequency="1"
-                                IsSnapToTickEnabled="True" ValueChanged="OnBackgroundNoiseChanged" />
-
-                        <TextBlock Text="Defect circles" Margin="0,10,0,4" FontSize="12"
-                                   Foreground="{StaticResource SecondaryTextBrush}" />
-                        <Slider x:Name="BackgroundCircleCountSlider" Minimum="0" Maximum="8" Value="3" TickFrequency="1"
-                                IsSnapToTickEnabled="True" ValueChanged="OnBackgroundCircleCountChanged" />
-
                         <controls:TileBackgroundNoiseSettingsView Margin="0,12,0,0"
-                                                                  ViewModel="{Binding TileBackgroundNoiseSettings}" />
+                                                                  ViewModel="{Binding DataContext.TileBackgroundNoiseSettings, RelativeSource={RelativeSource AncestorType=Window}}" />
 
                         <Border Height="1" Margin="0,14,0,12" Background="{StaticResource BorderBrush}" />
 

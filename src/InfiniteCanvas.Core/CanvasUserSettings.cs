@@ -40,6 +40,16 @@ public sealed record CanvasUserSettings
 
     public int BackgroundCircleCount { get; init; } = 3;
 
+    public double BackgroundNoiseScale { get; init; } = 1;
+
+    public int BackgroundNoiseOctaves { get; init; } = 5;
+
+    public double BackgroundNoiseLacunarity { get; init; } = 2.5;
+
+    public double BackgroundNoiseGain { get; init; } = 0.6;
+
+    public double BackgroundNoiseAmplitude { get; init; } = 1;
+
     public double MinimumSparseTilePixelSize { get; init; } = 96;
 
     public bool IsValid =>
@@ -53,6 +63,11 @@ public sealed record CanvasUserSettings
         && LabelSize is >= 8 and <= 20
         && LabelDisplay is >= 0 and <= 1
         && BackgroundCircleCount is >= 0 and <= 8
+        && BackgroundNoiseScale is >= 0.01 and <= 8
+        && BackgroundNoiseOctaves is >= 1 and <= 12
+        && BackgroundNoiseLacunarity is >= 0.1 and <= 8
+        && BackgroundNoiseGain is >= 0 and <= 1
+        && BackgroundNoiseAmplitude is >= 0 and <= 4
         && MinimumSparseTilePixelSize is >= 0 and <= 4096;
 }
 

@@ -3,6 +3,8 @@ using InfiniteCanvas.Core;
 using Microsoft.Win32.SafeHandles;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using Gdi = System.Drawing;
+using GdiImaging = System.Drawing.Imaging;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;

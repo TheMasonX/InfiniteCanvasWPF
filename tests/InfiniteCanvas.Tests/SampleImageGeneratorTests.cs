@@ -211,7 +211,7 @@ public class SampleImageGeneratorTests
     [Test]
     public void GenerateMonochromePixels_AppliesDeterministicOffsetToEveryPixel()
     {
-        var pixels = SampleImageGenerator.GenerateMonochromePixels(32, 32, 128, 8, seed: 42, circleCount: 0, SampleImageGenerator.NoiseSettings.Default);
+        var pixels = SampleImageGenerator.GenerateMonochromeMipPixels(32, 32, 128, 8, seed: 42, circleCount: 0, SampleImageGenerator.NoiseSettings.Default);
 
         Assert.Multiple(() =>
         {
@@ -224,8 +224,8 @@ public class SampleImageGeneratorTests
     [Test]
     public void GenerateMonochromePixels_IsStableForTheSameSeed()
     {
-        var first = SampleImageGenerator.GenerateMonochromePixels(32, 32, 128, 8, seed: 42, circleCount: 0, SampleImageGenerator.NoiseSettings.Default);
-        var second = SampleImageGenerator.GenerateMonochromePixels(32, 32, 128, 8, seed: 42, circleCount: 0, SampleImageGenerator.NoiseSettings.Default);
+        var first = SampleImageGenerator.GenerateMonochromeMipPixels(32, 32, 128, 8, seed: 42, circleCount: 0, SampleImageGenerator.NoiseSettings.Default);
+        var second = SampleImageGenerator.GenerateMonochromeMipPixels(32, 32, 128, 8, seed: 42, circleCount: 0, SampleImageGenerator.NoiseSettings.Default);
 
         Assert.That(second, Is.EqualTo(first));
     }

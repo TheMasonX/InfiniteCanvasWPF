@@ -85,6 +85,92 @@ public class ZeroCopyBitmapFactoryTests
     }
 
     [Test]
+    public void GenerateSet_BakesTileIndexIntoGray8Payload()
+    {
+        var tile = SampleImageGenerator.GenerateSet(
+            1,
+            64,
+            32,
+            targetValue: 128,
+            noise: 0,
+            objectsPerTile: 0,
+            seed: 42)[0];
+        Assert.That(tile.Pixels.Take(12 * 44).Any(value => value < 64), Is.True);
+    }
+
+    [Test]
+    public void GenerateMonochromeMipPixels_BakesTileIndexAtEachMipResolution()
+    {
+        var native = SampleImageGenerator.GenerateMonochromeMipPixels(
+            64,
+            32,
+            targetValue: 128,
+            noise: 0,
+            mipLevel: 0,
+            circleCount: 0,
+            tileLabel: "TILE-01");
+        var mip = SampleImageGenerator.GenerateMonochromeMipPixels(
+            64,
+            32,
+            targetValue: 128,
+            noise: 0,
+            mipLevel: 2,
+            circleCount: 0,
+            tileLabel: "TILE-01");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(native.Length, Is.EqualTo(64 * 32));
+            Assert.That(mip.Length, Is.EqualTo(16 * 8));
+            Assert.That(native.Take(12 * 44).Any(value => value < 64), Is.True);
+            Assert.That(mip.Any(value => value < 64), Is.True);
+        });
+    }
+
+    [Test]
+    public void GenerateFrozenBitmap_SkipsTileIndexLabelsWhenBackgroundImagesHidden()
+    {
+        var tile = SampleImageGenerator.GenerateSet(
+            1,
+            64,
+            32,
+            targetValue: 128,
+            noise: 0,
+            objectsPerTile: 0,
+            seed: 42)[0];
+        using var factory = new ZeroCopyBitmapFactory(64, 32);
+
+        var bitmap = factory.GenerateFrozenBitmap(
+            [tile],
+            [],
+            new CameraTransform().Capture(),
+            showBackgroundImages: false);
+        var pixels = new byte[64 * 32 * 4];
+        bitmap.CopyPixels(pixels, 64 * 4, 0);
+
+        Assert.That(pixels.All(p => p == 0), Is.True);
+    }
+
+    [Test]
+    public void GenerateFrozenBitmap_ComposesPartiallyVisibleTiles()
+    {
+        var tiles = SampleImageGenerator.GenerateSet(
+            2,
+            64,
+            32,
+            targetValue: 128,
+            noise: 0,
+            objectsPerTile: 0,
+            columns: 2,
+            seed: 42);
+        using var factory = new ZeroCopyBitmapFactory(64, 32);
+
+        var bitmap = factory.GenerateFrozenBitmap(tiles, [], new CameraTransform().Capture());
+
+        Assert.That(bitmap.IsFrozen, Is.True);
+    }
+
+    [Test]
     public void GenerateFrozenBitmap_RendersDefectBitmapUnalteredOutsideLogicalBounds()
     {
         using var defectBitmap = new Bitmap(4, 4, PixelFormat.Format24bppRgb);

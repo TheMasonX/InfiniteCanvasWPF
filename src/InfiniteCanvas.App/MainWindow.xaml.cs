@@ -48,9 +48,6 @@ public partial class MainWindow : Window
     private int _busyOperationCount;
     private TileCacheBudget _tileCacheBudget = new(TileCacheBudget.DefaultMaxBytes);
     private bool _showBackgroundImages = true;
-    private byte _backgroundTargetValue = 128;
-    private byte _backgroundNoise = 8;
-    private int _backgroundCircleCount = 3;
     private bool _showImageTiles = true;
     private ViewportScrollbarAxis? _scrollbarDragAxis;
     private double _scrollbarDragPointerOffset;
@@ -152,12 +149,6 @@ public partial class MainWindow : Window
         _showImageTiles = settings.ShowImageTiles;
         ShowBackgroundImagesCheckBox.IsChecked = settings.ShowBackgroundImages;
         _showBackgroundImages = settings.ShowBackgroundImages;
-        _backgroundTargetValue = settings.BackgroundTargetValue;
-        _backgroundNoise = settings.BackgroundNoise;
-        _backgroundCircleCount = settings.BackgroundCircleCount;
-        BackgroundTargetSlider.Value = settings.BackgroundTargetValue;
-        BackgroundNoiseSlider.Value = settings.BackgroundNoise;
-        BackgroundCircleCountSlider.Value = settings.BackgroundCircleCount;
         _mainViewModel.ApplySettings(settings);
     }
 
@@ -192,7 +183,12 @@ public partial class MainWindow : Window
                     defectPoolSize: 64,
                     targetValue: backgroundNoiseSettings.TargetValue,
                     noise: backgroundNoiseSettings.Noise,
-                    circleCount: backgroundNoiseSettings.CircleCount),
+                    circleCount: backgroundNoiseSettings.CircleCount,
+                    noiseScale: backgroundNoiseSettings.NoiseScale,
+                    noiseOctaves: backgroundNoiseSettings.NoiseOctaves,
+                    noiseLacunarity: backgroundNoiseSettings.NoiseLacunarity,
+                    noiseGain: backgroundNoiseSettings.NoiseGain,
+                    noiseAmplitude: backgroundNoiseSettings.NoiseAmplitude),
                 _lifetime.Token);
             SubscribeTileGenerationEvents(_tiles);
             _sceneBounds = GetSceneBounds(_tiles);
@@ -949,36 +945,6 @@ public partial class MainWindow : Window
         await RequestRenderAsync();
     }
 
-    private void OnBackgroundTargetChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (!IsLoaded)
-        {
-            return;
-        }
-
-        _mainViewModel.TileBackgroundNoiseSettings.TargetValue = BackgroundTargetSlider.Value;
-    }
-
-    private void OnBackgroundNoiseChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (!IsLoaded)
-        {
-            return;
-        }
-
-        _mainViewModel.TileBackgroundNoiseSettings.Noise = BackgroundNoiseSlider.Value;
-    }
-
-    private void OnBackgroundCircleCountChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (!IsLoaded)
-        {
-            return;
-        }
-
-        _mainViewModel.TileBackgroundNoiseSettings.CircleCount = BackgroundCircleCountSlider.Value;
-    }
-
     private async void OnViewportMouseWheel(object sender, MouseWheelEventArgs e)
     {
         var origin = e.GetPosition(ViewportHost);
@@ -1351,12 +1317,6 @@ public partial class MainWindow : Window
         _tileRows = rows;
         _objectsPerTile = objectsPerTile;
         _generationSeed = seed;
-        _backgroundTargetValue = (byte)Math.Round(BackgroundTargetSlider.Value);
-        _backgroundNoise = (byte)Math.Round(BackgroundNoiseSlider.Value);
-        _backgroundCircleCount = (int)Math.Round(BackgroundCircleCountSlider.Value);
-        _mainViewModel.TileBackgroundNoiseSettings.TargetValue = _backgroundTargetValue;
-        _mainViewModel.TileBackgroundNoiseSettings.Noise = _backgroundNoise;
-        _mainViewModel.TileBackgroundNoiseSettings.CircleCount = _backgroundCircleCount;
         return true;
     }
 
@@ -1395,7 +1355,12 @@ public partial class MainWindow : Window
             ShowBackgroundImages = _showBackgroundImages,
             BackgroundTargetValue = (byte)Math.Round(_mainViewModel.TileBackgroundNoiseSettings.TargetValue),
             BackgroundNoise = (byte)Math.Round(_mainViewModel.TileBackgroundNoiseSettings.Noise),
-            BackgroundCircleCount = (int)Math.Round(_mainViewModel.TileBackgroundNoiseSettings.CircleCount)
+            BackgroundCircleCount = (int)Math.Round(_mainViewModel.TileBackgroundNoiseSettings.CircleCount),
+            BackgroundNoiseScale = _mainViewModel.TileBackgroundNoiseSettings.Scale,
+            BackgroundNoiseOctaves = (int)Math.Round(_mainViewModel.TileBackgroundNoiseSettings.Octaves),
+            BackgroundNoiseLacunarity = _mainViewModel.TileBackgroundNoiseSettings.Lacunarity,
+            BackgroundNoiseGain = _mainViewModel.TileBackgroundNoiseSettings.Gain,
+            BackgroundNoiseAmplitude = _mainViewModel.TileBackgroundNoiseSettings.Amplitude
         };
 
         if (!settings.IsValid)
