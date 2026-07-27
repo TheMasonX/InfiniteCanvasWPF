@@ -2,6 +2,10 @@
 
 | Key | Status | Type | Summary | Acceptance / Notes |
 | --- | --- | --- | --- | --- |
+| ICW-141 | Proposed | Epic | Plan viewport-aware tile work scheduling and cancellation | Split the fast-navigation backlog problem into bounded cancellable materialization, viewport culling/priority, and stress validation while preserving source-neutral mip and resident-fallback contracts. |
+| ICW-142 | To Do | Story | Add bounded cancellable tile materialization ownership | Bound active work, coalesce equal cache-key fills, cancel unclaimed queued/in-flight work, preserve shared fills for remaining claimants, and release reservations exactly once. |
+| ICW-143 | To Do | Improvement | Add viewport culling and relevance-priority tile scheduling | Publish viewport interest snapshots, remove stale queued requests, prioritize visible tiles over prefetch, and preserve stale-frame and resident-mip guards. |
+| ICW-144 | Proposed | Spike | Add fast-scroll tile queue stress telemetry and benchmarks | Use repeatable rapid pan/zoom traces to measure queue depth, cancellation, stale/useful completion, coalescing, and reservation balance; do not use Dry smoke runs for percentage claims. |
 | ICW-094 | Done | Bug | Keep display-settings scrollbar beside panel content | Reserve a right-side content inset for the vertical settings scrollbar, disable horizontal overflow, and prevent controls or labels from rendering beneath the scrollbar. |
 | ICW-001 | Done | Story | Add repeatable performance benchmark harness | BenchmarkDotNet covers STR query selectivity, live snapshot/hot/publishing queries, snapshot rebuild allocation, and Windows projection plus bitmap generation. |
 | ICW-002 | Done | Story | Capture an immutable camera state per frame | Viewport query and every projection use the same transform state. |

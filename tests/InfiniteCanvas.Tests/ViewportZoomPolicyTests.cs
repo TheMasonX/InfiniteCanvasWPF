@@ -85,4 +85,36 @@ public class ViewportZoomPolicyTests
 
         Assert.That(percent, Is.EqualTo(100));
     }
+
+    [Test]
+    public void ComputeWheelDeltas_BothAxesClamped_ChoosesMaxUniformTargetOrFallsBack()
+    {
+        // Case: both axes are clamped and requested scale produces uniform target >= minima
+        var deltas1 = ViewportZoomPolicy.ComputeWheelDeltas(
+            currentScaleX: 0.5,
+            currentScaleY: 0.5,
+            minimumScaleX: 0.5,
+            minimumScaleY: 0.5,
+            requestedScaleDelta: 1.2);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(deltas1.ScaleX, Is.EqualTo(1.2));
+            Assert.That(deltas1.ScaleY, Is.EqualTo(1.2));
+        });
+
+        // Case: both clamped but uniform target is below one minimum -> fallback to per-axis minima
+        var deltas2 = ViewportZoomPolicy.ComputeWheelDeltas(
+            currentScaleX: 0.5,
+            currentScaleY: 0.5,
+            minimumScaleX: 0.5,
+            minimumScaleY: 0.7,
+            requestedScaleDelta: 1.1);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Math.Round(deltas2.ScaleX, 3), Is.EqualTo(1.0)); // stays at minX
+            Assert.That(Math.Round(deltas2.ScaleY, 3), Is.EqualTo(1.4)); // raised to minY (0.7 / 0.5)
+        });
+    }
 }

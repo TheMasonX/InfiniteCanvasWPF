@@ -55,6 +55,30 @@ public sealed class SampleImageTile
             : mipLevel => ValidateMipPixels(mipPixelFactory(mipLevel), pixelWidth, pixelHeight, mipLevel);
         _pixelCost = checked(pixelWidth * pixelHeight);
         Annotations = annotations;
+        // Optional shared defect template pool reference for lifecycle disposal.
+        DefectTemplatePool = null;
+    }
+
+    internal IReadOnlyList<SampleImageGenerator.DefectTemplate>? DefectTemplatePool { get; set; }
+
+    /// <summary>
+    /// Dispose unique defect template pools from the given tile collection.
+    /// The pool is shared across all tiles in a generation set, so we collect
+    /// distinct references and dispose each pool exactly once.
+    /// </summary>
+    public static void DisposeDefectTemplatePools(IReadOnlyList<SampleImageTile> tiles)
+    {
+        if (tiles is null || tiles.Count == 0) return;
+
+        var disposed = new HashSet<object>();
+        for (var i = 0; i < tiles.Count; i++)
+        {
+            var pool = tiles[i].DefectTemplatePool;
+            if (pool is not null && disposed.Add(pool))
+            {
+                DefectTemplateFactory.DisposePool(pool);
+            }
+        }
     }
 
     public string Id { get; }
@@ -131,7 +155,40 @@ public sealed class SampleImageTile
             return true;
         }
 
+        // If no native pixels are available yet, start native generation and
+        // attempt to return the best available mip as a fallback so the
+        // renderer can display a lower-resolution image until the native
+        // image finishes generating.
         EnsurePixelsGenerationStarted(tryReserveCacheEntry);
+
+        if (_mipPixelFactory is null)
+        {
+            pixels = [];
+            return false;
+        }
+
+        lock (_cacheGate)
+        {
+            var fallbackCandidates = new List<(int MipLevel, byte[] Pixels)>();
+            if (_pixels is not null)
+            {
+                fallbackCandidates.Add((0, _pixels));
+            }
+
+            fallbackCandidates.AddRange(_mipPixels.Select(pair => (pair.Key, pair.Value)));
+
+            var fallback = fallbackCandidates
+                .OrderBy(candidate => Math.Abs(candidate.MipLevel - 0))
+                .ThenBy(candidate => candidate.MipLevel)
+                .FirstOrDefault(candidate => candidate.Pixels is not null);
+
+            if (fallback.Pixels is not null)
+            {
+                pixels = fallback.Pixels;
+                return true;
+            }
+        }
+
         pixels = [];
         return false;
     }
@@ -150,7 +207,22 @@ public sealed class SampleImageTile
         out int residentMipLevel,
         Func<bool>? tryReserveCacheEntry = null)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(mipLevel);
+        ArgumentOutOfRangeException.ThrowIfNegative(mipLevel);
+
+        // For mip level 0, native pixels ARE the mip-0 data. Check them first
+        // and trigger native generation (not mip-0 generation via the mip factory)
+        // so the fallback logic below can correctly report residentMipLevel.
+        if (mipLevel == 0)
+        {
+            if (TryGetNativePixels(out pixels!))
+            {
+                residentMipLevel = 0;
+                return true;
+            }
+
+            EnsurePixelsGenerationStarted(tryReserveCacheEntry);
+        }
+
         lock (_cacheGate)
         {
             if (_mipPixels.TryGetValue(mipLevel, out pixels!))
@@ -167,7 +239,11 @@ public sealed class SampleImageTile
             return TryGetNativePixels(out pixels);
         }
 
-        EnsureMipPixelsGenerationStarted(mipLevel, tryReserveCacheEntry);
+        if (mipLevel > 0)
+        {
+            EnsureMipPixelsGenerationStarted(mipLevel, tryReserveCacheEntry);
+        }
+
         lock (_cacheGate)
         {
             var fallbackCandidates = new List<(int MipLevel, byte[] Pixels)>();
@@ -556,6 +632,11 @@ public sealed class TileCacheBudget
 
                 _trackedTiles.Remove(evictedTile.Id);
                 Interlocked.Add(ref _usedBytes, -evictedTile.PixelCost);
+                // Reset pixel caches. The defect template pool is NOT disposed here
+                // because it is shared across all tiles in a generation set; disposing
+                // it on eviction of any single tile would invalidate the other tiles'
+                // annotation bitmaps. Pool disposal is managed at the scene-regeneration
+                // boundary (see RegenerateSceneAsync).
                 evictedTile.ResetImageCache();
                 Interlocked.Increment(ref _evictionCount);
             }

@@ -11,6 +11,19 @@ using GdiImaging = System.Drawing.Imaging;
 
 namespace InfiniteCanvas.Rendering;
 
+/// <summary>
+/// Creates <see cref="InteropBitmap"/> instances that map a native memory section
+/// directly into WPF bitmaps. The returned <see cref="InteropBitmap"/> values are
+/// backed by the factory's file-mapping section and therefore are only valid while
+/// the factory (and its underlying file mapping) remains alive.
+/// </summary>
+/// <remarks>
+/// - Callers should keep the <see cref="ZeroCopyBitmapFactory"/> instance alive
+///   for the duration of any <see cref="InteropBitmap"/> usage. Disposing the
+///   factory invalidates previously returned bitmaps.
+/// - The implementation uses <c>PixelFormats.Bgra32</c> and a tightly-packed
+///   stride of <c>width * 4</c> bytes; callers should not assume other formats.
+/// </remarks>
 public sealed class ZeroCopyBitmapFactory : IDisposable
 {
     private const uint PageReadWrite = 0x04;
@@ -95,6 +108,8 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
                 pixels[offset + 3] = pixelColor.Alpha;
             }
 
+            // The returned InteropBitmap references the factory's memory section.
+            // Keep the factory instance alive while consumers hold references to the bitmap.
             var bitmap = (InteropBitmap)Imaging.CreateBitmapSourceFromMemorySection(
                 _section.DangerousGetHandle(),
                 _layout.Width,
@@ -142,6 +157,8 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
                 }
             }
 
+            // The returned InteropBitmap references the factory's memory section.
+            // Keep the factory instance alive while consumers hold references to the bitmap.
             var bitmap = (InteropBitmap)Imaging.CreateBitmapSourceFromMemorySection(
                 _section.DangerousGetHandle(),
                 _layout.Width,
@@ -175,16 +192,11 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
 
         var mipLevel = BackgroundTileMipPolicy.SelectMipLevel(camera);
         byte[]? sourcePixels = null;
-        var residentMipLevel = mipLevel;
-        var hasSourcePixels = mipLevel == 0
-            ? tile.TryGetPixelsNonBlocking(
-                out sourcePixels,
-                tryReserveCacheEntry is null ? null : () => tryReserveCacheEntry(tile))
-            : tile.TryGetPixelsNonBlocking(
-                mipLevel,
-                out sourcePixels,
-                out residentMipLevel,
-                tryReserveCacheEntry is null ? null : () => tryReserveCacheEntry(tile));
+        var hasSourcePixels = tile.TryGetPixelsNonBlocking(
+            mipLevel,
+            out sourcePixels,
+            out var residentMipLevel,
+            tryReserveCacheEntry is null ? null : () => tryReserveCacheEntry(tile));
         var sourceDimensions = BackgroundTileMipPolicy.GetDimensions(tile.PixelWidth, tile.PixelHeight, residentMipLevel);
         var placeholder = tile.PlaceholderValue;
 

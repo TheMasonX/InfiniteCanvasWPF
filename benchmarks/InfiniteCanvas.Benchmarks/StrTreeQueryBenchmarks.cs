@@ -7,7 +7,7 @@ namespace InfiniteCanvas.Benchmarks;
 [MemoryDiagnoser]
 public class StrTreeQueryBenchmarks
 {
-    private StrTreeSpatialIndexService<BenchmarkEntity> _index = null!;
+    private StrTreeSpatialIndexService<BenchmarkEntity>? _index = null;
     private SpatialBounds _viewport;
 
     [Params(100_000, 1_000_000, 10_000_000)]

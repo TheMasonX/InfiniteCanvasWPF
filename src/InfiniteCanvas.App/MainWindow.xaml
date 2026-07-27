@@ -65,7 +65,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" MinWidth="400"/>
                 <ColumnDefinition Width="5" />
-                <ColumnDefinition Width="250" MinWidth="100"/>
+                <ColumnDefinition Width="280" MinWidth="100"/>
             </Grid.ColumnDefinitions>
 
             <Border x:Name="ViewportHost" Grid.Column="0"
@@ -133,7 +133,7 @@
                                        Foreground="{StaticResource SecondaryTextBrush}" />
                         </StackPanel>
                     </Border>
-                    <ProgressBar Grid.Row="3" x:Name="RenderBusyBar" Height="1" IsIndeterminate="True" Visibility="Collapsed" d:Visibility="Visible"
+                    <ProgressBar Grid.Row="3" x:Name="RenderBusyBar" Height="2" IsIndeterminate="True" Visibility="Collapsed" d:Visibility="Visible"
                              VerticalAlignment="Bottom" HorizontalAlignment="Stretch" />
                 </Grid>
             </Border>

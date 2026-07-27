@@ -10,7 +10,7 @@ public class TileMaterializationBenchmarks
     [Params(2_048, 8_192)]
     public int TileWidth { get; set; }
 
-    private SampleImageTile[] _tiles = null!;
+    private SampleImageTile[]? _tiles = null;
 
     [GlobalSetup]
     public void Setup()

@@ -18,16 +18,18 @@ internal static class SerilogHost
         System.IO.Directory.CreateDirectory(logDirectory);
 
         var filePath = System.IO.Path.Combine(logDirectory, "infinitecanvas-.log");
+        string outputTemplate = "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}";
 
         var configuration = new LoggerConfiguration()
             .MinimumLevel.Debug()
             .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
             .Enrich.FromLogContext()
+            .WriteTo.Trace(outputTemplate: outputTemplate)
             .WriteTo.File(
                 path: filePath,
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 14,
-                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}");
+                outputTemplate: outputTemplate);
 
         try
         {

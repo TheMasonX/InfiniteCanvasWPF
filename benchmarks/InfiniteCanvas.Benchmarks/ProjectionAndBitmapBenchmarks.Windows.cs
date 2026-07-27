@@ -9,8 +9,8 @@ namespace InfiniteCanvas.Benchmarks;
 public class ProjectionAndBitmapBenchmarks
 {
     private readonly CameraTransform _camera = new();
-    private BenchmarkEntity[] _entities = null!;
-    private ZeroCopyBitmapFactory _bitmapFactory = null!;
+    private BenchmarkEntity[]? _entities = null;
+    private ZeroCopyBitmapFactory? _bitmapFactory = null;
 
     [Params(1_000, 10_000, 100_000)]
     public int VisiblePointCount { get; set; }

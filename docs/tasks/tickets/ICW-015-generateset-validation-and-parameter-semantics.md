@@ -2,7 +2,7 @@
 id: ICW-015-generateset-validation-and-parameter-semantics
 key: ICW-015
 title: Icw 015 Generateset Validation And Parameter Semantics
-status: Proposed
+status: Done
 type: Task
 priority: P2
 tags:
@@ -13,7 +13,7 @@ related: []
 links:
   - docs/tasks/README.md
 created: 2026-07-25
-updated: 2026-07-25
+updated: 2026-07-26
 ---
 
 # ICW-015-generateset-validation-and-parameter-semantics

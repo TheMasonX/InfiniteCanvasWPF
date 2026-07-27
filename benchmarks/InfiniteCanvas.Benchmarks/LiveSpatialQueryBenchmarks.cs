@@ -7,8 +7,8 @@ namespace InfiniteCanvas.Benchmarks;
 [MemoryDiagnoser]
 public class LiveSpatialQueryBenchmarks
 {
-    private BlockingSpatialIndexBuilder _builder = null!;
-    private LiveSpatialIndexService<BenchmarkEntity> _service = null!;
+    private BlockingSpatialIndexBuilder? _builder = null;
+    private LiveSpatialIndexService<BenchmarkEntity>? _service = null;
     private Task? _publicationTask;
     private SpatialBounds _viewport;
 

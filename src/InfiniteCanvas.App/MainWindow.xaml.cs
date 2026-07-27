@@ -168,6 +168,11 @@ public partial class MainWindow : Window
             _tileCacheBudget = new TileCacheBudget(_tileCacheBudget.MaxBytes);
             UnsubscribeTileGenerationEvents(_tiles);
 
+            // Dispose defect template pools from the previous scene. The pool is
+            // shared across all tiles in a generation set, so we collect unique
+            // references and dispose them once at the scene boundary.
+            SampleImageTile.DisposeDefectTemplatePools(_tiles);
+
             var tileCount = checked(_tileColumns * _tileRows);
             StatusText.Text = $"Generating metadata for {tileCount:N0} inspection tiles";
             SceneSummaryText.Text = $"{tileCount:N0} TILE INSPECTION SCENE ({_tileColumns} x {_tileRows})";
@@ -1432,9 +1437,31 @@ public partial class MainWindow : Window
                 _tiles[0].Bounds.Height,
                 _tileColumns,
                 _tiles.Count,
-                out var tileIndex)
-            && _tiles[tileIndex].TryGetPixelValue(worldX, worldY, out background))
+                out var tileIndex))
         {
+            var tile = _tiles[tileIndex];
+
+            // Sample the pixel from the visible/resident mip level rather than
+            // forcing native-resolution generation. Convert world -> tile ->
+            // mip coordinates using the resident mip dimensions so indexing is
+            // safe when a lower-resolution mip is used as a fallback.
+            byte[] sourcePixels;
+            var hasSourcePixels = tile.TryGetPixelsNonBlocking(
+                mipLevel, out sourcePixels, out var residentMipLevel);
+
+            var sourceDimensions = BackgroundTileMipPolicy.GetDimensions(tile.PixelWidth, tile.PixelHeight, residentMipLevel);
+            var sourceX = Math.Clamp((int)((worldX - tile.Bounds.X) * sourceDimensions.Width / tile.Bounds.Width), 0, Math.Max(0, sourceDimensions.Width - 1));
+            var sourceY = Math.Clamp((int)((worldY - tile.Bounds.Y) * sourceDimensions.Height / tile.Bounds.Height), 0, Math.Max(0, sourceDimensions.Height - 1));
+
+            if (hasSourcePixels)
+            {
+                background = sourcePixels[(sourceY * sourceDimensions.Width) + sourceX];
+            }
+            else
+            {
+                background = tile.PlaceholderValue;
+            }
+
             defect = 0;
             var sampleArea = new SpatialBounds(worldX, worldY, 0.01, 0.01);
             var hitAnnotations = _spatialIndex.Query(sampleArea);
@@ -1446,7 +1473,6 @@ public partial class MainWindow : Window
                 }
             }
 
-            var tile = _tiles[tileIndex];
             var dimensions = BackgroundTileMipPolicy.GetDimensions(tile.PixelWidth, tile.PixelHeight, mipLevel);
             tileInfo = new BackgroundTileReadoutInfo(tile.Id, mipLevel, dimensions.Width, dimensions.Height);
             tileId = tile.Id;

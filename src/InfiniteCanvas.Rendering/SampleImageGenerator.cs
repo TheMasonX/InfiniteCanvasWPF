@@ -45,14 +45,28 @@ public static class SampleImageGenerator
         ["Stain"] = new(120, 220, 120, 255),
         ["Edge defect"] = new(90, 160, 255, 255)
     };
-    public sealed record DefectTemplate(
+        public sealed record DefectTemplate(
         int Width,
         int Height,
         byte[] Pixels
-#if WINDOWS
+    #if WINDOWS
         , Bitmap Bitmap
-#endif
-    );
+    #endif
+        ) : IDisposable
+        {
+        public void Dispose()
+        {
+    #if WINDOWS
+            Bitmap?.Dispose();
+    #endif
+        }
+        }
+
+    // Centralized byte conversion helpers: keep intermediate math in wider types
+    // and convert to `byte` only at the pixel-sink boundary.
+    private static byte ToByteClamped(int v) => (byte)Math.Clamp(v, 0, 255);
+    private static byte ToByteClamped(double v) => (byte)Math.Clamp((int)Math.Round(v), 0, 255);
+    private const byte DefectBaseValue = 150;
 
     public static IReadOnlyList<SampleImageTile> GenerateSet(
         int imageCount = 64,
@@ -72,6 +86,24 @@ public static class SampleImageGenerator
         int defectPoolSize = 64,
         int circleCount = 3)
     {
+        // Preserve original parameter validation so thrown exceptions keep caller-visible parameter names.
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(imageCount);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pixelWidth);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pixelHeight);
+
+        if (objectsPerTile is < 0 or > MaxObjectsPerTile)
+        {
+            throw new ArgumentOutOfRangeException(nameof(objectsPerTile));
+        }
+
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(columns);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(defectPoolSize);
+
+        if (rows is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(rows));
+        }
+
         // Forwarding overload preserved for backward compatibility.
         var options = new GeneratorOptions(
             ImageCount: imageCount,
@@ -96,23 +128,39 @@ public static class SampleImageGenerator
 
     public static IReadOnlyList<SampleImageTile> GenerateSet(GeneratorOptions options)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.ImageCount);
-
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.PixelWidth);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.PixelHeight);
-
-        if (options.ObjectsPerTile is < 0 or > MaxObjectsPerTile)
+        if (options.ImageCount <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(options.ObjectsPerTile));
+            throw new ArgumentOutOfRangeException("imageCount");
         }
 
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.Columns);
+        if (options.PixelWidth <= 0)
+        {
+            throw new ArgumentOutOfRangeException("pixelWidth");
+        }
 
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.DefectPoolSize);
+        if (options.PixelHeight <= 0)
+        {
+            throw new ArgumentOutOfRangeException("pixelHeight");
+        }
+
+        if (options.ObjectsPerTile < 0 || options.ObjectsPerTile > MaxObjectsPerTile)
+        {
+            throw new ArgumentOutOfRangeException("objectsPerTile");
+        }
+
+        if (options.Columns <= 0)
+        {
+            throw new ArgumentOutOfRangeException("columns");
+        }
+
+        if (options.DefectPoolSize <= 0)
+        {
+            throw new ArgumentOutOfRangeException("defectPoolSize");
+        }
 
         if (options.Rows is <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(options.Rows));
+            throw new ArgumentOutOfRangeException("rows");
         }
 
         var rowCount = options.Rows ?? Math.Max(1, (int)Math.Ceiling(options.ImageCount / (double)options.Columns));
@@ -121,7 +169,7 @@ public static class SampleImageGenerator
         {
             throw new ArgumentException(
                 "imageCount must equal columns multiplied by rows when rows is specified.",
-                nameof(options.ImageCount));
+                "imageCount");
         }
 
         var poolSeed = unchecked(options.Seed + 48611);
@@ -155,6 +203,9 @@ public static class SampleImageGenerator
                 annotations,
                 options.TargetValue,
                 mipLevel => GenerateMonochromeMipPixelsSeeded(options.PixelWidth, options.PixelHeight, options.TargetValue, options.Noise, mipLevel, pixelSeed, options.CircleCount, noiseSettings, (float)bounds.X, (float)bounds.Y, tileId));
+            // Attach a reference to the shared defect template pool so eviction paths
+            // can dispose platform bitmaps when the tile's images are evicted/regenerated.
+            tiles[tileIndex].DefectTemplatePool = defectTemplatePool;
         }
 
         return tiles;
@@ -262,12 +313,12 @@ public static class SampleImageGenerator
         var scaleX = width / (double)nativeWidth;
         var scaleY = height / (double)nativeHeight;
         var circles = new (float CenterX, float CenterY, float Radius, byte Value)[effectiveCircleCount];
-        for (var circleIndex = 0; circleIndex < effectiveCircleCount; circleIndex++)
+            for (var circleIndex = 0; circleIndex < effectiveCircleCount; circleIndex++)
         {
             var centerX = random.Next(0, nativeWidth);
             var centerY = random.Next(0, nativeHeight);
             var radius = random.Next(6, maxRadius + 1);
-            var circleValue = (byte)Math.Clamp(targetValue - random.Next(10, 34), 0, 255);
+            var circleValue = ToByteClamped(targetValue - random.Next(10, 34));
             circles[circleIndex] = ((float)(centerX * scaleX), (float)(centerY * scaleY), (float)(radius * Math.Min(scaleX, scaleY)), circleValue);
         }
 
@@ -402,7 +453,7 @@ public static class SampleImageGenerator
                     }
                 }
 
-                destination[(y * destinationDimensions.Width) + x] = (byte)((sum + (count / 2)) / count);
+                destination[(y * destinationDimensions.Width) + x] = ToByteClamped((sum + (count / 2)) / count);
             }
         }
 
@@ -472,7 +523,7 @@ public static class SampleImageGenerator
         var noiseBuffer = ArrayPool<float>.Shared.Rent(pixelCount);
         try
         {
-            using var fastNoise = CreateFastNoise(noiseSettings, seed);
+            using var fastNoise = CreateFastNoise(noiseSettings);
             var outputMinMax = fastNoise.GenUniformGrid2D(
                 noiseBuffer.AsSpan(0, pixelCount),
                 worldOriginX,
@@ -501,7 +552,7 @@ public static class SampleImageGenerator
                 var jitter = scaledJitter >= 0.0f
                     ? (int)(scaledJitter + 0.5f)
                     : (int)(scaledJitter - 0.5f);
-                pixels[index] = (byte)Math.Clamp(targetValue + jitter, 0, 255);
+                pixels[index] = ToByteClamped(targetValue + jitter);
             }
         }
         finally
@@ -510,7 +561,7 @@ public static class SampleImageGenerator
         }
     }
 
-    private static FastNoise CreateFastNoise(NoiseSettings noiseSettings, int seed)
+    private static FastNoise CreateFastNoise(NoiseSettings noiseSettings)
     {
         var fastNoise = new FastNoise("FractalFBm");
         fastNoise.Set("Source", new FastNoise("Simplex"));
@@ -590,7 +641,7 @@ public static class SampleImageGenerator
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
 
         var pixels = new byte[checked(width * height)];
-        Array.Fill(pixels, (byte)150);
+        Array.Fill(pixels, DefectBaseValue);
         var circleCount = random.Next(2, 6);
         var baseCenterX = (width - 1) / 2.0;
         var baseCenterY = (height - 1) / 2.0;
@@ -604,7 +655,7 @@ public static class SampleImageGenerator
             var centerX = baseCenterX + ((random.NextDouble() * 2 - 1) * maxJitterX);
             var centerY = baseCenterY + ((random.NextDouble() * 2 - 1) * maxJitterY);
             var radius = minimumRadius + (random.NextDouble() * (maximumRadius - minimumRadius));
-            var value = (byte)random.Next(24, 236);
+            var value = ToByteClamped(random.Next(24, 236));
 
             var left = Math.Max(0, (int)Math.Floor(centerX - radius));
             var right = Math.Min(width - 1, (int)Math.Ceiling(centerX + radius));

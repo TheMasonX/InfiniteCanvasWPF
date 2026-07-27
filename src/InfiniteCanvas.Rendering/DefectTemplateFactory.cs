@@ -5,6 +5,16 @@ namespace InfiniteCanvas.Rendering;
 
 internal static class DefectTemplateFactory
 {
+    /// <summary>
+    /// Build a defect template pool. Each template contains a centered grayscale
+    /// pixel payload and, on Windows, a <see cref="System.Drawing.Bitmap"/>
+    /// created with <c>PixelFormat.Format24bppRgb</c> for renderer consumption.
+    /// </summary>
+    /// <remarks>
+    /// Consumers should treat the returned pool as an owned resource and dispose
+    /// the contained templates (or call <see cref="DisposePool"/>) when no longer
+    /// needed so platform bitmaps are released promptly.
+    /// </remarks>
     public static IReadOnlyList<SampleImageGenerator.DefectTemplate> Build(int count, SampleImageGenerator.DeterministicRandom random)
     {
         var pool = new SampleImageGenerator.DefectTemplate[count];
@@ -26,6 +36,26 @@ internal static class DefectTemplateFactory
         }
 
         return pool;
+    }
+
+    /// <summary>
+    /// Dispose bitmaps held by a defect template pool. Callers that take ownership
+    /// of the returned pool should call this when the pool is no longer needed.
+    /// </summary>
+    public static void DisposePool(IReadOnlyList<SampleImageGenerator.DefectTemplate> pool)
+    {
+        if (pool == null) return;
+        foreach (var t in pool)
+        {
+            try
+            {
+                t.Dispose();
+            }
+            catch
+            {
+                // Best-effort; do not rethrow during disposal.
+            }
+        }
     }
 
 #if WINDOWS
