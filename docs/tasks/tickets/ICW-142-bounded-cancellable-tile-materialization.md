@@ -3,7 +3,7 @@ id: ICW-142
 author: Copilot
 key: ICW-142
 title: Add bounded cancellable tile materialization ownership
-status: To Do
+status: In Progress
 type: Story
 priority: P1
 tags:
@@ -59,6 +59,26 @@ Outcome: Pending implementation.
 ## Notes
 
 Do not use `CancellationTokenSource.Dispose` from a viewport-culling loop while a worker may still observe the token. Coordinator ownership must define when token sources are disposed. Preserve the current resident-mip fallback while replacement work is pending.
+
+## Implementation progress
+
+### Done
+- `TileWorkCoordinator` class created with:
+  - Bounded concurrency (default 4, configurable)
+  - Deduplication by `BackgroundTileCacheKey` (coalesces equal keys)
+  - Shared-fill claimant tracking with `AddClaimant`/`RemoveClaimant`
+  - Per-claimant token registration that auto-removes claimants when their token fires
+  - Work-level `CancellationTokenSource` canceled when last claimant is removed
+  - `CancelAll()` for shutdown/reset
+  - Structured diagnostic counters: admitted, coalesced, completed, canceled, failed, reservation releases
+  - `IDisposable` with proper cleanup
+- Both Debug and Release builds succeed (only FastNoise2 submodule warnings)
+
+### Next steps
+1. Write focused unit tests for `TileWorkCoordinator` (cancellation before start, during generation, shared waiter survival, failure cleanup)
+2. Wire coordinator into `SampleImageTile.EnsurePixelsGenerationStarted` and `EnsureMipPixelsGenerationStarted`
+3. Wire into `MainWindow` render pipeline (create coordinator instance, integrate with render/regeneration lifecycle)
+4. Update status text to show coordinator counters
 
 ## Related Tasks
 
