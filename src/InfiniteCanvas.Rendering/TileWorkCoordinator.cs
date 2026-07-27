@@ -275,17 +275,26 @@ public sealed class TileWorkCoordinator : IDisposable
             {
                 var pixels = await item.Factory(item.WorkToken).ConfigureAwait(false);
 
+                var wasCanceled = false;
                 lock (_lock)
                 {
-                    if (_disposed || item.State == TileWorkItemState.Canceled)
+                    if (_disposed)
                         return;
 
-                    item.State = TileWorkItemState.Completed;
-                    Interlocked.Increment(ref _completedCount);
-                    _activeCount--;
-                    _items.Remove(item.CacheKey);
+                    wasCanceled = item.State == TileWorkItemState.Canceled;
+                    if (!wasCanceled)
+                    {
+                        item.State = TileWorkItemState.Completed;
+                        Interlocked.Increment(ref _completedCount);
+                        _activeCount--;
+                        _items.Remove(item.CacheKey);
+                    }
                 }
 
+                // Always dispatch completion so the tile can reset its
+                // generation-queued flag, even if the item was canceled
+                // (the factory ran to completion). The tile's callback
+                // handles epoch checks and decides whether to publish.
                 item.DispatchCompleted(pixels);
                 DrainQueue();
             }
@@ -338,8 +347,10 @@ public sealed class TileWorkCoordinator : IDisposable
         }
         else
         {
-            // Queued work: just remove from queue.
+            // Queued work: notify the tile so it can reset its generation flag.
             RemoveFromQueue(key);
+            item.DispatchFailed(new OperationCanceledException(
+                "Tile work was canceled before execution"));
         }
 
         _items.Remove(key);
