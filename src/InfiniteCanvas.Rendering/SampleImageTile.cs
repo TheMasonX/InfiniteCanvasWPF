@@ -496,6 +496,13 @@ public sealed class SampleImageTile
 #endif
                 shouldRaiseEvent = true;
             }
+            else
+            {
+                // Pixels discarded — epoch mismatch (tile was reset/evicted after
+                // the request was made) or pixels already present. Reset the
+                // generation-queued flag so the tile can retry generation.
+                Interlocked.Exchange(ref _generationQueued, 0);
+            }
         }
 
         if (shouldRaiseEvent)
@@ -607,18 +614,23 @@ public sealed class SampleImageTile
     {
         var expectedEpoch = key.ContentRevision;
         var mipLevel = key.MipLevel;
+        var shouldRaiseEvent = false;
 
         lock (_cacheGate)
         {
             if (expectedEpoch == Volatile.Read(ref _generationEpoch))
             {
                 _mipPixels[mipLevel] = pixels;
+                shouldRaiseEvent = true;
             }
 
             _mipGenerationQueued.Remove(mipLevel);
         }
 
-        PixelsGenerated?.Invoke(this, EventArgs.Empty);
+        if (shouldRaiseEvent)
+        {
+            PixelsGenerated?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     private static byte[] ValidatePixels(byte[] pixels, int width, int height)
