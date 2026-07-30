@@ -59,6 +59,7 @@ public partial class MainWindow : Window
     private IReadOnlyList<FeatureDisplayItem> _selectedAnnotationFeatures = [];
     private TileWorkCoordinator _tileCoordinator = null!;
     private int _frameClaimantId;
+    private readonly RenderRequestTracker _renderRequestTracker = new();
     private int _diagnosticsFrameCount;
     private readonly Stopwatch _diagnosticsStopwatch = Stopwatch.StartNew();
     private long _lastFrameTicks;
@@ -170,6 +171,10 @@ public partial class MainWindow : Window
             LoadingOverlay.Visibility = Visibility.Visible;
             RegenerateButton.IsEnabled = false;
 
+            // Preserve the previous MainViewModel's background noise settings
+            // before InitializeSpatialState creates a new MainViewModel.
+            var previousNoiseSettings = _mainViewModel?.CreateBackgroundNoiseSnapshot();
+
             InitializeSpatialState();
             _selectedAnnotationId = null;
             _camera = new CameraTransform();
@@ -188,7 +193,10 @@ public partial class MainWindow : Window
             StatusText.Text = $"Generating metadata for {tileCount:N0} inspection tiles";
             SceneSummaryText.Text = $"{tileCount:N0} TILE INSPECTION SCENE ({_tileColumns} x {_tileRows})";
 
-            var backgroundNoiseSettings = _mainViewModel.CreateBackgroundNoiseSnapshot();
+            // Restore background noise settings from the previous MainViewModel
+            // so that user-configured values survive scene regeneration.
+            var backgroundNoiseSettings = previousNoiseSettings
+                ?? _mainViewModel!.CreateBackgroundNoiseSnapshot();
             _tiles = await Task.Run(
                 () => SampleImageGenerator.GenerateSet(
                     imageCount: tileCount,
@@ -348,6 +356,9 @@ public partial class MainWindow : Window
         var viewport = camera.GetViewportBounds(width, height);
         var stopwatch = Stopwatch.StartNew();
 
+        // Track this render request for stale-frame rejection.
+        var requestVersion = _renderRequestTracker.BeginRequest();
+
         var factory = AcquireBackBuffer(width, height);
         var frame = await Task.Run(() =>
         {
@@ -364,8 +375,14 @@ public partial class MainWindow : Window
             return (Bitmap: bitmap, VisibleItems: visibleItems, VisibleTiles: visibleTiles);
         }, cancellationToken);
 
+        // If a newer render request has started since we began, discard
+        // this stale frame to prevent out-of-order publication.
+        if (!_renderRequestTracker.IsCurrent(requestVersion))
+            return;
+
         var frameVisual = BuildFrameVisual(frame.Bitmap, frame.VisibleItems, camera, width, height);
         PublishFrame(factory, frameVisual);
+        _renderRequestTracker.Advance();
         _viewModel.ApplyFrame(viewport, frame.VisibleItems.Count);
         _mainViewModel.ApplyViewportState(frame.VisibleItems.Count, _spatialIndex.Count);
 

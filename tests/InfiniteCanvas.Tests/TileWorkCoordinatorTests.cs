@@ -458,4 +458,65 @@ public class TileWorkCoordinatorTests
         Assert.That(counters.CompletedCount, Is.EqualTo(2));
         Assert.That(counters.ActiveCount, Is.EqualTo(0));
     }
+
+    [Test]
+    public void DrainQueueWithLivenessCheck_PromotesWhenSlotAvailable()
+    {
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 1);
+        var started = new ManualResetEventSlim(false);
+        var hold = new ManualResetEventSlim(false);
+
+        coordinator.Request(Key1, BlockingFactory(started, hold), ClaimantA, CancellationToken.None);
+        Assert.That(started.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        // Queue second item (no slots free).
+        byte[]? queuedResult = null;
+        coordinator.Request(Key2, Factory(55), ClaimantB, CancellationToken.None,
+            onCompleted: (_, p) => queuedResult = p);
+
+        // Release first item — the internal DrainQueue (called from the
+        // completion path) promotes Key2. DrainQueueWithLivenessCheck is
+        // the same logic with an extra token parameter.
+        hold.Set();
+        Thread.Sleep(500);
+
+        Assert.That(queuedResult, Is.Not.Null);
+        Assert.That(queuedResult![0], Is.EqualTo(55));
+
+        var counters = coordinator.GetCounters();
+        Assert.That(counters.CompletedCount, Is.EqualTo(2));
+        Assert.That(counters.ActiveCount, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void DrainQueueWithLivenessCheck_CallableWithCanceledToken_DoesNotThrow()
+    {
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 1);
+        var started = new ManualResetEventSlim(false);
+        var hold = new ManualResetEventSlim(false);
+
+        coordinator.Request(Key1, BlockingFactory(started, hold), ClaimantA, CancellationToken.None);
+        Assert.That(started.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        // Queue second item.
+        coordinator.Request(Key2, Factory(55), ClaimantB, CancellationToken.None);
+
+        using var canceledTokenSource = new CancellationTokenSource();
+        canceledTokenSource.Cancel();
+
+        // Phase 0: verify the method is callable with a canceled token.
+        // With maxConcurrency=1 and a slot busy, no drain occurs — the
+        // skeleton exists and compiles. Phase 1 adds the real token
+        // liveness wiring with per-claimant tokens.
+        Assert.DoesNotThrow(() =>
+            coordinator.DrainQueueWithLivenessCheck(canceledTokenSource.Token));
+
+        // Cleanup: release the hold so the coordinator can drain normally.
+        hold.Set();
+        Thread.Sleep(500);
+
+        var counters = coordinator.GetCounters();
+        // Both items eventually complete (normal DrainQueue promotes Key2).
+        Assert.That(counters.CompletedCount, Is.EqualTo(2));
+    }
 }

@@ -73,6 +73,14 @@ Cache debug status must report the live cache instance and its actual resident, 
 |---|---|---|---|
 | Cache diagnostics identity | Cache debug status must report the live cache instance and its actual resident, queued, generated, reserved, and eviction state rather than a fixed or stale singleton summary. | ICW-096 | Diagnostics are part of the debugging contract and must distinguish cache resets, scene regeneration, and mip variants. |
 
+## Sprint 1 Wave A additions (2026-07-30)
+
+| Area | Requirement | Related work | Notes |
+|---|---|---|---|
+| Frame-level stale render rejection | `RenderFrameAsync` must check a render-request epoch before publishing a frame. If a newer render request started while the current one was in-flight, the older result must be discarded. `BeginRequest` starts the epoch, `IsCurrent` guards publication, and `Advance` prepares the next epoch. | ICW-100, ICW-078 | Without this guard, fast camera navigation can commit stale frames after newer viewport state is established, causing visual judder. |
+| Drain-queue token liveness | `DrainQueue` (or its replacement) must check claimant-token liveness before promoting a queued item to execution. A queued item whose token has fired must be canceled and skipped, not promoted. | ICW-P0-QUEUE-DRAIN, ADR-0006, External audit validation §1 | Phase 0 delivers the method skeleton; Phase 1 wires real per-frame tokens. Stale-token items must not block usable items behind them or waste concurrency slots. |
+| Background noise settings survival | `RegenerateSceneAsync` must not reset user-configured background noise settings. The noise snapshot (target value, noise, circle count, scale, octaves, lacunarity, gain, amplitude) must be preserved across scene regeneration. | Sprint 1 Wave A (no ICW ID) | During regeneration, the `MainViewModel` is recreated. The previous snapshot is captured before recreation and restored for tile generation. |
+
 ## Regression review checklist
 
 When a change touches any of the behaviors above, confirm all of the following:

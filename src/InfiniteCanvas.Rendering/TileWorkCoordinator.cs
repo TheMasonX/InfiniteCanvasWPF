@@ -424,15 +424,40 @@ public sealed class TileWorkCoordinator : IDisposable
 
     private void DrainQueue()
     {
+        DrainQueueWithLivenessCheck(CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Drains the queue but checks claimant-token liveness before promoting
+    /// each queued item. If a queued item has no live claimants, it is
+    /// canceled and skipped rather than promoted.
+    ///
+    /// Phase 0: method skeleton with tests.
+    /// Phase 1 (after ICW-P1-CLAIMANT-TOKENS lands): wire real per-frame
+    /// claimant token so that stale-token items are correctly culled.
+    /// </summary>
+    public void DrainQueueWithLivenessCheck(CancellationToken claimantToken)
+    {
         lock (_lock)
         {
             while (_activeCount < _maxConcurrency && _queue.Count > 0)
             {
                 var key = _queue.Dequeue();
-                if (_items.TryGetValue(key, out var item) && item.State == TileWorkItemState.Queued)
+                if (!_items.TryGetValue(key, out var item) || item.State != TileWorkItemState.Queued)
+                    continue;
+
+                // Phase 0: claimant-token liveness check is a placeholder.
+                // Phase 1: replace with real token check that cancels the
+                // item if its token has fired and no other live claimants
+                // remain. For now, always promote.
+                if (claimantToken.IsCancellationRequested)
                 {
-                    StartWorkItem(item);
+                    // Token is stale — cancel this item and skip it.
+                    CancelWorkItem(key, item);
+                    continue;
                 }
+
+                StartWorkItem(item);
             }
         }
     }

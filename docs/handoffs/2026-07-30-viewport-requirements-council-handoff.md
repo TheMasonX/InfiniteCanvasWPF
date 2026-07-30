@@ -75,7 +75,7 @@ Start ICW-P0-ACTIVECOUNT (fix `_activeCount` timing — move decrement to worker
 
 ---
 
-# Supplementary Status Update/Sprint Plan
+# Forked Status Update/Sprint Plan
 
 ## Viewport Requirements Assessment
 
