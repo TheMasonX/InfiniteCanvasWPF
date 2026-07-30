@@ -406,7 +406,7 @@ Examples include:
 
 - Fixed-grid or hierarchical binning approaches. 
 
-- Directionally biased ("DW") binning optimized for SmartView-style web inspection datasets, where the inspected material continuously advances in a dominant direction and the coordinate distribution is highly anisotropic. 
+- Directionally biased ("DW") binning optimized for web inspection datasets with a dominant flow direction, where the inspected material continuously advances and the coordinate distribution is highly anisotropic. 
 
 Maintaining this abstraction allows future algorithms to be evaluated without impacting higher-level rendering, camera, or MVVM infrastructure. 
 

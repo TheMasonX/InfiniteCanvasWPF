@@ -1,0 +1,194 @@
+{
+  "meta": {
+    "reviewer": "Viewport Architecture Reviewer",
+    "date": "2026-07-30",
+    "scope": "Viewport-aware tile work + background tile mips + viewport tile transition + 14 external audit mandatory requirements + camera viewport sizing + camera-native scrollbars",
+    "sourceFiles": [
+      "docs/requirements/functional-requirements-and-invariants.md",
+      "docs/tasks/active-tasks.md",
+      "docs/ADR/0006-viewport-aware-tile-work-scheduling.md"
+    ]
+  },
+
+  "findings": [
+    {
+      "requirement": "Tile materialization must be bounded, deduplicated by complete source/revision/mip identity, and aware of the current viewport interest set.",
+      "supportingTasks": ["ICW-142", "ICW-064", "ICW-143", "ICW-076"],
+      "coverage": "partial",
+      "gapDescription": "Bounded and deduplicated materialization (ICW-142, ICW-064) is Done. Viewport interest-set awareness (ICW-143) is To Do and blocked on ICW-P0-ACTIVECOUNT, ICW-P0-QUEUE-DRAIN, ICW-P1-CLAIMANT-TOKENS — all three are Proposed, not started. Source/revision/mip identity deduplication (ICW-076) is In Progress but nonzero mip variants still need materializer/cache reservation and variant pinning.",
+      "recommendation": "Unblock ICW-143 by implementing ICW-P0-ACTIVECOUNT, ICW-P0-QUEUE-DRAIN, and ICW-P1-CLAIMANT-TOKENS. Expand ICW-076 scope to include materializer/cache reservation for nonzero mip variants."
+    },
+    {
+      "requirement": "Queued work that is no longer visible or within the configured prefetch margin must be removed or marked canceled; in-flight work must stop when it has no current claimant, while shared fills continue for remaining claimants.",
+      "supportingTasks": ["ICW-143", "ICW-P0-QUEUE-DRAIN", "ICW-P1-CLAIMANT-TOKENS"],
+      "coverage": "none",
+      "gapDescription": "ICW-143 (To Do) covers viewport culling but is not started and blocked on Phase 0/1 tasks. No existing task explicitly addresses shared-fill semantics (remaining claimants keep in-flight work alive). ICW-P0-QUEUE-DRAIN and ICW-P1-CLAIMANT-TOKENS are Proposed/unstarted. The 'configured prefetch margin' concept has no dedicated task.",
+      "recommendation": "Add explicit shared-fill semantics sub-task to ICW-143 scope. Add prefetch margin configuration as a sub-task of ICW-143 or ICW-144. Implement ICW-P0-QUEUE-DRAIN and ICW-P1-CLAIMANT-TOKENS before starting ICW-143."
+    },
+    {
+      "requirement": "Visible work must outrank prefetch and stale work, and cancellation must release reservations without stale publication or UI faults.",
+      "supportingTasks": ["ICW-143", "ICW-P0-LEASE-RELEASE", "ICW-P0-STALE-PUB", "ICW-134", "ICW-P1-PIXELCOST-MIPS", "ICW-078"],
+      "coverage": "partial",
+      "gapDescription": "Visible-work priority ordering is covered by ICW-143 (To Do). Cancellation releasing reservations: ICW-P0-LEASE-RELEASE (Proposed) is the necessary fix — ReleaseReservation is currently a no-op counter. ICW-134 (To Do) and ICW-P1-PIXELCOST-MIPS (Proposed) cover the mip-aware byte accounting. Stale publication guard exists at frame level (ICW-078) but tile-level guard (ICW-P0-STALE-PUB) is Proposed and not started. No task covers 'without UI faults' explicitly.",
+      "recommendation": "Implement ICW-P0-LEASE-RELEASE as a dependency of ICW-134. Implement ICW-P0-STALE-PUB for tile-level stale-completion rejection. Add explicit UI-fault regression coverage (no blank frames, no placeholder flash during cancellation) to ICW-143 scope."
+    },
+    {
+      "requirement": "Background tile mip levels: When the viewport is zoomed out enough, the background tile system should fetch or generate a lower-resolution canonical mip rather than always use the full-resolution source. For deterministic synthetic imagery, each requested level must be generated directly from its underlying deterministic noise. The system supports at least eight levels. Canvas and raster inputs remain source-agnostic: a materializer/cache resolves descriptor-plus-request contracts asynchronously, while the synchronous rasterizer receives only a validated resident payload or placeholder.",
+      "supportingTasks": ["ICW-076", "ICW-096", "ICW-134", "ICW-P1-PIXELCOST-MIPS", "ICW-140", "ICW-145"],
+      "coverage": "partial",
+      "gapDescription": "ICW-076 (In Progress) covers mip generation, eight-level ceiling, and direct low-pass reduction. ICW-096 (In Review) and ICW-140/ICW-145 (Done) cover resident-mip fallback during transitions. Gaps: (a) nonzero mip variants need materializer/cache reservation and variant pinning — ICW-076 explicitly lists this as remaining work. (b) Source-agnostic materializer/cache is not implemented — `IBackgroundTileSource` has zero implementers (ICW-018 tracks this). (c) ICW-134 (To Do) and ICW-P1-PIXELCOST-MIPS (Proposed) are needed for variant-aware cache accounting. (d) Asynchronous materializer contract not resolved.",
+      "recommendation": "Complete ICW-076 nonzero mip admission and completion ownership. Resolve ICW-018 (IBackgroundTileSource fate). Implement ICW-134 and ICW-P1-PIXELCOST-MIPS for mip-aware cache accounting. Add explicit task for async materializer contract if IBackgroundTileSource is kept."
+    },
+    {
+      "requirement": "Viewport tile transition: When zooming changes the selected background mip, a resident older mip or full-resolution payload must remain renderable until the requested replacement is complete; publication of a new payload must be atomic from the frame's perspective.",
+      "supportingTasks": ["ICW-096", "ICW-140", "ICW-145", "ICW-098", "ICW-078", "ICW-P0-STALE-PUB"],
+      "coverage": "partial",
+      "gapDescription": "Resident mip fallback during transitions is covered by ICW-096 (In Review), ICW-140 (Done), ICW-145 (Done), and ICW-098 (In Progress). Atomic publication from frame perspective: ICW-078 (In Progress, but wiring was reverted — tracked by ICW-100 To Do) covers frame-level epoch. Tile-level stale publication guard (ICW-P0-STALE-PUB) is Proposed and not started. No task explicitly verifies 'must remain renderable' under concurrent generation and cache eviction.",
+      "recommendation": "Complete ICW-100 (re-apply RenderRequestTracker wiring) to close ICW-078 gap. Implement ICW-P0-STALE-PUB for tile-level stale-completion rejection. Add integration test that concurrently generates a new mip while evicting the old one and asserts continuous renderability."
+    },
+    {
+      "requirement": "[External audit] Coordinator concurrency: The coordinator's `_activeCount` must represent physically executing factory delegates only. It must be decremented in the worker's terminal `finally` block, not at cancellation-request time.",
+      "supportingTasks": ["ICW-P0-ACTIVECOUNT"],
+      "coverage": "none",
+      "gapDescription": "ICW-P0-ACTIVECOUNT is Proposed and not started. This is a critical Phase 0 defect confirmed by two independent audits. It blocks ICW-143, ICW-P1-CLAIMANT-TOKENS, ICW-P1-GDI-CONCURRENCY.",
+      "recommendation": "Promote ICW-P0-ACTIVECOUNT to active implementation. It is the highest-priority dependency for the entire viewport-aware tile work stack."
+    },
+    {
+      "requirement": "[External audit] Queue drain liveness: `DrainQueue` must check claimant-token liveness before advancing past a queued item.",
+      "supportingTasks": ["ICW-P0-QUEUE-DRAIN"],
+      "coverage": "none",
+      "gapDescription": "ICW-P0-QUEUE-DRAIN is Proposed and not started. Currently dormant because ICW-P0-ACTIVECOUNT and ICW-P1-CLAIMANT-TOKENS are also unstarted, but required for ICW-143.",
+      "recommendation": "Start ICW-P0-QUEUE-DRAIN after ICW-P0-ACTIVECOUNT lands, since it depends on real claimant tokens to function."
+    },
+    {
+      "requirement": "[External audit] Claimant token wiring: Claimant tokens must originate from the frame/viewport lifecycle, not be hardcoded to `CancellationToken.None`. Per-frame claimant advancement must use token-source replacement rather than `RemoveAllClaimants`.",
+      "supportingTasks": ["ICW-P1-CLAIMANT-TOKENS"],
+      "coverage": "none",
+      "gapDescription": "ICW-P1-CLAIMANT-TOKENS is Proposed and not started. Both production call sites hardcode CancellationToken.None. Per-frame claimant advance was removed from ICW-142 (caused cancel thrashing). This blocks viewport culling (ICW-143) entirely.",
+      "recommendation": "Start ICW-P1-CLAIMANT-TOKENS after ICW-P0-ACTIVECOUNT. Must use token-source replacement, not RemoveAllClaimants."
+    },
+    {
+      "requirement": "[External audit] Pixelometer readout: `TryReadPixelValue` must never initiate tile acquisition as a side effect of mouse movement. It must consume a published-frame snapshot or the best available resident payload only.",
+      "supportingTasks": ["ICW-P0-PIXELOMETER-READOUT", "ICW-035", "ICW-100"],
+      "coverage": "none",
+      "gapDescription": "ICW-P0-PIXELOMETER-READOUT is Proposed and not started. Current code passes `tryReserveCacheEntry: null`, completely bypassing TileCacheBudget. ICW-035 (In Progress) unifies blend contracts but does not address the cache-budget bypass. ICW-100 (To Do) aligns pixelometer sampling with rendered mip but does not address the budget bypass either.",
+      "recommendation": "Implement ICW-P0-PIXELOMETER-READOUT interim fix: pass `tryReserveCacheEntry` through pixelometer path. Long-term: convert to published-frame snapshot. Add regression test asserting mouse-move does not increase TileCacheBudget.UsedBytes."
+    },
+    {
+      "requirement": "[External audit] Regeneration atomicity: `RegenerateSceneAsync` must be atomic from the user's perspective. Failure or cancellation must restore the previous scene state.",
+      "supportingTasks": ["ICW-P0-TRANSACTIONAL-REGEN"],
+      "coverage": "none",
+      "gapDescription": "ICW-P0-TRANSACTIONAL-REGEN is Proposed and not started. If RegenerateSceneAsync throws or cancels mid-way, the app is left with partially-initialized state. No task covers this.",
+      "recommendation": "Implement ICW-P0-TRANSACTIONAL-REGEN as Phase 0 safety harness. Wrap RegenerateSceneAsync in transactional guard with rollback on failure."
+    },
+    {
+      "requirement": "[External audit] Frame surface reuse: A retired frame surface (`InteropBitmap`) must not be modified or reassigned until WPF's compositor has confirmed it is done reading the backing memory section.",
+      "supportingTasks": ["ICW-P0-BUFFER-REUSE-SYNC", "ICW-021"],
+      "coverage": "none",
+      "gapDescription": "ICW-P0-BUFFER-REUSE-SYNC is Proposed and not started. ICW-021 is a template-only ticket with no concrete acceptance criteria or implementation. External audit confirmed ~70% confidence that PublishFrame recycles the front buffer without compositor synchronization.",
+      "recommendation": "Expand ICW-021 with concrete acceptance criteria: synchronization strategy (triple-buffering or compositor fence), reproduction steps, and regression test. Link ICW-P0-BUFFER-REUSE-SYNC as the implementation tracker."
+    },
+    {
+      "requirement": "[External audit] Cache lease release: Cache reservations must use exactly-once release semantics enforced by `IDisposable`. `ReleaseReservation` must not be a no-op diagnostic counter.",
+      "supportingTasks": ["ICW-P0-LEASE-RELEASE", "ICW-134"],
+      "coverage": "none",
+      "gapDescription": "ICW-P0-LEASE-RELEASE is Proposed and not started. ICW-134 (To Do) includes replacing ReleaseReservation with IDisposable lease, but is not started. ReleaseReservation currently increments a diagnostic counter and does not release budget bytes.",
+      "recommendation": "Implement ICW-P0-LEASE-RELEASE as a dependency of ICW-134. Add double-dispose safety and leak detection. Add regression test that confirms UsedBytes decreases after reservation disposal."
+    },
+    {
+      "requirement": "[External audit] Cooperative cancellation: Tile generation factories must be cooperatively cancellable. They must check the cancellation token at least once per expensive sub-phase (circle rasterization, noise generation, memcpy).",
+      "supportingTasks": ["ICW-P1-COOPERATIVE-CANCEL"],
+      "coverage": "none",
+      "gapDescription": "ICW-P1-COOPERATIVE-CANCEL is Proposed and not started. Mip-level factory only checks cancellation after expensive GDI+ work completes. During fast scroll, GDI+ operations continue to completion even after tile is no longer visible.",
+      "recommendation": "Implement ICW-P1-COOPERATIVE-CANCEL after ICW-P1-CLAIMANT-TOKENS (which provides the real cancellation token). Add CancellationToken.ThrowIfCancellationRequested() in ApplyDetailsWithGdiPlus and GenerateMipAndCache around each expensive sub-phase."
+    },
+    {
+      "requirement": "[External audit] Platform-interop concurrency: Any platform-interop drawing (GDI+) used inside a generation factory must be subject to explicit physical-concurrency guarantees independent of the coordinator's admission concurrency.",
+      "supportingTasks": ["ICW-P1-GDI-CONCURRENCY", "ICW-P0-ACTIVECOUNT"],
+      "coverage": "none",
+      "gapDescription": "ICW-P1-GDI-CONCURRENCY is Proposed and not started. GDI+ concurrency is unbounded during cancellation bursts because ICW-P0-ACTIVECOUNT is unstarted. No dedicated GDI+ concurrency management exists.",
+      "recommendation": "Implement ICW-P0-ACTIVECOUNT first (fixes the concurrency ceiling), then implement ICW-P1-GDI-CONCURRENCY with explicit GDI+ worker thread or serialization lock. Add stress test measuring peak concurrent GDI+ operations."
+    },
+    {
+      "requirement": "[External audit] Settings validation unification: Every declared option field must have exactly one canonical validation function, used identically by the XAML binding path, the JSON file-load path, and any host-adapter translation path. Every declared option field must be demonstrably read somewhere in the actual render/generation call graph.",
+      "supportingTasks": ["ICW-P1-SETTINGS-VALIDATION", "ICW-099"],
+      "coverage": "none",
+      "gapDescription": "ICW-P1-SETTINGS-VALIDATION is Proposed and not started. Two known instances: (1) ObjectsPerTile upper bound absent from CanvasUserSettings.IsValid, (2) MinimumSparseTilePixelSize validated but never consumed. ICW-099 (To Do) only addresses the MinimumSparseTilePixelSize threading, not the structural pattern.",
+      "recommendation": "Implement ICW-P1-SETTINGS-VALIDATION as the structural fix. Add ObjectsPerTile <= MaxObjectsPerTile to IsValid. Complete ICW-099 for MinimumSparseTilePixelSize threading. Add shared validation function per field."
+    },
+    {
+      "requirement": "[External audit] Mip memory accounting: Cache byte accounting must equal the sum of resident payload byte lengths across all cached mip variants for each tile. `PixelCost` must not be a mip-0-only computation.",
+      "supportingTasks": ["ICW-P1-PIXELCOST-MIPS", "ICW-134"],
+      "coverage": "none",
+      "gapDescription": "ICW-P1-PIXELCOST-MIPS is Proposed and not started. ICW-134 (To Do) includes this fix but is not started. `_pixelCost = checked(pixelWidth * pixelHeight)` is computed once from mip-0 dimensions only; undercounts by ~33% once several mip levels accumulate.",
+      "recommendation": "Promote ICW-P1-PIXELCOST-MIPS into ICW-134 scope. Replace _pixelCost with sum of all resident mip payload bytes. Use ResourceKey including mip level. Add MemoryGovernor_AccountsForAllResidentMipLevelsNotJustNative test."
+    },
+    {
+      "requirement": "[External audit] Settings lifecycle in Phase 1: MainWindow decomposition (Phase 1) must explicitly include: (a) settings not silently reset on `RegenerateSceneAsync`, (b) `CanvasUserSettings.IsValid` checks all enforced bounds, (c) every persisted setting is verifiably consumed.",
+      "supportingTasks": ["ICW-P1-SETTINGS-SCOPE", "ICW-022"],
+      "coverage": "none",
+      "gapDescription": "ICW-P1-SETTINGS-SCOPE is Proposed and not started. ICW-022 (To Do) covers MainWindow decomposition but does not include these acceptance criteria in its scope. A team could complete all migration phases and ship known settings-persistence bugs.",
+      "recommendation": "Add ICW-P1-SETTINGS-SCOPE acceptance criteria to ICW-022 Phase 1 scope. Add regression tests for settings-not-reset-on-regen, IsValid completeness, and verifiable consumption of every persisted setting."
+    },
+    {
+      "requirement": "[External audit] Migration sequencing: During the 8-phase, 5-assembly migration, concurrent feature work must either freeze for Phases 1-2 or be built against emerging contracts (strangler-fig pattern). The target must not move faster than the migration.",
+      "supportingTasks": ["ICW-P0-MIGRATION-GUARD"],
+      "coverage": "none",
+      "gapDescription": "ICW-P0-MIGRATION-GUARD is Proposed and not started. No policy exists for managing concurrent feature work during migration. Codebase is under rapid active iteration.",
+      "recommendation": "Document explicit policy in ADR-0006: freeze demo-app feature work for Phases 1-2, or mandate strangler-fig pattern. Add review gate to PRs that touch MainWindow during active migration phases."
+    },
+    {
+      "requirement": "[External audit] Static claimant identity: Claimant identity for tile work must be per-tile or per-viewport-frame, not a static `DefaultCoordinatorClaimant` shared by all tile instances. `RemoveAllClaimants(GetClaimantId())` must only affect the intended tile/viewport.",
+      "supportingTasks": ["ICW-P1-CLAIMANT-TOKENS"],
+      "coverage": "none",
+      "gapDescription": "Same task as Claimant Token Wiring (ICW-P1-CLAIMANT-TOKENS, Proposed, not started). Static DefaultCoordinatorClaimant means RemoveAllClaimants would cancel every tile's in-flight generation.",
+      "recommendation": "See Claimant Token Wiring finding. ICW-P1-CLAIMANT-TOKENS must use per-tile or per-viewport-frame claimant identity."
+    },
+    {
+      "requirement": "Camera viewport sizing: The render target, zoom-floor calculation, and camera clamp must use the fixed visible viewport dimensions only. Scrollbar extent or scaled-scene dimensions must never replace those dimensions.",
+      "supportingTasks": ["ICW-065"],
+      "coverage": "partial",
+      "gapDescription": "ICW-065 (Done) adds camera-native scrollbars and preserves fixed viewport sizing. However, no active task validates that this invariant is maintained. The invariant is documented in the requirements registry but has no regression test or validation task.",
+      "recommendation": "Add a regression test or validation assertion (could be part of ICW-022 MainWindow decomposition) that asserts render target, zoom-floor, and camera clamp use fixed viewport dimensions only. Reference from the requirements registry entry."
+    },
+    {
+      "requirement": "Camera-native scrollbars: Viewport scrollbars are custom overlay controls derived from the captured camera and scene bounds. Their thumbs must update after pan, zoom, resize, and regeneration; thumb drag and track click must pan through the bounded camera path without participating in viewport measurement. The XAML overlay, event handlers, policy calculation, and `RenderFrameAsync` update hook are one protected feature and must remain present together.",
+      "supportingTasks": ["ICW-065", "ICW-079", "ICW-096"],
+      "coverage": "partial",
+      "gapDescription": "ICW-065 (Done) and ICW-079 (Done) cover scrollbar overlay, handlers, policy, and wiring guard (CanvasScrollbarWiringTests). ICW-096 (In Review) restores historical scrollbar overlay. Gap: ICW-098 (Proposed) documents a half-wired scrollbar slice — MainWindow.xaml.cs has UpdateViewportScrollbars and mouse handlers but MainWindow.xaml lacks named scrollbar controls and render path does not call the update method. This means the 'must remain present together' invariant is partially broken.",
+      "recommendation": "Resolve ICW-098: either finish the end-to-end scrollbar wiring (add XAML controls, wire fields, call update in render path) or remove orphan methods. Extend CanvasScrollbarWiringTests to cover the full update call chain."
+    }
+  ],
+
+  "summary": {
+    "totalRequirements": 22,
+    "fullCoverage": 0,
+    "partialCoverage": 7,
+    "noCoverage": 15,
+    "criticalGaps": [
+      "All 6 ICW-P0-* tasks (ACTIVECOUNT, QUEUE-DRAIN, PIXELOMETER-READOUT, TRANSACTIONAL-REGEN, BUFFER-REUSE-SYNC, LEASE-RELEASE, STALE-PUB, MIGRATION-GUARD, SEQUENCING) are Proposed/unstarted — these are external audit Phase 0 mandatory requirements with no implementation started.",
+      "All 6 ICW-P1-* tasks (CLAIMANT-TOKENS, COOPERATIVE-CANCEL, GDI-CONCURRENCY, SETTINGS-VALIDATION, PIXELCOST-MIPS, SETTINGS-SCOPE) are Proposed/unstarted — these are external audit Phase 1 mandatory requirements with no implementation started.",
+      "ICW-143 (viewport culling and relevance-priority scheduling) is To Do and explicitly blocked on Phase 0/1 tasks. Core viewport-aware scheduling has no implementation started.",
+      "Queue liveness (DrainQueue) has no task coverage independent of ICW-P0-QUEUE-DRAIN.",
+      "Shared-fill semantics (remaining claimants keep in-flight work alive) has no explicit task coverage.",
+      "Prefetch margin configuration has no task coverage.",
+      "Atomic mip publication at tile level (ICW-P0-STALE-PUB) has no implementation started.",
+      "Settings validation unification and mip memory accounting lack started tasks."
+    ],
+    "blockedDependencies": [
+      "ICW-143 blocked on ICW-P0-ACTIVECOUNT, ICW-P0-QUEUE-DRAIN, ICW-P1-CLAIMANT-TOKENS",
+      "ICW-P1-COOPERATIVE-CANCEL blocked on ICW-P1-CLAIMANT-TOKENS",
+      "ICW-P1-GDI-CONCURRENCY blocked on ICW-P0-ACTIVECOUNT",
+      "ICW-P0-QUEUE-DRAIN blocked on ICW-P0-ACTIVECOUNT + ICW-P1-CLAIMANT-TOKENS",
+      "ICW-134 scope expansion blocked on ICW-P0-LEASE-RELEASE, ICW-P1-PIXELCOST-MIPS"
+    ],
+    "recommendedImmediateActions": [
+      "Start ICW-P0-ACTIVECOUNT (highest-priority dependency for entire viewport stack)",
+      "Start ICW-P0-LEASE-RELEASE (dependency for ICW-134 and cancellation reservation correctness)",
+      "Resolve ICW-098 scrollbar wiring gap (half-wired feature slice)",
+      "Complete ICW-100 (re-apply RenderRequestTracker wiring) to close ICW-078 gap",
+      "Add shared-fill semantics and prefetch margin to ICW-143 scope",
+      "Promote all ICW-P0-* tasks from Proposed to active implementation"
+    ]
+  }
+}

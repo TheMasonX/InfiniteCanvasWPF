@@ -26,6 +26,36 @@ Keep these core project notes in mind:
 - camera and projection logic should be deterministic and testable
 - changes should preserve benchmark and test coverage where possible
 
+## Code quality standards
+
+Apply a **two-axis mental model** to every change you make or review:
+
+- **Standards axis**: does the code follow this repo’s documented conventions plus universal code-quality heuristics?
+- **Spec axis**: does the code match what the requirement, issue, or design doc asked for?
+
+One axis can pass while the other fails. Keep both in view. Do not let a clean implementation of the wrong thing pass, and do not let spec faithfulness excuse a messy diff.
+
+### Universal code-smell baseline
+
+When reviewing code, check against these 12 Fowler code smells (*Refactoring* ch.3). They apply even when the repo documents no explicit standard. A documented repo convention overrides the baseline. Skip anything that tooling (analyzers, linters) already enforces.
+
+| Smell | Quick check |
+|---|---|
+| **Mysterious Name** | Does the name tell you what the thing does or holds? |
+| **Duplicated Code** | Does the same logic shape appear in more than one place in the diff? |
+| **Feature Envy** | Does a method reach into another object more than its own? |
+| **Data Clumps** | Do the same fields or parameters travel together repeatedly? |
+| **Primitive Obsession** | Is a domain concept expressed as a primitive or string? |
+| **Repeated Switches** | Does the same switch/if-cascade on the same type recur? |
+| **Shotgun Surgery** | Does one logical change force scattered edits across many files? |
+| **Divergent Change** | Is one file edited for several unrelated reasons? |
+| **Speculative Generality** | Are abstractions added for needs the spec does not have? |
+| **Message Chains** | Does the caller navigate a long a.b().c().d() chain? |
+| **Middle Man** | Does a class mostly delegate without adding value? |
+| **Refused Bequest** | Does a subclass ignore or override most of what it inherits? |
+
+Distinguish **hard violations** (a documented standard is breached — definite, fix now) from **judgement calls** (a heuristic smell — consider, discuss, may defer).
+
 ## Scripting
 
 Utility scripts should go under scripts/ and be callable from the command line.
@@ -65,9 +95,11 @@ If the user gives a requirement, bug report, task note, implementation hint, use
 
 1. Review the relevant design documentation and current task tracker before starting.
 2. Capture any new user requirement, bug note, or task detail immediately in the durable task/ADR store.
-3. Implement the smallest change that addresses the task and keep the diff focused.
-4. Validate with the narrowest relevant command, such as dotnet build, dotnet test, or a benchmark smoke run.
-5. Update the tracker with the outcome, evidence, and the next step.
+3. Identify the spec source: find the issue, PRD, or design doc that defines what correct looks like. Pin a fixed point (commit/branch) for diff-based work.
+4. Implement the smallest change that addresses the task and keep the diff focused. Check each hunk against the Standards and Spec axes in your head.
+5. Validate with the narrowest relevant command, such as dotnet build, dotnet test, or a benchmark smoke run.
+6. Before committing, self-review the diff against the smell baseline. Tag any concerns as hard violations (fix now) or judgement calls (consider).
+7. Update the tracker with the outcome, evidence, and the next step.
 
 ## Task tracking
 
@@ -97,6 +129,28 @@ Before committing and pushing a sprint-sized batch of work, the agent should:
 - Verify claims and sources for accuracy before acting on them.
 - Do not claim completion until the relevant validation command has been run and the tracker has been updated.
 - Before any commit/push for a sprint batch, ensure a current handoff note exists in docs/handoffs/ and reflects the latest state.
+
+## Technical Writing Style
+
+When writing documentation, commit messages, handoff notes, task descriptions, or any other durable text, follow ASD-STE100 (Simplified Technical English) principles:
+
+- **Sentence length**: maximum 20 words for procedures, 25 words for descriptions.
+- **Paragraph length**: maximum 6 sentences per paragraph.
+- **Punctuation**: use periods, question marks, and commas only. Do not use semicolons or em-dashes.
+- **Voice**: use active voice exclusively. (Example: "The server sends the data." NOT "The data is sent by the server.")
+- **Vocabulary**: pick one noun per object and one verb per action. Use it consistently. Do not rotate synonyms for style.
+- **No phrasal verbs**: use single-word verbs. (Example: "create" NOT "spin up". "determine" NOT "figure out".)
+- **No marketing fluff**: strip all subjective adjectives and adverbs. (Remove "seamless", "robust", "powerful", "cutting-edge", "highly", "easily".)
+- **Noun clusters**: do not string more than three nouns together.
+- **Tense**: use simple present for descriptions, imperative for instructions. Do not use future tense unless necessary.
+- **No hedging or modals**: remove "might", "could", "should", "potentially". State facts directly.
+- **Verb-noun consistency**: use verbs for actions, do not hide actions in nouns. (Example: "Analyze the data." NOT "Perform an analysis of the data.")
+- **Procedures**: write steps chronologically. One action per step.
+- **Warnings**: place warnings before the step that causes the risk.
+- **Conditionals**: start with the condition. (Example: "If the file exists, delete it.")
+- **Conversational filler**: do not open with introductions like "Here is the rewritten text." Output the content directly.
+
+Use the [ste-technical-writing](../skills/ste-technical-writing/SKILL.md) skill for on-demand rewriting, generation, or linting of existing documentation.
 
 ## Chat Response Footer
 
