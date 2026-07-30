@@ -1,7 +1,7 @@
 id: ICW-081
 key: ICW-081
 title: Reconcile duplicate and orphaned audit tickets before adding more backlog work
-status: Proposed
+status: Done
 type: Task
 priority: P1
 tags:
@@ -12,7 +12,7 @@ related: []
 links:
   - docs/tasks/README.md
 created: 2026-07-25
-updated: 2026-07-25
+updated: 2026-07-30
 ---
 
 ## Summary

@@ -183,10 +183,26 @@ public static class BackgroundTileMipPolicy
 /// These have highest priority for generation.</param>
 /// <param name="PrefetchKeys">Tile cache keys in a configurable margin around
 /// the viewport. These have lower priority than visible keys.</param>
-public readonly record struct ViewportInterestSet(
-    IReadOnlySet<BackgroundTileCacheKey> VisibleKeys,
-    IReadOnlySet<BackgroundTileCacheKey> PrefetchKeys)
+public readonly record struct ViewportInterestSet
 {
+    /// <summary>
+    /// Creates an interest set from the given visible and prefetch key sets.
+    /// Neither set may be null — if no tiles are of interest, use <see cref="Empty"/>.
+    /// </summary>
+    public ViewportInterestSet(
+        IReadOnlySet<BackgroundTileCacheKey> visibleKeys,
+        IReadOnlySet<BackgroundTileCacheKey> prefetchKeys)
+    {
+        ArgumentNullException.ThrowIfNull(visibleKeys);
+        ArgumentNullException.ThrowIfNull(prefetchKeys);
+        VisibleKeys = visibleKeys;
+        PrefetchKeys = prefetchKeys;
+    }
+
+    public IReadOnlySet<BackgroundTileCacheKey> VisibleKeys { get; }
+
+    public IReadOnlySet<BackgroundTileCacheKey> PrefetchKeys { get; }
+
     /// <summary>
     /// True if the given key is in the visible or prefetch interest set.
     /// </summary>

@@ -1,55 +1,98 @@
 ---
 id: ICW-022-mainwindow-decomposition-and-tests
+author: External Audit (Integration-1)
 key: ICW-022
-title: Icw 022 Mainwindow Decomposition And Tests
-status: Proposed
+title: Extract testable logic from MainWindow code-behind and backfill unit tests
+status: To Do
 type: Task
 priority: P2
 tags:
-  - icw
-  - task-tracker
-dependsOn: []
-related: []
+  - refactoring
+  - mainwindow
+  - testing
+  - decomposition
+dependsOn:
+  - ICW-101
+  - ICW-031
+related:
+  - ICW-080
+  - ICW-037
+  - ICW-P1-SETTINGS-SCOPE
+  - ICW-P1-SETTINGS-VALIDATION
 links:
-  - docs/tasks/README.md
+  - src/InfiniteCanvas.App/MainWindow.xaml.cs
+  - src/InfiniteCanvas.App/MainWindow.xaml
+  - src/InfiniteCanvas.ViewModels
+  - src/InfiniteCanvas.Core
+  - tests/InfiniteCanvas.Tests
+  - docs/audits/infinitecanvaswpf-icw-implementation-audit-26-07-30-16-40-49.md
 created: 2026-07-25
-updated: 2026-07-25
+updated: 2026-07-30
 ---
 
-# ICW-022-mainwindow-decomposition-and-tests
+# ICW-022 — Extract testable logic from MainWindow code-behind and backfill unit tests
 
 ## Summary
 
-- Status: To Do
-- Objective: reduce MainWindow from a monolithic shell into a composition of smaller, testable views and presenters while preserving current behavior.
+**Audit finding:** MainWindow combines viewport composition, render presentation, settings editing, and lifecycle logic in one shell; the XAML repeats visual patterns that would benefit from styles and subcontrols. The file is 1600+ lines. Multiple audit items depend on this decomposition.
 
 ## Scope
 
-- Extract the viewport host, settings sidebar, feature inspector, and footer/status area into dedicated subcontrols or user controls.
-- Move pure interaction and presentation logic out of MainWindow code-behind where practical, especially zoom, pixelometer, generation input validation, and selection/tooltip formatting.
-- Consolidate repeated visual patterns into reusable styles/templates so the growing XAML surface becomes more maintainable.
-- Capture the acceptance criteria and validation path.
+### Phase 1 — Compatibility & Settings Hardening (acceptance criteria from external audit)
 
-## Acceptance Criteria
+These items must be completed before structural decomposition begins:
 
-- MainWindow becomes a thin shell that composes a small set of focused views or controls.
-- The viewport and settings interactions are backed by small presenter/controller classes or view-models rather than being embedded directly in the window code-behind.
-- Repeated UI patterns (section headers, button groups, panel spacing, slider labels) use shared styles/templates.
-- Pure logic for zoom, generation validation, and pixelometer/view-state handling is unit-testable without instantiating the full window.
-- The validation command and outcome are recorded.
+1. **(a) Settings not silently reset on `RegenerateSceneAsync`** — Add regression test asserting `MainViewModel`/noise settings survive scene regeneration. **Status: DONE** (Sprint 1 Wave A — background noise settings snapshot). Add cross-reference in tracker.
+
+2. **(b) `CanvasUserSettings.IsValid` checks all enforced bounds** — Audit every field, fix any gaps. Covered by ICW-P1-SETTINGS-VALIDATION.
+
+3. **(c) Every persisted setting is verifiably consumed** in the render/generation call graph — Add consumption test that would have caught `MinimumSparseTilePixelSize` not reaching `GenerateFrozenBitmap`. Covered by ICW-P1-SETTINGS-VALIDATION.
+
+### Phase 2 — Structural Decomposition
+
+1. **Extract subcontrols:**
+   - Viewport host (viewport `Canvas` + scrollbar overlays + grid overlay)
+   - Settings sidebar (display panel, debug panel, noise settings, etc.)
+   - Feature inspector (selected-annotation DataGrid)
+   - Footer/status area (status text, loading indicator, pixelometer readout)
+
+2. **Move pure logic to presenter/controller classes:**
+   - Zoom math → `ViewportZoomCalculator` (see ICW-052) **Status: DONE** — verify extraction is complete.
+   - Pixelometer view-state → `PixelometerController`
+   - Generation input validation → `GenerationOptionsValidator` (see ICW-052) **Status: DONE** — verify.
+   - Selection/tooltip formatting → `AnnotationFeaturePresenter` (see ICW-101) **Status: PARTIAL** — tooltip still uses raw indexers.
+
+3. **Consolidate repeated XAML patterns** into shared styles/templates:
+   - Section headers, button groups, panel spacing, slider labels.
+
+### Acceptance Criteria
+
+- MainWindow becomes a thin shell composing focused subcontrols.
+- Viewport and settings interactions backed by presenter/controller classes rather than code-behind.
+- Repeated XAML patterns use shared styles/templates.
+- Pure logic is unit-testable without instantiating the full window.
+
+## Files to Change
+
+| File | Change |
+|---|---|
+| `src/InfiniteCanvas.App/MainWindow.xaml` | Extract subcontrols into separate files, consolidate styles |
+| `src/InfiniteCanvas.App/MainWindow.xaml.cs` | Delegate to presenter/controller classes |
+| `src/InfiniteCanvas.App/Controls/ViewportHostControl.xaml` (new) | Viewport composition subcontrol |
+| `src/InfiniteCanvas.App/Controls/SettingsSidebarControl.xaml` (new) | Settings panel subcontrol |
+| `tests/InfiniteCanvas.Tests` | Add tests for extracted logic |
 
 ## Validation
 
-- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
-- Result: To be completed when implemented.
-
-## Notes
-
-- This is the primary backlog home for the current MainWindow extraction work.
-- The current evidence is the large single-window composition in MainWindow.xaml and the mixed viewport/render/settings logic in MainWindow.xaml.cs.
-- The style-consolidation and subcontrol-extraction work should be treated as part of the same effort rather than as separate tickets unless a narrower slice becomes worthwhile later.
+```
+dotnet test tests/InfiniteCanvas.Tests --configuration Release
+dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release
+```
 
 ## Related Tasks
 
-- ICW-080
-- ICW-037
+- ICW-080: annotation feature presentation model
+- ICW-037: accessibility baseline (depends on subcontrol extraction)
+- ICW-P1-SETTINGS-SCOPE: Phase 1 acceptance criteria
+- ICW-P1-SETTINGS-VALIDATION: settings validation (Phase 1 prerequisite)
+- ICW-101: tooltip presenter restore (Phase 1 prerequisite)

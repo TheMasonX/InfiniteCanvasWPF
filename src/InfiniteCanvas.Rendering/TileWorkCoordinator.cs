@@ -281,7 +281,13 @@ public sealed class TileWorkCoordinator : IDisposable
             // Running items are NOT cancelled — they are allowed to complete
             // since their pixels may still be useful for cache warming.
             // Only queued (not yet started) items are culled.
-            var toRemove = new List<BackgroundTileCacheKey>();
+            //
+            // NOTE: Call CancelWorkItem directly instead of removing claimants
+            // first. CancelWorkItem calls DispatchFailed which snapshots the
+            // claimant list — if we remove claimants first, the failure callback
+            // is never delivered and the tile's _generationQueued flag stays set
+            // permanently (ICW-143 bug fix).
+            var toCancel = new List<BackgroundTileCacheKey>();
             foreach (var (key, item) in _items)
             {
                 if (item.State != TileWorkItemState.Queued)
@@ -289,22 +295,11 @@ public sealed class TileWorkCoordinator : IDisposable
 
                 if (!interestSet.Contains(key) && item.ClaimantCount > 0)
                 {
-                    // Remove all claimants for this non-interest tile.
-                    // Since we use per-tile claimants, removing all claimants
-                    // will cancel the work item if no other claimants remain.
-                    foreach (var claimantId in item.GetClaimantIds())
-                    {
-                        item.RemoveClaimant(claimantId);
-                    }
-
-                    if (item.ClaimantCount == 0)
-                    {
-                        toRemove.Add(key);
-                    }
+                    toCancel.Add(key);
                 }
             }
 
-            foreach (var key in toRemove)
+            foreach (var key in toCancel)
             {
                 if (_items.TryGetValue(key, out var item))
                 {
@@ -511,6 +506,8 @@ public sealed class TileWorkCoordinator : IDisposable
     {
         lock (_lock)
         {
+            if (_disposed) return;
+
             while (_activeCount < _maxConcurrency && _queue.Count > 0)
             {
                 var key = _queue.Dequeue();

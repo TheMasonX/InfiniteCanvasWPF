@@ -81,6 +81,15 @@ Cache debug status must report the live cache instance and its actual resident, 
 | Drain-queue token liveness | `DrainQueue` (or its replacement) must check claimant-token liveness before promoting a queued item to execution. A queued item whose token has fired must be canceled and skipped, not promoted. | ICW-P0-QUEUE-DRAIN, ADR-0006, External audit validation §1 | Phase 0 delivers the method skeleton; Phase 1 wires real per-frame tokens. Stale-token items must not block usable items behind them or waste concurrency slots. |
 | Background noise settings survival | `RegenerateSceneAsync` must not reset user-configured background noise settings. The noise snapshot (target value, noise, circle count, scale, octaves, lacunarity, gain, amplitude) must be preserved across scene regeneration. | Sprint 1 Wave A (no ICW ID) | During regeneration, the `MainViewModel` is recreated. The previous snapshot is captured before recreation and restored for tile generation. |
 
+## Sprint 1 Wave D additions (2026-07-30)
+
+| Area | Requirement | Related work | Notes |
+|---|---|---|---|
+| Interest set publication ordering | Interest set publication via `PublishInterestSet` must occur AFTER the per-frame CTS replacement (which fires stale-frame CancellationTokenSources) and BEFORE background tile work starts each frame. The CTS replacement first removes stale claimants; then the interest set culls non-visible queued items. | ICW-143, ADR-0006 | The ordering is: (1) CTS replacement/cancellation, (2) interest set publication, (3) background render work. CTS replacement before interest set is intentional — stale claimants are removed first. |
+| Non-visible queued item cancellation | When `PublishInterestSet` is called, any queued (not running) tile work item whose cache key is not in the viewport interest set must be canceled. The failure callback (`onFailed`) must be delivered so the tile can reset its `_generationQueued` flag and retry. | ICW-143, ADR-0006 | Running items are preserved for cache warming. Failure callback delivery is essential — without it, the tile is permanently stuck. See council review bug fix. |
+| Visible promotion over prefetch | During `DrainQueueWithLivenessCheck`, when a published interest set contains visible keys, visible items must be promoted over non-visible items. If the dequeued item is not visible, the method scans ahead for a visible candidate. If none exists, the original prefetch item is started. Empty interest set preserves FIFO behavior. | ICW-143, ADR-0006 | The scan-ahead is O(n) under `_lock`. Performance impact tracked by ICW-144. |
+| Running items preserved for cache warming | `PublishInterestSet` must NOT cancel in-flight (running) tile generation even if the tile is no longer visible. The pixels may still be useful for cache warming when the viewport returns. | ICW-143, ADR-0006 | Cancellation of running items is driven by claimant-token fire (CTS replacement), not interest set. These are separate mechanisms. |
+
 ## Regression review checklist
 
 When a change touches any of the behaviors above, confirm all of the following:

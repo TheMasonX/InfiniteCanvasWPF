@@ -3,7 +3,7 @@ id: ICW-143
 author: Copilot
 key: ICW-143
 title: Add viewport culling and relevance-priority tile scheduling
-status: To Do
+status: Done
 type: Improvement
 priority: P1
 tags:
@@ -15,52 +15,74 @@ tags:
 dependsOn:
   - ICW-142
   - ICW-078
+  - ICW-P0-QUEUE-DRAIN
+  - ICW-P1-CLAIMANT-TOKENS
+  - ICW-P0-STALE-PUB
+  - ICW-P0-SPATIAL-INDEX-SAFETY
+  - ICW-100
 related:
   - ICW-076
   - ICW-096
   - ICW-065
+  - ICW-144
 links:
   - src/InfiniteCanvas.App/MainWindow.xaml.cs
   - src/InfiniteCanvas.Rendering/SampleImageTile.cs
-  - src/InfiniteCanvas.Core/RenderRequestTracker.cs
+  - src/InfiniteCanvas.Rendering/TileWorkCoordinator.cs
+  - src/InfiniteCanvas.Rendering/BackgroundTileContracts.cs
   - docs/ADR/0006-viewport-aware-tile-work-scheduling.md
+  - docs/handoffs/2026-07-30-sprint1-wave-d-complete.md
+  - docs/tasks/tickets/ICW-143-viewport-tile-culling-and-priority.md
 created: 2026-07-26
-updated: 2026-07-26
+updated: 2026-07-30
 ---
 
 ## Summary
 
-Update tile interest on every captured viewport change so stale queued requests are culled and current visible tiles are generated before optional prefetch work.
+Viewport culling and relevance-priority tile scheduling delivered in Sprint 1 Wave D. All P0 dependencies cleared. ViewportInterestSet type, PublishInterestSet on TileWorkCoordinator, priority-aware DrainQueueWithLivenessCheck, and full render pipeline wiring in RenderFrameAsync. See council review for post-merge bug fix and supplementary handoff for remaining items.
 
-## Scope
+## Deliverables
 
-- Derive a deterministic visible tile set from the immutable camera snapshot and viewport bounds.
-- Publish a request epoch plus optional bounded prefetch margin to the tile coordinator.
-- Prioritize visible tiles by relevance to the viewport center, then use stable tile ID/mip tie-breakers.
-- Treat prefetch as lower priority and cancel it first under pressure.
-- Keep request identity source/revision/mip-aware and align pinning with the actually sampled resident variant.
-- Preserve `RenderRequestTracker` stale-frame guards and resident-mip fallback during transitions.
+### Wave D-1: ViewportInterestSet record type
+- Added `BackgroundTileContracts.cs`: `ViewportInterestSet` with `VisibleKeys`, `PrefetchKeys`, `Contains()`, `IsVisible()`, `Empty` static.
+- Null-guard validation added during council review.
 
-## Acceptance Criteria
+### Wave D-2: PublishInterestSet on TileWorkCoordinator
+- Added `TileWorkCoordinator.cs`: `PublishInterestSet(ViewportInterestSet)` method.
+- Cancels queued items whose keys are not in the interest set.
+- Running items preserved for cache warming.
+- Post-council bug fix: removed premature claimant removal that dropped failure callbacks.
 
-- A tile outside the current interest set is not started if it is still queued, and running work loses its claim promptly.
-- Current visible requests outrank stale or prefetch requests after a rapid pan or zoom.
-- Priority ordering is deterministic for equal relevance and has unit coverage at viewport center, edge, and outside bounds.
-- The render path remains non-blocking and never awaits tile generation just to compose a frame.
-- A rapid sequence of viewport updates cannot publish a frame or completion callback for an obsolete request epoch.
+### Wave D-3: Priority-aware drain
+- `DrainQueueWithLivenessCheck` scans ahead for visible items when the dequeued item is not visible.
+- Visible items promoted first; empty interest set preserves FIFO.
+
+### Wave D-4: Render pipeline wiring
+- `MainWindow.xaml.cs` `RenderFrameAsync`: computes interest set from camera snapshot and viewport bounds.
+- Includes mip-0 and selected mip level in interest set keys.
+- Interest set published before background tile work starts.
 
 ## Validation
 
 Commands: `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release` and `dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release`
 
-Outcome: Pending implementation.
+Outcome: Passed! 93/93 tests, Release build 0 errors, 1 pre-existing warning.
 
-## Notes
+## Post-Review Corrections
 
-Debouncing can reduce churn, but it must not be the primary correctness mechanism. The coordinator must remain correct when viewport updates arrive faster than a debounce interval. Any prefetch margin and concurrency default should be selected from benchmark evidence.
+1. **Bug fix (2026-07-30):** PublishInterestSet no longer removes claimants before CancelWorkItem — failure callbacks were silently dropped.
+2. **Null guard (2026-07-30):** ViewportInterestSet constructor validates arguments.
+3. **_disposed guard (2026-07-30):** Added to DrainQueueWithLivenessCheck.
+
+## Deferred Items
+
+- ICW-144: Fast-scroll stress benchmarks (no performance baseline exists)
+- Performance: duplicate bounds iteration, GetClaimantIds() LINQ allocation, O(n) RemoveFromQueue
+- ICW-081: Ticket deduplication
 
 ## Related Tasks
 
 - ICW-141: parent scheduling plan
 - ICW-142: cancellation ownership
 - ICW-144: stress validation
+- ICW-081: ticket deduplication

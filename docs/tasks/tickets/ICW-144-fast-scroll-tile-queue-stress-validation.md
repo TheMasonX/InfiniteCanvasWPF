@@ -3,7 +3,7 @@ id: ICW-144
 author: Copilot
 key: ICW-144
 title: Add fast-scroll tile queue stress telemetry and benchmarks
-status: Proposed
+status: In Progress
 type: Spike
 priority: P1
 tags:
@@ -12,6 +12,7 @@ tags:
   - performance
   - benchmarks
   - diagnostics
+  - wave-e
 dependsOn:
   - ICW-142
   - ICW-143
@@ -41,16 +42,16 @@ Prove that viewport-aware scheduling reduces stale work and improves useful tile
 
 ## Acceptance Criteria
 
-- A stress trace demonstrates bounded queue depth and no unbalanced reservations after completion or cancellation.
-- Diagnostics distinguish canceled, stale, failed, resident-fallback, and useful current-viewport completions.
-- Benchmarks report repeated measurements; one-iteration Dry runs are labeled smoke checks only.
-- The result records whether debounce, priority, cancellation, or concurrency limiting is the dominant improvement and identifies remaining bottlenecks.
+- [x] A stress trace demonstrates bounded queue depth and no unbalanced reservations after completion or cancellation.
+- [ ] Diagnostics distinguish canceled, stale, failed, resident-fallback, and useful current-viewport completions.
+- [ ] Benchmarks report repeated measurements; one-iteration Dry runs are labeled smoke checks only.
+- [ ] The result records whether debounce, priority, cancellation, or concurrency limiting is the dominant improvement and identifies remaining bottlenecks.
 
 ## Validation
 
-Commands: `dotnet build benchmarks/InfiniteCanvas.Benchmarks/InfiniteCanvas.Benchmarks.csproj --configuration Release` and the focused BenchmarkDotNet fast-scroll filter documented by the ticket implementation.
+Commands: `dotnet build benchmarks/InfiniteCanvas.Benchmarks/InfiniteCanvas.Benchmarks.csproj --configuration Release` and `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release`
 
-Outcome: Pending implementation.
+Outcome: `TileWorkCoordinatorBenchmarks.cs` added with 8 benchmark scenarios covering PublishInterestSet (empty, full-visible, none-visible, mixed) and DrainQueueWithLivenessCheck (FIFO fallback, visible-promoted priority, 3-cycle fast-scroll stress). Build: 0 errors. Tests: 93/93 passing.
 
 ## Notes
 

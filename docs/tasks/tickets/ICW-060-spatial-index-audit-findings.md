@@ -1,47 +1,51 @@
 ---
 id: ICW-060-spatial-index-audit-findings
+author: External Audit (Integration-1)
 key: ICW-060
-title: Icw 060 Spatial Index Audit Findings
-status: Proposed
+title: Audit findings - spatial indexing subsystem (STALE - see description)
+status: Deprecated
 type: Task
 priority: P2
 tags:
-  - icw
-  - task-tracker
+  - spatial
+  - audit
+  - stale
 dependsOn: []
-related: []
+related:
+  - ICW-P0-SPATIAL-INDEX-SAFETY
 links:
-  - docs/tasks/README.md
+  - docs/audits/infinitecanvaswpf-icw-implementation-audit-26-07-30-16-40-49.md
+  - docs/audits/infinitecanvaswpf-icw-followup-audit-26-07-30-22-04-25.md
 created: 2026-07-25
-updated: 2026-07-25
+updated: 2026-07-30
 ---
 
-# ICW-060-spatial-index-audit-findings
+# ICW-060 — Audit findings: spatial indexing subsystem (STALE — see description)
 
-## Summary
+## Status: Deprecated
 
-Status: Proposed
+**This ticket is no longer accurate at HEAD.** The specific defects it describes have been fixed or are not applicable.
 
-## Scope
+## What was claimed
 
-- Review and update the relevant implementation area.
-- Capture the acceptance criteria and validation path.
+The ticket described invalid returns, mutable lists exposed from STRtree, ambiguous boundary semantics, and publish-state edge cases in the spatial indexing subsystem.
 
-## Acceptance Criteria
+## What the audits found
 
-- The task has a clear implementation goal.
-- The task is linked to the relevant files or design notes.
-- The validation command and outcome are recorded.
+**External audit (80-90% confidence):**
+
+1. **"Mutable STRtree list exposure"** — **Already fixed at HEAD.** `StrTreeSpatialIndexService.Query` already copies NTS's mutable `IList<T>` to an array with an explicit comment naming this exact concern. `LiveSpatialIndexService` already uses an immutable, lock-free CAS state machine.
+
+2. **"LiveSpatialIndexService.Query mutability"** — **Already fixed in Sprint 1 Wave C.** `LiveSpatialIndexService.Query` now returns `.ToArray()` instead of `List<T>`. ICW-P0-SPATIAL-INDEX-SAFETY (Done) covers this.
+
+3. **Ambiguous boundary semantics** — This is a real concern (`SpatialBounds.Intersects` uses closed-interval semantics while pixel/tile lookups elsewhere use half-open). This should be tracked under **ICW-033 (boundary semantics)**, not ICW-060.
+
+## Recommendation
+
+This ticket should be **closed or rescoped**. If there is a *different* remaining concern (e.g., `LiveSpatialIndexService.Query`'s `AppendMatches` doing an `O(n)` linear scan over `HotItems`/`PublishingItems` rather than the indexed `SnapshotIndex` — this is real but is a *performance* characteristic, not a safety/immutability bug), rewrite the ticket to describe that specific concern rather than leaving stale text.
 
 ## Validation
 
-- Command: dotnet test tests/InfiniteCanvas.Tests --configuration Release
-- Result: To be completed when implemented.
-
-## Notes
-
-- Add implementation details, blockers, or follow-up questions here.
-
-## Related Tasks
-
-- ICW-000
+```
+dotnet test tests/InfiniteCanvas.Tests --configuration Release --filter "SpatialIndex|LiveSpatialIndex|StrTree"
+```
