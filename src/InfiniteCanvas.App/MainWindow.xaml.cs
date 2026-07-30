@@ -1574,7 +1574,7 @@ public partial class MainWindow : Window
             // bypassing it (which would create untracked, unevictable tiles).
             var hasSourcePixels = tile.TryGetPixelsNonBlocking(
                 mipLevel, out sourcePixels, out var residentMipLevel,
-                tryReserveCacheEntry: _tileCacheBudget.TryReserve);
+                tryReserveCacheEntry: () => _tileCacheBudget.TryReserve(tile));
 
             var sourceDimensions = BackgroundTileMipPolicy.GetDimensions(tile.PixelWidth, tile.PixelHeight, residentMipLevel);
             var sourceX = Math.Clamp((int)((worldX - tile.Bounds.X) * sourceDimensions.Width / tile.Bounds.Width), 0, Math.Max(0, sourceDimensions.Width - 1));
