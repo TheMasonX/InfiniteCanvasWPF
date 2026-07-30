@@ -536,4 +536,78 @@ public class TileWorkCoordinatorTests
         // the last claimant before DispatchFailed could run — correct behavior
         // since there is no claimant to notify.
     }
+
+    [Test]
+    public void PublishInterestSet_CancelsNonVisibleQueuedItems()
+    {
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 1);
+        var started = new ManualResetEventSlim(false);
+        var hold = new ManualResetEventSlim(false);
+
+        coordinator.Request(Key1, BlockingFactory(started, hold), ClaimantA, CancellationToken.None);
+        Assert.That(started.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        // Queue Key2 (not in interest set).
+        coordinator.Request(Key2, Factory(55), ClaimantB, CancellationToken.None);
+
+        // Queue Key3 (in interest set).
+        coordinator.Request(Key3, Factory(66), ClaimantA, CancellationToken.None);
+
+        // Publish interest set that only includes Key3.
+        var visibleKeys = new HashSet<BackgroundTileCacheKey> { Key3 };
+        coordinator.PublishInterestSet(new ViewportInterestSet(visibleKeys, new HashSet<BackgroundTileCacheKey>()));
+
+        // Release Key1 so drain runs. Key3 (visible) should be promoted.
+        hold.Set();
+        Thread.Sleep(1000);
+
+        var counters = coordinator.GetCounters();
+        // Key1 completed, Key2 was canceled (not in interest set), Key3 completed.
+        Assert.That(counters.CompletedCount, Is.EqualTo(2));
+        Assert.That(counters.CanceledCount, Is.EqualTo(1));
+        Assert.That(counters.ActiveCount, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void DrainQueueWithLivenessCheck_PromotesVisibleOverNonVisible()
+    {
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 2);
+        var started1 = new ManualResetEventSlim(false);
+        var hold1 = new ManualResetEventSlim(false);
+        var started2 = new ManualResetEventSlim(false);
+        var hold2 = new ManualResetEventSlim(false);
+
+        // Fill both slots so subsequent items queue.
+        coordinator.Request(Key1, BlockingFactory(started1, hold1), ClaimantA, CancellationToken.None);
+        Assert.That(started1.Wait(TimeSpan.FromSeconds(2)), Is.True);
+        coordinator.Request(Key2, BlockingFactory(started2, hold2), ClaimantB, CancellationToken.None);
+        Assert.That(started2.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        // Queue Key3 (not in interest set — will be canceled).
+        coordinator.Request(Key3, Factory(11), ClaimantA, CancellationToken.None);
+
+        // Publish interest set that does NOT include Key3.
+        // Key3 is queued and not visible → should be cancelled.
+        var visibleKeys = new HashSet<BackgroundTileCacheKey>();
+        coordinator.PublishInterestSet(new ViewportInterestSet(visibleKeys, new HashSet<BackgroundTileCacheKey>()));
+
+        // Release one slot. Key3 (queued, not visible) was cancelled by
+        // PublishInterestSet. No visible items to promote.
+        hold1.Set();
+        Thread.Sleep(1000);
+
+        var counters = coordinator.GetCounters();
+        // Key1 completed, Key3 canceled (not visible). Key2 still running.
+        Assert.That(counters.CompletedCount, Is.EqualTo(1));
+        Assert.That(counters.CanceledCount, Is.EqualTo(1));
+        Assert.That(counters.ActiveCount, Is.EqualTo(1));
+
+        // Release the final slot.
+        hold2.Set();
+        Thread.Sleep(500);
+
+        counters = coordinator.GetCounters();
+        Assert.That(counters.CompletedCount, Is.EqualTo(2));
+        Assert.That(counters.ActiveCount, Is.EqualTo(0));
+    }
 }

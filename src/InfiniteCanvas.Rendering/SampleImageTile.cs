@@ -20,6 +20,14 @@ public sealed class SampleImageTile
     private int _generationQueued;
     private int _generationEpoch;
     private long _generationDurationTicks;
+
+    /// <summary>
+    /// The current generation epoch for this tile. Incremented when
+    /// <see cref="ResetImageCache"/> is called. Used by the viewport
+    /// interest set to build cache keys that match the tile's current
+    /// generation state.
+    /// </summary>
+    public int CurrentGenerationEpoch => Volatile.Read(ref _generationEpoch);
 #if WINDOWS
     private int _backgroundFetched;
 #endif

@@ -67,6 +67,7 @@ public sealed class TileWorkCoordinator : IDisposable
     private readonly Lock _lock = new();
     private readonly Dictionary<BackgroundTileCacheKey, TileWorkItem> _items = new();
     private readonly Queue<BackgroundTileCacheKey> _queue = new();
+    private ViewportInterestSet _interestSet = ViewportInterestSet.Empty;
     private int _activeCount;
 
     // Diagnostic counters (interlocked for lock-free reads).
@@ -247,6 +248,69 @@ public sealed class TileWorkCoordinator : IDisposable
             }
 
             _queue.Clear();
+        }
+    }
+
+    /// <summary>
+    /// Publishes the current viewport interest set to the coordinator.
+    /// Any queued or running work whose cache key is not in the interest
+    /// set is canceled, since no current frame or viewport claims it.
+    /// The interest set is also used by DrainQueueWithLivenessCheck for
+    /// priority ordering (visible items drain before prefetch items).
+    /// </summary>
+    /// <param name="interestSet">
+    /// The set of tile cache keys that are currently interesting to the
+    /// viewport. Can include both visible and prefetch keys.
+    /// Use <see cref="ViewportInterestSet.Empty"/> when no frame is active.
+    /// </param>
+    /// <remarks>
+    /// This is the primary hook for ICW-143 viewport culling. Call this
+    /// from the render pipeline (RenderFrameAsync) before starting tile
+    /// generation for the current frame so that stale work from previous
+    /// frames is removed.
+    /// </remarks>
+    public void PublishInterestSet(ViewportInterestSet interestSet)
+    {
+        lock (_lock)
+        {
+            if (_disposed) return;
+
+            _interestSet = interestSet;
+
+            // Cancel any queued items whose keys are not in the interest set.
+            // Running items are NOT cancelled — they are allowed to complete
+            // since their pixels may still be useful for cache warming.
+            // Only queued (not yet started) items are culled.
+            var toRemove = new List<BackgroundTileCacheKey>();
+            foreach (var (key, item) in _items)
+            {
+                if (item.State != TileWorkItemState.Queued)
+                    continue;
+
+                if (!interestSet.Contains(key) && item.ClaimantCount > 0)
+                {
+                    // Remove all claimants for this non-interest tile.
+                    // Since we use per-tile claimants, removing all claimants
+                    // will cancel the work item if no other claimants remain.
+                    foreach (var claimantId in item.GetClaimantIds())
+                    {
+                        item.RemoveClaimant(claimantId);
+                    }
+
+                    if (item.ClaimantCount == 0)
+                    {
+                        toRemove.Add(key);
+                    }
+                }
+            }
+
+            foreach (var key in toRemove)
+            {
+                if (_items.TryGetValue(key, out var item))
+                {
+                    CancelWorkItem(key, item);
+                }
+            }
         }
     }
 
@@ -434,6 +498,10 @@ public sealed class TileWorkCoordinator : IDisposable
     /// promoted. This prevents stale-token items from blocking usable items
     /// behind them or wasting concurrency slots.
     ///
+    /// When a viewport interest set has been published via PublishInterestSet,
+    /// visible tiles drain before prefetch tiles. This ensures the viewport
+    /// sees the highest-priority generation first during rapid navigation.
+    ///
     /// The claimantToken parameter is provided for backward compatibility
     /// with the Phase 0 skeleton. The primary liveness check now uses the
     /// item's ClaimantCount: if all claimants have been auto-removed (their
@@ -456,6 +524,45 @@ public sealed class TileWorkCoordinator : IDisposable
                 {
                     CancelWorkItem(key, item);
                     continue;
+                }
+
+                // Priority: if an interest set has been published and this
+                // item is not visible, scan ahead for a visible item to
+                // promote first. This ensures viewport-visible tiles are
+                // generated before prefetch or stale tiles.
+                if (_interestSet.VisibleKeys.Count > 0 && !_interestSet.IsVisible(key))
+                {
+                    // Re-enqueue this prefetch/non-interest item and look
+                    // for a visible one ahead of it in the queue.
+                    var deferred = new List<BackgroundTileCacheKey> { key };
+                    bool foundVisible = false;
+                    var remaining = new List<BackgroundTileCacheKey>(_queue.Count);
+                    while (_queue.Count > 0)
+                    {
+                        var candidate = _queue.Dequeue();
+                        if (!foundVisible
+                            && _items.TryGetValue(candidate, out var candidateItem)
+                            && candidateItem.State == TileWorkItemState.Queued
+                            && candidateItem.ClaimantCount > 0
+                            && _interestSet.IsVisible(candidate))
+                        {
+                            // Found a visible item — start it now.
+                            StartWorkItem(candidateItem);
+                            foundVisible = true;
+                        }
+                        else
+                        {
+                            remaining.Add(candidate);
+                        }
+                    }
+
+                    // Re-enqueue the deferred and remaining items.
+                    foreach (var d in deferred) { _queue.Enqueue(d); }
+                    foreach (var r in remaining) { _queue.Enqueue(r); }
+
+                    if (foundVisible) continue;
+
+                    // No visible item found — start the original prefetch item.
                 }
 
                 StartWorkItem(item);
@@ -639,6 +746,18 @@ public sealed class TileWorkCoordinator : IDisposable
             {
                 try { cb?.Invoke(CacheKey, ex); }
                 catch { }
+            }
+        }
+
+        /// <summary>
+        /// Returns a snapshot of all registered claimant IDs.
+        /// Used by PublishInterestSet to remove claimants for non-interest tiles.
+        /// </summary>
+        public object[] GetClaimantIds()
+        {
+            lock (_claimantLock)
+            {
+                return _claimants.Select(c => c.Id).ToArray();
             }
         }
 

@@ -375,6 +375,30 @@ public partial class MainWindow : Window
         }
         _previousFrameTileCts = previousCts;
 
+        // Compute the viewport interest set for tile work culling (ICW-143).
+        // Visible tiles are those intersecting the current viewport. Prefetch
+        // is empty for now — a configurable margin can be added later.
+        var mipLevel = BackgroundTileMipPolicy.SelectMipLevel(camera);
+        var visibleTileKeys = new HashSet<BackgroundTileCacheKey>();
+        for (var i = 0; i < _tiles.Count; i++)
+        {
+            if (_tiles[i].Bounds.Intersects(viewport))
+            {
+                var epoch = _tiles[i].CurrentGenerationEpoch;
+                visibleTileKeys.Add(new BackgroundTileCacheKey("synthetic", _tiles[i].Id, epoch, 0));
+                // Also add the selected mip level as a separate key so the
+                // coordinator recognizes both the native and mip requests.
+                if (mipLevel > 0)
+                {
+                    visibleTileKeys.Add(new BackgroundTileCacheKey("synthetic", _tiles[i].Id, epoch, mipLevel));
+                }
+            }
+        }
+
+        // Publish the interest set to the coordinator. This cancels any
+        // queued or running generation for tiles outside the viewport.
+        _tileCoordinator.PublishInterestSet(new ViewportInterestSet(visibleTileKeys, new HashSet<BackgroundTileCacheKey>()));
+
         // Track this render request for stale-frame rejection.
         var requestVersion = _renderRequestTracker.BeginRequest();
 

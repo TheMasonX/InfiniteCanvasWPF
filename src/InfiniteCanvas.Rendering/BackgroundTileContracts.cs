@@ -173,3 +173,35 @@ public static class BackgroundTileMipPolicy
         return Math.Clamp(level, 0, clampedMax);
     }
 }
+
+/// <summary>
+/// Describes the set of tile cache keys that are currently of interest
+/// to the viewport. Used by ICW-143 to cull non-visible tile work and
+/// prioritize visible generation.
+/// </summary>
+/// <param name="VisibleKeys">Tile cache keys that intersect the current viewport.
+/// These have highest priority for generation.</param>
+/// <param name="PrefetchKeys">Tile cache keys in a configurable margin around
+/// the viewport. These have lower priority than visible keys.</param>
+public readonly record struct ViewportInterestSet(
+    IReadOnlySet<BackgroundTileCacheKey> VisibleKeys,
+    IReadOnlySet<BackgroundTileCacheKey> PrefetchKeys)
+{
+    /// <summary>
+    /// True if the given key is in the visible or prefetch interest set.
+    /// </summary>
+    public bool Contains(BackgroundTileCacheKey key) =>
+        VisibleKeys.Contains(key) || PrefetchKeys.Contains(key);
+
+    /// <summary>
+    /// True if the given key is in the visible (highest priority) set.
+    /// </summary>
+    public bool IsVisible(BackgroundTileCacheKey key) => VisibleKeys.Contains(key);
+
+    /// <summary>
+    /// Returns an empty interest set (no tiles are of interest).
+    /// </summary>
+    public static ViewportInterestSet Empty { get; } = new(
+        new HashSet<BackgroundTileCacheKey>(),
+        new HashSet<BackgroundTileCacheKey>());
+}
