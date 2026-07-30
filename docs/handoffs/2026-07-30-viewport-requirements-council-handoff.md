@@ -72,3 +72,74 @@ Between: ICW-P0-QUEUE-DRAIN ↔ ICW-P1-CLAIMANT-TOKENS, ICW-P0-STALE-PUB ↔ ICW
 ## Recommended Next Step
 
 Start ICW-P0-ACTIVECOUNT (fix `_activeCount` timing — move decrement to worker `finally`). This is the first task on the critical path and unblocks everything else. Create its ticket file first, then proceed with the remaining 15.
+
+---
+
+# Supplementary Status Update/Sprint Plan
+
+## Viewport Requirements Assessment
+
+Here is where we stand against the external auditor's requirements for a "reusable production viewport engine."
+
+### What's in good shape (~70% done)
+
+| Area | Status |
+|---|---|
+| **Coordinator infrastructure** | Sound. 19 unit tests, bounded concurrency, deduplication, claimant tracking, structured diagnostics. `_activeCount` now correctly represents physical execution. |
+| **Mip generation (ICW-076)** | Mip contracts, eight-level ceiling, deterministic low-pass reduction, camera-selected raster sampling all work. Nonzero mip admission/caching is the remaining gap. |
+| **Resident mip fallback (ICW-140/145/096)** | The render path returns the best available mip while new ones generate. Fallback ordering is correct. |
+| **Zero-copy rendering** | Mature. `InteropBitmap` + Kernel32 file mapping, `Freeze()` marshalling, Gray8 direct path. |
+| **Settings persistence (ICW-043)** | JSON versioned settings, save on close, malformed-file recovery. |
+
+### What's partially done (~30% done)
+
+| Area | Status |
+|---|---|
+| **Frame-level stale rejection (ICW-078)** | `RenderRequestTracker` epoch mechanism exists but **wiring was reverted** from `MainWindow.xaml.cs`. ICW-100 tracks re-application — it's 4 lines to put back. |
+| **Cache accounting (ICW-134)** | Task scope is broad but `_pixelCost` mip-0-only defect and `ReleaseReservation` no-op counter are not yet explicitly named. |
+| **Exception safety (ICW-014)** | Global handlers exist, EventLog fallback verified. But 19/21 async-void handlers have no try blocks — all silent swallowing with no user-visible signal. |
+| **Architecture cleanup (ICW-018)** | 2 of 5 interfaces have zero implementers (`IRenderer`, `IBackgroundTileSource`). Decision pending. |
+
+### What needs to be built (0% done, critical path)
+
+These are the **external auditor's mandatory Phase 0/1 requirements** that must precede or accompany ICW-143 (viewport culling):
+
+| Priority | Task | Status | Effort |
+|---|---|---|---|
+| **P0** | **ICW-P0-QUEUE-DRAIN** — `DrainQueue` must check claimant-token liveness before advancing past queued items | Open | Small |
+| **P0** | **ICW-P1-CLAIMANT-TOKENS** — Wire real per-frame/viewport `CancellationToken` instead of `CancellationToken.None`. Make `DefaultCoordinatorClaimant` per-tile, not `static` | Open | Small-medium |
+| **P0** | **ICW-100** — Re-apply ICW-078 `RenderRequestTracker` wiring (4 reverted lines) | Open | Trivial |
+| **P0** | **ICW-P0-PIXELOMETER-READOUT** — Mouse hover must not trigger untracked tile generation outside `TileCacheBudget` | Open | Small (interim) |
+| **P0** | **ICW-P0-TRANSACTIONAL-REGEN** — Failed/canceled regenerate must restore previous scene | Open | Medium |
+| **P0** | **ICW-P0-LEASE-RELEASE** — Replace `ReleaseReservation` no-op counter with `IDisposable` lease | Open | Small |
+| **P1** | **Background noise settings reset** — `InitializeSpatialState()` doesn't preserve `MainViewModel` across regenerate | Open | Trivial |
+| **P1** | **ICW-P1-COOPERATIVE-CANCEL** — Mip factory must check cancellation token during expensive sub-phases, not just after | Open | Small |
+| **P1** | **ICW-P1-GDI-CONCURRENCY** — Bounded GDI+ concurrency for tile generation (independent of coordinator's cap) | Open | Medium |
+| **P1** | **ICW-P1-SETTINGS-VALIDATION** — Fix `ObjectsPerTile` `IsValid` gap; thread `MinimumSparseTilePixelSize` into render path | Open | Small |
+| **P1** | **ICW-P1-PIXELCOST-MIPS** — `_pixelCost` should reflect all resident mips, not just mip-0 | Open | Small |
+| **P1** | **ICW-P0-BUFFER-REUSE-SYNC** — `InteropBitmap` compositor handoff race (ICW-021 needs concrete scope) | Open | Medium |
+
+### Overall completion estimate
+
+```
+Coordinator core (ICW-142)          ████████░░  80%  (with _activeCount fix just landed)
+Safety harness (Phase 0)            █░░░░░░░░░  10%  (just did 1 of ~10 items)
+Correctness (Phase 1)               ░░░░░░░░░░   0%  (all 6 items still open)
+Viewport culling (ICW-143)          ░░░░░░░░░░   0%  (blocked by Phase 0/1)
+Stress/benchmarks (ICW-144)         ░░░░░░░░░░   0%
+Rendering pipeline                  █████░░░░░  50%
+Settings/ViewModel                  ██░░░░░░░░  20%
+Tests/benchmarks (existing)         ██████░░░░  60%
+Documentation (ADRs, requirements)  ████░░░░░░  40%
+
+OVERALL toward external audit       ███░░░░░░░  ~30-35%
+```
+
+### What to do next (highest ROI)
+
+1. **ICW-P0-QUEUE-DRAIN** — Add token liveness check. Cheap, unblocks ICW-143 directly.
+2. **ICW-100** — Re-apply the 4 reverted `RenderRequestTracker` lines. Trivial, blocks ICW-143.
+3. **Background noise settings reset** — Move `MainViewModel` construction out of `InitializeSpatialState()`. Single-method fix, high user impact.
+4. **ICW-P1-CLAIMANT-TOKENS** — Make claimant identity per-tile, wire real cancellation tokens. This plus #1 and #2 unblocks ICW-143.
+
+The next ~1-2 days of focused work on those 4 items would bring us to the point where ICW-143 (viewport culling) can safely start.

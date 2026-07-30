@@ -198,6 +198,13 @@ public class TileWorkCoordinatorTests
 
         coordinator.CancelAll();
 
+        // Release the hold so the worker can observe the cancellation token
+        // and actually stop. ActiveCount now represents physical execution, so
+        // it only drops when the worker's catch/finally runs.
+        hold.Set();
+        Assert.That(() => coordinator.GetCounters().ActiveCount,
+            Is.EqualTo(0).After(2, 100), "ActiveCount must reach 0 after CancelAll");
+
         var counters = coordinator.GetCounters();
         Assert.Multiple(() =>
         {
@@ -205,8 +212,6 @@ public class TileWorkCoordinatorTests
             Assert.That(counters.ActiveCount, Is.EqualTo(0));
             Assert.That(counters.QueuedCount, Is.EqualTo(0));
         });
-
-        hold.Set();
     }
 
     [Test]
@@ -221,11 +226,16 @@ public class TileWorkCoordinatorTests
 
         coordinator.Dispose();
 
+        // Release the hold so the worker can observe the cancellation token
+        // and actually stop. ActiveCount now represents physical execution,
+        // so it drops only when the worker's catch/finally runs.
+        hold.Set();
+        Assert.That(() => coordinator.GetCounters().ActiveCount,
+            Is.EqualTo(0).After(2, 100), "ActiveCount must reach 0 after Dispose");
+
         var counters = coordinator.GetCounters();
         Assert.That(counters.CanceledCount, Is.EqualTo(1));
         Assert.That(counters.ActiveCount, Is.EqualTo(0));
-
-        hold.Set();
     }
 
     [Test]

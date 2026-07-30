@@ -308,12 +308,17 @@ public sealed class TileWorkCoordinator : IDisposable
                     {
                         item.State = TileWorkItemState.Completed;
                         Interlocked.Increment(ref _completedCount);
-                        _activeCount--;
                         _items.Remove(item.CacheKey);
-                        Log.Debug("Coord COMPLETE {SourceId}/{TileId} mip{MipLevel} rev{Rev} (active now {Active})",
-                            item.CacheKey.SourceId, item.CacheKey.TileId, item.CacheKey.MipLevel,
-                            item.CacheKey.ContentRevision, _activeCount);
                     }
+
+                    // Always decrement active count when the worker physically stops.
+                    // This ensures the concurrency cap reflects real execution, not
+                    // cancellation-request state. If CancelWorkItem ran first, it does
+                    // not decrement — only this termination path does.
+                    _activeCount--;
+                    Log.Debug("Coord COMPLETE {SourceId}/{TileId} mip{MipLevel} rev{Rev} (active now {Active})",
+                        item.CacheKey.SourceId, item.CacheKey.TileId, item.CacheKey.MipLevel,
+                        item.CacheKey.ContentRevision, _activeCount);
                 }
 
                 // Always dispatch completion so the tile can reset its
@@ -350,14 +355,31 @@ public sealed class TileWorkCoordinator : IDisposable
     {
         lock (_lock)
         {
-            if (_disposed || item.State == TileWorkItemState.Canceled)
+            // Always decrement active count when a worker physically stops,
+            // even if the coordinator is disposed or the item was already
+            // canceled externally. This ensures the concurrency cap correctly
+            // represents physical execution.
+            //
+            // If disposed, skip other cleanup — CancelAll/Dispose already
+            // removed the item and released its reservation.
+            if (_disposed)
+            {
+                _activeCount = Math.Max(0, _activeCount - 1);
                 return;
+            }
 
-            item.State = finalState;
-            if (finalState == TileWorkItemState.Canceled)
-                Interlocked.Increment(ref _canceledCount);
-            else
-                Interlocked.Increment(ref _failedCount);
+            // If the item was already canceled externally (by CancelWorkItem),
+            // skip state/diagnostic changes but still decrement active count
+            // because this worker is physically done.
+            var alreadyCanceled = item.State == TileWorkItemState.Canceled;
+            if (!alreadyCanceled)
+            {
+                item.State = finalState;
+                if (finalState == TileWorkItemState.Canceled)
+                    Interlocked.Increment(ref _canceledCount);
+                else
+                    Interlocked.Increment(ref _failedCount);
+            }
 
             _activeCount = Math.Max(0, _activeCount - 1);
             _items.Remove(item.CacheKey);
@@ -381,8 +403,12 @@ public sealed class TileWorkCoordinator : IDisposable
         if (wasRunning)
         {
             // In-flight work: signal cancellation via the work token source.
+            // Do NOT decrement _activeCount here — the worker's termination path
+            // (completion, OperationCanceledException, or exception) will handle
+            // the decrement when the factory delegate actually stops. This ensures
+            // the concurrency cap represents physically executing work, not
+            // cancellation-request state.
             item.CancelWork();
-            _activeCount = Math.Max(0, _activeCount - 1);
         }
         else
         {
