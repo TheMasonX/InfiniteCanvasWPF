@@ -429,12 +429,15 @@ public sealed class TileWorkCoordinator : IDisposable
 
     /// <summary>
     /// Drains the queue but checks claimant-token liveness before promoting
-    /// each queued item. If a queued item has no live claimants, it is
-    /// canceled and skipped rather than promoted.
+    /// each queued item. If a queued item has no live claimants (their tokens
+    /// fired and auto-removed them), it is canceled and skipped rather than
+    /// promoted. This prevents stale-token items from blocking usable items
+    /// behind them or wasting concurrency slots.
     ///
-    /// Phase 0: method skeleton with tests.
-    /// Phase 1 (after ICW-P1-CLAIMANT-TOKENS lands): wire real per-frame
-    /// claimant token so that stale-token items are correctly culled.
+    /// The claimantToken parameter is provided for backward compatibility
+    /// with the Phase 0 skeleton. The primary liveness check now uses the
+    /// item's ClaimantCount: if all claimants have been auto-removed (their
+    /// CancellationToken fired), the item is canceled.
     /// </summary>
     public void DrainQueueWithLivenessCheck(CancellationToken claimantToken)
     {
@@ -446,13 +449,11 @@ public sealed class TileWorkCoordinator : IDisposable
                 if (!_items.TryGetValue(key, out var item) || item.State != TileWorkItemState.Queued)
                     continue;
 
-                // Phase 0: claimant-token liveness check is a placeholder.
-                // Phase 1: replace with real token check that cancels the
-                // item if its token has fired and no other live claimants
-                // remain. For now, always promote.
-                if (claimantToken.IsCancellationRequested)
+                // If no live claimants remain (their tokens fired via the
+                // auto-removal callback in AddClaimant), cancel this item
+                // and skip it rather than promoting stale work.
+                if (item.ClaimantCount == 0)
                 {
-                    // Token is stale — cancel this item and skip it.
                     CancelWorkItem(key, item);
                     continue;
                 }

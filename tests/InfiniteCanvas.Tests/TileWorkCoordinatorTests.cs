@@ -489,34 +489,51 @@ public class TileWorkCoordinatorTests
     }
 
     [Test]
-    public void DrainQueueWithLivenessCheck_CallableWithCanceledToken_DoesNotThrow()
+    public void DrainQueueWithLivenessCheck_RemovedItem_SkipsInQueue()
     {
-        using var coordinator = new TileWorkCoordinator(maxConcurrency: 1);
-        var started = new ManualResetEventSlim(false);
-        var hold = new ManualResetEventSlim(false);
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 2);
+        var started1 = new ManualResetEventSlim(false);
+        var hold1 = new ManualResetEventSlim(false);
+        var started2 = new ManualResetEventSlim(false);
+        var hold2 = new ManualResetEventSlim(false);
 
-        coordinator.Request(Key1, BlockingFactory(started, hold), ClaimantA, CancellationToken.None);
-        Assert.That(started.Wait(TimeSpan.FromSeconds(2)), Is.True);
+        // Fill both slots so subsequent items queue.
+        coordinator.Request(Key1, BlockingFactory(started1, hold1), ClaimantA, CancellationToken.None);
+        Assert.That(started1.Wait(TimeSpan.FromSeconds(2)), Is.True);
 
-        // Queue second item.
-        coordinator.Request(Key2, Factory(55), ClaimantB, CancellationToken.None);
+        coordinator.Request(Key2, BlockingFactory(started2, hold2), ClaimantB, CancellationToken.None);
+        Assert.That(started2.Wait(TimeSpan.FromSeconds(2)), Is.True);
 
-        using var canceledTokenSource = new CancellationTokenSource();
-        canceledTokenSource.Cancel();
+        // Queue a third item.
+        coordinator.Request(Key3, Factory(55), ClaimantA, CancellationToken.None);
 
-        // Phase 0: verify the method is callable with a canceled token.
-        // With maxConcurrency=1 and a slot busy, no drain occurs — the
-        // skeleton exists and compiles. Phase 1 adds the real token
-        // liveness wiring with per-claimant tokens.
-        Assert.DoesNotThrow(() =>
-            coordinator.DrainQueueWithLivenessCheck(canceledTokenSource.Token));
+        // Remove the third item's claimant directly — the coordinator
+        // cancels it since ClaimantCount drops to 0, removing it from _items.
+        // DrainQueueWithLivenessCheck must skip the orphaned queue entry.
+        coordinator.RemoveClaimant(Key3, ClaimantA);
 
-        // Cleanup: release the hold so the coordinator can drain normally.
-        hold.Set();
+        // Release one slot. DrainQueueWithLivenessCheck runs from Key1's
+        // completion path. It should skip Key3 (no longer in _items) and
+        // find no more work.
+        hold1.Set();
         Thread.Sleep(500);
 
         var counters = coordinator.GetCounters();
-        // Both items eventually complete (normal DrainQueue promotes Key2).
+        // Key1 completed, Key2 still running, Key3 was canceled by RemoveClaimant.
+        Assert.That(counters.CompletedCount, Is.EqualTo(1));
+        Assert.That(counters.CanceledCount, Is.EqualTo(1));
+
+        // Cleanup: release second slot.
+        hold2.Set();
+        Thread.Sleep(500);
+
+        counters = coordinator.GetCounters();
         Assert.That(counters.CompletedCount, Is.EqualTo(2));
+        Assert.That(counters.CanceledCount, Is.EqualTo(1));
+        Assert.That(counters.ActiveCount, Is.EqualTo(0));
+
+        // Key3's callbacks were not invoked because RemoveClaimant removed
+        // the last claimant before DispatchFailed could run — correct behavior
+        // since there is no claimant to notify.
     }
 }

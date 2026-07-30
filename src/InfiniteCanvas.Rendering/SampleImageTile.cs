@@ -24,15 +24,24 @@ public sealed class SampleImageTile
     private int _backgroundFetched;
 #endif
     private TileWorkCoordinator? _coordinator;
-    private static readonly object DefaultCoordinatorClaimant = new();
+    private readonly object _perTileClaimant = new();
 
     /// <summary>
     /// Optional provider that returns the current frame's claimant ID for
     /// coordinator requests. When set, tile generation is attributed to the
     /// current frame, allowing per-frame viewport-aware cancellation.
-    /// If null, a static default claimant is used.
+    /// If null, a per-tile instance claimant is used (each tile has its own
+    /// identity so RemoveAllClaimants only cancels that tile's work).
     /// </summary>
     public Func<object>? ClaimantIdProvider { get; set; }
+
+    /// <summary>
+    /// Optional provider that returns the cancellation token for the current
+    /// frame or viewport. When set, this token is passed to the coordinator
+    /// so that stale frames automatically remove their claimants.
+    /// If null, CancellationToken.None is used (no auto-removal).
+    /// </summary>
+    public Func<CancellationToken>? ClaimantTokenProvider { get; set; }
     public event EventHandler? PixelsGenerated;
     public event EventHandler? PixelsGenerationFailed;
 
@@ -342,7 +351,9 @@ public sealed class SampleImageTile
         set => _coordinator = value;
     }
 
-    private object GetClaimantId() => ClaimantIdProvider?.Invoke() ?? DefaultCoordinatorClaimant;
+    private object GetClaimantId() => ClaimantIdProvider?.Invoke() ?? _perTileClaimant;
+
+    private CancellationToken GetClaimantToken() => ClaimantTokenProvider?.Invoke() ?? CancellationToken.None;
 
     public IReadOnlyList<SampleAnnotation> Annotations { get; }
 
@@ -425,7 +436,7 @@ public sealed class SampleImageTile
                     return result;
                 },
                 GetClaimantId(),
-                CancellationToken.None,
+                GetClaimantToken(),
                 onCompleted: OnCoordinatorPixelsGenerated,
                 onFailed: OnCoordinatorPixelsGenerationFailed,
                 tryReserve: tryReserveCacheEntry);
@@ -550,7 +561,7 @@ public sealed class SampleImageTile
                     return result;
                 },
                 GetClaimantId(),
-                CancellationToken.None,
+                GetClaimantToken(),
                 onCompleted: OnCoordinatorMipGenerated,
                 onFailed: OnCoordinatorPixelsGenerationFailed,
                 tryReserve: tryReserveCacheEntry);

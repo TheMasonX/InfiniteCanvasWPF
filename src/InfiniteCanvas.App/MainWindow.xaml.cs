@@ -60,6 +60,8 @@ public partial class MainWindow : Window
     private TileWorkCoordinator _tileCoordinator = null!;
     private int _frameClaimantId;
     private readonly RenderRequestTracker _renderRequestTracker = new();
+    private CancellationTokenSource? _frameTileCts;
+    private CancellationTokenSource? _previousFrameTileCts;
     private int _diagnosticsFrameCount;
     private readonly Stopwatch _diagnosticsStopwatch = Stopwatch.StartNew();
     private long _lastFrameTicks;
@@ -219,7 +221,8 @@ public partial class MainWindow : Window
             for (var i = 0; i < _tiles.Count; i++)
             {
                 _tiles[i].Coordinator = _tileCoordinator;
-                _tiles[i].ClaimantIdProvider = null; // Use default stable claimant
+                _tiles[i].ClaimantIdProvider = null; // Use per-tile claimant identity
+                _tiles[i].ClaimantTokenProvider = () => _frameTileCts?.Token ?? CancellationToken.None;
             }
 
             SubscribeTileGenerationEvents(_tiles);
@@ -355,6 +358,22 @@ public partial class MainWindow : Window
         var camera = _camera.Capture();
         var viewport = camera.GetViewportBounds(width, height);
         var stopwatch = Stopwatch.StartNew();
+
+        // Replace the per-frame tile-work cancellation token source.
+        // The previous frame's CTS is cancelled so that its tile claimants
+        // are automatically removed from the coordinator. The cancelled CTS
+        // is disposed on the next frame replacement to avoid disposing
+        // while in-flight registrations are still running.
+        var previousCts = Interlocked.Exchange(ref _frameTileCts, new CancellationTokenSource());
+        previousCts?.Cancel();
+
+        // Dispose the previous frame's CTS that was cancelled two frames ago.
+        // This gives in-flight cancellation callbacks time to complete.
+        if (_previousFrameTileCts is not null)
+        {
+            _previousFrameTileCts.Dispose();
+        }
+        _previousFrameTileCts = previousCts;
 
         // Track this render request for stale-frame rejection.
         var requestVersion = _renderRequestTracker.BeginRequest();
@@ -1550,8 +1569,12 @@ public partial class MainWindow : Window
             // mip coordinates using the resident mip dimensions so indexing is
             // safe when a lower-resolution mip is used as a fallback.
             byte[] sourcePixels;
+            // Pass the cache budget reservation so that hover-triggered
+            // tile generation participates in budget accounting instead of
+            // bypassing it (which would create untracked, unevictable tiles).
             var hasSourcePixels = tile.TryGetPixelsNonBlocking(
-                mipLevel, out sourcePixels, out var residentMipLevel);
+                mipLevel, out sourcePixels, out var residentMipLevel,
+                tryReserveCacheEntry: _tileCacheBudget.TryReserve);
 
             var sourceDimensions = BackgroundTileMipPolicy.GetDimensions(tile.PixelWidth, tile.PixelHeight, residentMipLevel);
             var sourceX = Math.Clamp((int)((worldX - tile.Bounds.X) * sourceDimensions.Width / tile.Bounds.Width), 0, Math.Max(0, sourceDimensions.Width - 1));
