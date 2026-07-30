@@ -91,6 +91,44 @@ public class LiveSpatialIndexServiceTests
         Assert.That(service.Count, Is.EqualTo(2));
     }
 
+    [Test]
+    public void Query_ReturnsImmutableArray_CallerCannotModify()
+    {
+        var service = CreateService();
+        service.Add(new SpatialRecord<string>("item", new SpatialBounds(0, 0, 10, 10), "item"));
+
+        var results = service.Query(new SpatialBounds(-5, -5, 20, 20));
+
+        // The returned list must be an array (immutable snapshot), not a
+        // mutable List<T>. This verifies the ICW-P0-SPATIAL-INDEX-SAFETY
+        // requirement that callers receive an immutable copy.
+        Assert.That(results, Is.InstanceOf<Array>());
+
+        // Verify the array cannot be cast to a mutable list.
+        Assert.That(results, Is.Not.InstanceOf<List<SpatialRecord<string>>>());
+        Assert.That(results, Has.Count.EqualTo(1));
+    }
+
+    [Test]
+    public async Task QueryDuringPublish_ReturnsConsistentSnapshot()
+    {
+        var builder = new DelayedBuilder<SpatialRecord<string>>();
+        var service = new LiveSpatialIndexService<SpatialRecord<string>>(builder);
+        var first = new SpatialRecord<string>("first", new SpatialBounds(0, 0, 10, 10), "first");
+
+        service.Add(first);
+        var publishTask = service.PublishSnapshotAsync();
+        await builder.BuildStarted.Task;
+
+        // Query while publish is in progress (hot items moved to publishing).
+        var results = service.Query(new SpatialBounds(-5, -5, 30, 30));
+        Assert.That(results.Select(item => item.Id), Is.EquivalentTo(new[] { "first" }));
+        Assert.That(results, Is.InstanceOf<Array>());
+
+        builder.ReleaseBuild();
+        await publishTask;
+    }
+
     private static LiveSpatialIndexService<SpatialRecord<string>> CreateService()
     {
         return new(new LinearSpatialIndexBuilder<SpatialRecord<string>>());

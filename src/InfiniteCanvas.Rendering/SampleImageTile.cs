@@ -498,6 +498,14 @@ public sealed class SampleImageTile
     {
         var expectedEpoch = key.ContentRevision;
         var currentEpoch = Volatile.Read(ref _generationEpoch);
+
+        // Stale-generation publication guard (ICW-P0-STALE-PUB):
+        // The key's ContentRevision captures the tile's _generationEpoch at
+        // request time. If the tile was reset or evicted (epoch advanced)
+        // between request and completion, the result is stale and must be
+        // discarded. This shares the same epoch mechanism used by the frame-
+        // level RenderRequestTracker (ICW-100): both compare a captured
+        // version against the current version to detect staleness.
         var published = false;
         lock (_cacheGate)
         {

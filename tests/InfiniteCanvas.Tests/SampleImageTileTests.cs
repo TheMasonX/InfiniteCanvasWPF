@@ -72,6 +72,49 @@ public class SampleImageTileTests
     }
 
     [Test]
+    public void CoordinatorCompletion_WithStaleEpoch_DiscardsPixels()
+    {
+        var coordinator = new TileWorkCoordinator(maxConcurrency: 1);
+        var generationStarted = new ManualResetEventSlim(false);
+        var releaseGeneration = new ManualResetEventSlim(false);
+        var tile = new SampleImageTile(
+            "tile-stale-coordinator",
+            new SpatialBounds(0, 0, 2, 2),
+            2,
+            2,
+            () =>
+            {
+                generationStarted.Set();
+                releaseGeneration.Wait();
+                return [10, 20, 30, 40];
+            },
+            []);
+
+        // Wire the coordinator to the tile so it uses the coordinator path.
+        tile.Coordinator = coordinator;
+        tile.ClaimantTokenProvider = () => CancellationToken.None;
+
+        // Trigger generation (goes through coordinator).
+        Assert.That(tile.TryGetPixelsNonBlocking(out _), Is.False);
+        Assert.That(generationStarted.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        // Reset the tile — this bumps _generationEpoch. When the coordinator
+        // completes, OnCoordinatorPixelsGenerated will see that the key's
+        // ContentRevision (old epoch) doesn't match the current epoch and
+        // discard the result.
+        tile.ResetImageCache();
+        releaseGeneration.Set();
+
+        // Wait for coordinator to process the completion.
+        Thread.Sleep(500);
+
+        // Tile must not have accepted the stale pixels.
+        Assert.That(tile.IsImageGenerated, Is.False);
+
+        coordinator.Dispose();
+    }
+
+    [Test]
     public void DefectOverlaySampler_UsesLastApplicableAnnotationValueAndFallsBackToBackground()
     {
         var annotations = new List<SampleAnnotation>

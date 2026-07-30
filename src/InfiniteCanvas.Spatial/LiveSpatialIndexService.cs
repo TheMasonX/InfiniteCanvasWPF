@@ -49,7 +49,10 @@ public sealed class LiveSpatialIndexService<T> : ISpatialIndexService<T> where T
         results.AddRange(state.SnapshotIndex.Query(viewport));
         AppendMatches(results, state.PublishingItems, viewport);
         AppendMatches(results, state.HotItems, viewport);
-        return results;
+
+        // Return an immutable array so callers cannot modify the result list
+        // and to ensure snapshot isolation during concurrent publish.
+        return results.ToArray();
     }
 
     public async Task PublishSnapshotAsync(CancellationToken cancellationToken = default)
