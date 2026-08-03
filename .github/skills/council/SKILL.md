@@ -3,7 +3,7 @@ name: council
 description: >-
   Run a multi-seat peer review for high-impact decisions in InfiniteCanvasWPF.
   Use when evaluating requirement-to-task coverage, architecture plans, audit
-  reconciliation, sprint scope, or migration strategy. Default 4 seats plus a
+  reconciliation, sprint scope, or migration strategy. Default 3 seats plus a
   synthesizer. Produces a structured report with seat-level findings,
   confidence percentages, dissent, acceptance criteria, and evidence gates.
 argument-hint: 'Decision topic and scope — such as viewport requirements alignment or audit reconciliation'
@@ -64,7 +64,7 @@ Minimum pack should include:
 
 ### 2. Select Council Seats
 
-Default to 4 seats plus a Synthesizer. Adjust the seat list based on the decision scope:
+Default to 3 seats plus a Synthesizer. Adjust the seat list based on the decision scope:
 
 | Seat | Focus | Best for |
 |---|---|---|
@@ -75,7 +75,8 @@ Default to 4 seats plus a Synthesizer. Adjust the seat list based on the decisio
 | **Spatial Indexing Reviewer** | ISpatialIndexService, STRtree, LiveSpatialIndexService, ADR-0003 conformance | Spatial index safety, publish semantics |
 | **Rendering Performance Reviewer** | Benchmark baselines, stage instrumentation, Gray8/mip optimization | Performance claims, benchmark evidence |
 
-Always include at least 4 seats for a full council. For narrow-scope decisions, use 3 seats minimum. For major architecture decisions, use all 6.
+Use three seats for the default council. Add specialist seats only when the evidence pack contains material concerns that the default seats cannot assess.
+Use all six seats only for major architecture decisions with broad cross-subsystem impact.
 
 ### 3. Run Independent Seat Reviews
 
@@ -89,6 +90,10 @@ Each seat receives the same evidence pack and must return:
 - **Confidence percentage**: 0.0–1.0 expressing certainty in the finding
 
 For parallel execution, delegate seat reviews to subagents using the [subagent-swarm](../subagent-swarm/SKILL.md) skill. Each seat runs as an independent subagent with the same evidence pack but a different perspective prompt.
+Resolve the recovery directory before delegation from the user-supplied path, or use `D:\Temp\Subagents\<run-id>\`.
+Assign one child directory per seat and require the subagent to write its prompt, notes, evidence references, and result there.
+Do not allow a subagent to write intermediate artifacts to the operating system temporary directory or directly to repository planning files.
+Stop delegation if the recovery directory is unavailable.
 
 ### 4. Branch on Disagreement
 

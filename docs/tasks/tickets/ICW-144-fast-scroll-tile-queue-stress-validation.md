@@ -26,7 +26,7 @@ links:
   - docs/requirements/functional-requirements-and-invariants.md
   - docs/ADR/0006-viewport-aware-tile-work-scheduling.md
 created: 2026-07-26
-updated: 2026-07-26
+updated: 2026-08-03
 ---
 
 ## Summary
@@ -51,7 +51,7 @@ Prove that viewport-aware scheduling reduces stale work and improves useful tile
 
 Commands: `dotnet build benchmarks/InfiniteCanvas.Benchmarks/InfiniteCanvas.Benchmarks.csproj --configuration Release` and `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release`
 
-Outcome: `TileWorkCoordinatorBenchmarks.cs` added with 8 benchmark scenarios covering PublishInterestSet (empty, full-visible, none-visible, mixed) and DrainQueueWithLivenessCheck (FIFO fallback, visible-promoted priority, 3-cycle fast-scroll stress). Build: 0 errors. Tests: 93/93 passing.
+Outcome: `TileWorkCoordinatorBenchmarks.cs` added with seven benchmark methods covering PublishInterestSet (empty, full-visible, none-visible, mixed) and DrainQueueWithLivenessCheck (FIFO fallback, visible-promoted priority, 3-cycle fast-scroll stress). Build: 0 errors. Tests: 93/93 passing. The method count is seven; parameterized cases are not additional methods.
 
 ## Notes
 
@@ -62,3 +62,7 @@ Coordinate stage counters with ICW-132 and benchmark structure with ICW-133. Do 
 - ICW-141: parent scheduling plan
 - ICW-142: bounded materialization
 - ICW-143: culling and priority
+
+## Council Update, 2026-08-03
+
+Add evidence gates for queue scan allocations, callback exception diagnostics, queued-work eviction, and repeated benchmark measurements. Keep the seven-method count. Do not claim performance improvement from one-iteration smoke output.

@@ -1,10 +1,13 @@
 ---
 id: ICW-189
 status: To Do
+key: ICW-189
 title: Add `GenerateSet(GeneratorOptions)` adapter and preserve deprecation forwarding
 type: Task
 priority: P3
 tags: [rendering, api-design, backward-compatibility]
+created: 2026-08-02
+updated: 2026-08-03
 ---
 
 Summary
@@ -18,3 +21,7 @@ Validation
 
 Next step
 - Implement the adapter overload, add XML doc deprecation notes on old signatures, and add parity unit tests. Keep forwarding overloads for one release before removal.
+
+Council update, 2026-08-03
+- Register this existing ticket in `docs/tasks/active-tasks.md` and `docs/tasks/JIRA.md`.
+- Verify direct callers, XML deprecation behavior, and pixel and tile-ID parity before closing the migration path.

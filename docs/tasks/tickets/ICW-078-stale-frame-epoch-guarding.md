@@ -2,7 +2,7 @@
 id: ICW-078-stale-frame-epoch-guarding
 key: ICW-078
 title: Guard render and regeneration paths against stale frame publication
-status: Proposed
+status: Done
 type: Task
 priority: P1
 tags:
@@ -13,7 +13,7 @@ related: []
 links:
   - docs/tasks/README.md
 created: 2026-07-25
-updated: 2026-07-25
+updated: 2026-08-03
 ---
 
 # ICW-078 - Guard render and regeneration paths against stale frame publication
@@ -47,6 +47,10 @@ The render pipeline currently publishes frames from a shared coalescer without a
 ## Council Notes (2026-07-26)
 
 - Council scan of recent audits found a regression where `RenderRequestTracker` wiring was reverted and similar `async void` handler patterns that increase crash surface. Related tasks created: ICW-110 (async-void safety), ICW-111 (annotation metrics migration), ICW-112 (tilecache diagnostics snapshot). Link cross-references and owners when assigning.
+
+## Council Update, 2026-08-03
+
+Source review confirms the stale-frame epoch guard is implemented and covered by the current render request tests. Update the tracker and ticket status to match the implementation. Keep the related async-handler and diagnostics work separate.
 
 
 ## Related Tasks

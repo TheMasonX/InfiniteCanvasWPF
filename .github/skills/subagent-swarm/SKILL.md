@@ -27,6 +27,20 @@ Do not use this skill for a single-file change or a trivial bug fix.
 - target subsystems and expected deliverables
 - constraints such as benchmark safety, test scope, or docs updates
 - any existing tracker entries, ADRs, or requirements that should guide the work
+- optional user-supplied recovery directory for delegated artifacts
+
+## Recovery Workspace
+
+Resolve the recovery directory before creating workstreams.
+Use the user-supplied path when present. Otherwise use `D:\Temp\Subagents\<run-id>\`.
+Create the directory and record it in the swarm manifest.
+
+Every subagent must write its prompt, working notes, evidence, output, and handoff to its own child directory under the recovery root.
+Subagents must not use the operating system temporary directory for intermediate files.
+Subagents must not write directly to repository source, task, or report files during investigation.
+The coordinator applies verified changes after reconciliation.
+
+If the recovery directory cannot be created or written, stop the swarm and report the filesystem error.
 
 ## Procedure
 
@@ -37,6 +51,7 @@ Do not use this skill for a single-file change or a trivial bug fix.
   - tests/benchmarks/validation
   - docs and task tracker updates
 - Keep each track scoped to a concrete deliverable.
+- Create one recovery child directory for each track before delegation.
 
 2. Preserve shared repository context
 - Before execution, ensure each track uses the same baseline artifacts:
@@ -46,6 +61,7 @@ Do not use this skill for a single-file change or a trivial bug fix.
   - docs/tasks/JIRA.md
   - relevant ADRs and requirements docs
 - Avoid conflicting assumptions between tracks.
+- Give every track the same recovery root and baseline manifest.
 
 3. Assign concrete evidence goals
 - Each track should end with a verifiable output such as:
@@ -65,6 +81,7 @@ Do not use this skill for a single-file change or a trivial bug fix.
 - Merge results from each stream into a single summary.
 - Check for contradictions, duplicate work, or drift from the original requirement.
 - Highlight any unresolved risk or follow-up task that should be tracked.
+- Preserve each subagent artifact in the recovery workspace for replay and failure recovery.
 
 ## Decision Points
 
