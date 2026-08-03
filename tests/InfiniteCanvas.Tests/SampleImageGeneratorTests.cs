@@ -359,4 +359,35 @@ public class SampleImageGeneratorTests
 
         Assert.That(reduced, Is.EqualTo(new byte[] { 128, 128 }));
     }
+
+    [Test]
+    public void GenerateMonochromeMipPixels_WithCanceledToken_ThrowsPromptly()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        Assert.That(
+            () => SampleImageGenerator.GenerateMonochromeMipPixels(
+                64, 64, 128, 8, 0, seed: 1729, circleCount: 2,
+                cancellationToken: cts.Token),
+            Throws.TypeOf<OperationCanceledException>());
+    }
+
+    [Test]
+    public async Task GenerateMonochromeMipPixels_WithTokenCanceledMidGeneration_StopsWithinBound()
+    {
+        using var cts = new CancellationTokenSource();
+        var generation = Task.Run(() =>
+            SampleImageGenerator.GenerateMonochromeMipPixels(
+                2048, 2048, 128, 16, 0, seed: 1729, circleCount: 6,
+                cancellationToken: cts.Token));
+
+        // Cancel after generation starts so the expensive phases observe the token.
+        await Task.Delay(10);
+        cts.Cancel();
+
+        Assert.That(
+            async () => await generation.WaitAsync(TimeSpan.FromSeconds(2)),
+            Throws.TypeOf<OperationCanceledException>());
+    }
 }

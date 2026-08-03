@@ -475,10 +475,17 @@ public sealed class TileWorkCoordinator : IDisposable
             RemoveFromQueue(key);
             item.DispatchFailed(new OperationCanceledException(
                 "Tile work was canceled before execution"));
+
+            // Queued work never reaches HandleWorkStopped, so it owns removal
+            // and reservation cleanup on this path.
+            _items.Remove(key);
+            ReleaseReservation(key);
         }
 
-        _items.Remove(key);
-        ReleaseReservation(key);
+        // Running work remains in _items until the worker physically stops.
+        // A cancel-and-re-request can therefore admit duplicate work briefly.
+        // Epoch guards discard stale results, but the duplicate still costs CPU.
+        // The worker termination path owns removal and reservation cleanup.
     }
 
     private void DrainQueue()

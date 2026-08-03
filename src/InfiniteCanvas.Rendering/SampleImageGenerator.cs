@@ -202,7 +202,9 @@ public static class SampleImageGenerator
                 () => GenerateMonochromeMipPixelsSeeded(options.PixelWidth, options.PixelHeight, options.TargetValue, options.Noise, 0, pixelSeed, options.CircleCount, noiseSettings, (float)bounds.X, (float)bounds.Y, tileId),
                 annotations,
                 options.TargetValue,
-                mipLevel => GenerateMonochromeMipPixelsSeeded(options.PixelWidth, options.PixelHeight, options.TargetValue, options.Noise, mipLevel, pixelSeed, options.CircleCount, noiseSettings, (float)bounds.X, (float)bounds.Y, tileId));
+                mipLevel => GenerateMonochromeMipPixelsSeeded(options.PixelWidth, options.PixelHeight, options.TargetValue, options.Noise, mipLevel, pixelSeed, options.CircleCount, noiseSettings, (float)bounds.X, (float)bounds.Y, tileId),
+                cancellablePixelFactory: token => GenerateMonochromeMipPixelsSeeded(options.PixelWidth, options.PixelHeight, options.TargetValue, options.Noise, 0, pixelSeed, options.CircleCount, noiseSettings, (float)bounds.X, (float)bounds.Y, tileId, token),
+                cancellableMipPixelFactory: (mipLevel, token) => GenerateMonochromeMipPixelsSeeded(options.PixelWidth, options.PixelHeight, options.TargetValue, options.Noise, mipLevel, pixelSeed, options.CircleCount, noiseSettings, (float)bounds.X, (float)bounds.Y, tileId, token));
             // Attach a reference to the shared defect template pool so eviction paths
             // can dispose platform bitmaps when the tile's images are evicted/regenerated.
             tiles[tileIndex].DefectTemplatePool = defectTemplatePool;
@@ -224,7 +226,8 @@ public static class SampleImageGenerator
         NoiseSettings? noiseSettings = null,
         float worldOriginX = 0f,
         float worldOriginY = 0f,
-        string? tileLabel = null)
+        string? tileLabel = null,
+        CancellationToken cancellationToken = default)
     {
         return GenerateMonochromeMipPixels(
             nativeWidth,
@@ -237,7 +240,8 @@ public static class SampleImageGenerator
             noiseSettings,
             worldOriginX,
             worldOriginY,
-            tileLabel);
+            tileLabel,
+            cancellationToken);
     }
 
     // Overload that defaults to mip level 0 for callers that omit the mip.
@@ -251,9 +255,10 @@ public static class SampleImageGenerator
         NoiseSettings? noiseSettings = null,
         float worldOriginX = 0f,
         float worldOriginY = 0f,
-        string? tileLabel = null)
+        string? tileLabel = null,
+        CancellationToken cancellationToken = default)
     {
-        return GenerateMonochromeMipPixelsSeeded(nativeWidth, nativeHeight, targetValue, noise, 0, seed, circleCount, noiseSettings, worldOriginX, worldOriginY, tileLabel);
+        return GenerateMonochromeMipPixelsSeeded(nativeWidth, nativeHeight, targetValue, noise, 0, seed, circleCount, noiseSettings, worldOriginX, worldOriginY, tileLabel, cancellationToken);
     }
 
     public static byte[] GenerateMonochromeMipPixels(
@@ -267,8 +272,10 @@ public static class SampleImageGenerator
         NoiseSettings? noiseSettings = null,
         float worldOriginX = 0f,
         float worldOriginY = 0f,
-        string? tileLabel = null)
+        string? tileLabel = null,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (nativeWidth <= 0 || nativeHeight <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(nativeWidth));
@@ -285,14 +292,15 @@ public static class SampleImageGenerator
         {
             var mipScale = 1 << mipLevel;
             var stepSize = mipScale * (float)(noiseSettings?.Scale ?? NoiseSettings.Default.Scale);
-            GenerateNoisePixelsCore(pixels, width, height, targetValue, noise, seed, noiseSettings ?? NoiseSettings.Default, worldOriginX, worldOriginY, stepSize);
+            GenerateNoisePixelsCore(pixels, width, height, targetValue, noise, seed, noiseSettings ?? NoiseSettings.Default, worldOriginX, worldOriginY, stepSize, cancellationToken);
         }
 
         if (circleCount > 0 || !string.IsNullOrWhiteSpace(tileLabel))
         {
-            ApplyMipDetails(pixels, width, height, nativeWidth, nativeHeight, targetValue, circleCount, seed, tileLabel);
+            ApplyMipDetails(pixels, width, height, nativeWidth, nativeHeight, targetValue, circleCount, seed, tileLabel, cancellationToken);
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         return pixels;
     }
 
@@ -305,8 +313,10 @@ public static class SampleImageGenerator
         byte targetValue,
         int circleCount,
         int seed,
-        string? tileLabel)
+        string? tileLabel,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var random = new DeterministicRandom(unchecked(seed + 0x2F6E2B1));
         var effectiveCircleCount = Math.Clamp(circleCount, 0, 8);
         var maxRadius = Math.Max(8, Math.Min(nativeWidth, nativeHeight) / 10);
@@ -315,6 +325,7 @@ public static class SampleImageGenerator
         var circles = new (float CenterX, float CenterY, float Radius, byte Value)[effectiveCircleCount];
             for (var circleIndex = 0; circleIndex < effectiveCircleCount; circleIndex++)
         {
+                cancellationToken.ThrowIfCancellationRequested();
             var centerX = random.Next(0, nativeWidth);
             var centerY = random.Next(0, nativeHeight);
             var radius = random.Next(6, maxRadius + 1);
@@ -323,9 +334,9 @@ public static class SampleImageGenerator
         }
 
 #if WINDOWS
-        ApplyDetailsWithGdiPlus(pixels, width, height, circles, tileLabel);
+        ApplyDetailsWithGdiPlus(pixels, width, height, circles, tileLabel, cancellationToken);
 #else
-        ApplyCirclesWithRasterizer(pixels, width, height, circles);
+        ApplyCirclesWithRasterizer(pixels, width, height, circles, cancellationToken);
 #endif
     }
 
@@ -335,15 +346,19 @@ public static class SampleImageGenerator
         int width,
         int height,
         ReadOnlySpan<(float CenterX, float CenterY, float Radius, byte Value)> circles,
-        string? tileLabel)
+        string? tileLabel,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         using var bitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb);
         using (var graphics = Graphics.FromImage(bitmap))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             graphics.Clear(Color.Transparent);
             graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             foreach (var circle in circles)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 using var brush = new SolidBrush(Color.FromArgb(255, circle.Value, circle.Value, circle.Value));
                 graphics.FillEllipse(
                     brush,
@@ -355,6 +370,7 @@ public static class SampleImageGenerator
 
             if (!string.IsNullOrWhiteSpace(tileLabel))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 using var font = new Font(
                     FontFamily.GenericSansSerif,
                     Math.Max(8f, height / 12f),
@@ -369,11 +385,13 @@ public static class SampleImageGenerator
         var data = bitmap.LockBits(bounds, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             unsafe
             {
                 var source = (byte*)data.Scan0;
                 for (var y = 0; y < height; y++)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     var row = source + (y * data.Stride);
                     for (var x = 0; x < width; x++)
                     {
@@ -400,10 +418,12 @@ public static class SampleImageGenerator
         byte[] pixels,
         int width,
         int height,
-        ReadOnlySpan<(float CenterX, float CenterY, float Radius, byte Value)> circles)
+        ReadOnlySpan<(float CenterX, float CenterY, float Radius, byte Value)> circles,
+        CancellationToken cancellationToken)
     {
         foreach (var circle in circles)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var radiusSquared = circle.Radius * circle.Radius;
             var left = Math.Max(0, (int)Math.Floor(circle.CenterX - circle.Radius));
             var right = Math.Min(width, (int)Math.Ceiling(circle.CenterX + circle.Radius) + 1);
@@ -411,6 +431,7 @@ public static class SampleImageGenerator
             var bottom = Math.Min(height, (int)Math.Ceiling(circle.CenterY + circle.Radius) + 1);
             for (var y = top; y < bottom; y++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var dy = y - circle.CenterY;
                 for (var x = left; x < right; x++)
                 {
@@ -510,8 +531,10 @@ public static class SampleImageGenerator
         NoiseSettings noiseSettings,
         float worldOriginX,
         float worldOriginY,
-        float stepSize)
+        float stepSize,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (noise == 0)
         {
             Array.Fill(pixels, targetValue);
@@ -524,6 +547,7 @@ public static class SampleImageGenerator
         try
         {
             using var fastNoise = CreateFastNoise(noiseSettings);
+            cancellationToken.ThrowIfCancellationRequested();
             var outputMinMax = fastNoise.GenUniformGrid2D(
                 noiseBuffer.AsSpan(0, pixelCount),
                 worldOriginX,
@@ -548,6 +572,10 @@ public static class SampleImageGenerator
             var noiseToJitterOffset = (-noiseMin * noiseToJitterScale) - jitterScale;
             for (var index = 0; index < pixelCount; index++)
             {
+                if ((index & 0x3FFF) == 0)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
                 var scaledJitter = (noiseBuffer[index] * noiseToJitterScale) + noiseToJitterOffset;
                 var jitter = scaledJitter >= 0.0f
                     ? (int)(scaledJitter + 0.5f)

@@ -10,8 +10,8 @@ namespace InfiniteCanvas.Rendering;
 public sealed class SampleImageTile
 {
     private readonly Lock _cacheGate = new();
-    private readonly Func<byte[]> _pixelFactory;
-    private readonly Func<int, byte[]>? _mipPixelFactory;
+    private readonly Func<CancellationToken, byte[]> _pixelFactory;
+    private readonly Func<int, CancellationToken, byte[]>? _mipPixelFactory;
     private readonly byte _placeholderValue;
     private readonly int _pixelCost;
     private readonly Dictionary<int, byte[]> _mipPixels = new();
@@ -61,7 +61,9 @@ public sealed class SampleImageTile
         Func<byte[]> pixelFactory,
         IReadOnlyList<SampleAnnotation> annotations,
         byte placeholderValue = 128,
-        Func<int, byte[]>? mipPixelFactory = null)
+        Func<int, byte[]>? mipPixelFactory = null,
+        Func<CancellationToken, byte[]>? cancellablePixelFactory = null,
+        Func<int, CancellationToken, byte[]>? cancellableMipPixelFactory = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentNullException.ThrowIfNull(pixelFactory);
@@ -77,10 +79,14 @@ public sealed class SampleImageTile
         PixelWidth = pixelWidth;
         PixelHeight = pixelHeight;
         _placeholderValue = placeholderValue;
-        _pixelFactory = () => ValidatePixels(pixelFactory(), pixelWidth, pixelHeight);
-        _mipPixelFactory = mipPixelFactory is null
-            ? null
-            : mipLevel => ValidateMipPixels(mipPixelFactory(mipLevel), pixelWidth, pixelHeight, mipLevel);
+        _pixelFactory = cancellablePixelFactory is null
+            ? _ => ValidatePixels(pixelFactory(), pixelWidth, pixelHeight)
+            : token => ValidatePixels(cancellablePixelFactory(token), pixelWidth, pixelHeight);
+        _mipPixelFactory = cancellableMipPixelFactory is not null
+            ? (mipLevel, token) => ValidateMipPixels(cancellableMipPixelFactory(mipLevel, token), pixelWidth, pixelHeight, mipLevel)
+            : mipPixelFactory is null
+                ? null
+                : (mipLevel, _) => ValidateMipPixels(mipPixelFactory(mipLevel), pixelWidth, pixelHeight, mipLevel);
         _pixelCost = checked(pixelWidth * pixelHeight);
         Annotations = annotations;
         // Optional shared defect template pool reference for lifecycle disposal.
@@ -162,7 +168,7 @@ public sealed class SampleImageTile
             {
                 if (_pixels is null)
                 {
-                    _pixels = _pixelFactory();
+                    _pixels = _pixelFactory(CancellationToken.None);
 #if WINDOWS
                     Interlocked.Exchange(ref _backgroundFetched, 1);
 #endif
@@ -439,7 +445,7 @@ public sealed class SampleImageTile
                 async token =>
                 {
                     var generationStarted = Stopwatch.GetTimestamp();
-                    var result = _pixelFactory();
+                    var result = _pixelFactory(token);
                     Interlocked.Exchange(ref _generationDurationTicks, Stopwatch.GetTimestamp() - generationStarted);
                     return result;
                 },
@@ -469,7 +475,7 @@ public sealed class SampleImageTile
             var generationEpoch = Volatile.Read(ref _generationEpoch);
             try
             {
-                var generated = _pixelFactory();
+                var generated = _pixelFactory(CancellationToken.None);
                 var shouldRaiseEvent = false;
                 lock (_cacheGate)
                 {
@@ -572,8 +578,7 @@ public sealed class SampleImageTile
                 key,
                 async token =>
                 {
-                    var result = _mipPixelFactory!(capturedMipLevel);
-                    token.ThrowIfCancellationRequested();
+                    var result = _mipPixelFactory!(capturedMipLevel, token);
                     return result;
                 },
                 GetClaimantId(),
@@ -608,7 +613,7 @@ public sealed class SampleImageTile
             var generationEpoch = Volatile.Read(ref _generationEpoch);
             try
             {
-                var generated = _mipPixelFactory!(mipLevel);
+                var generated = _mipPixelFactory!(mipLevel, CancellationToken.None);
                 var shouldRaiseEvent = false;
                 lock (_cacheGate)
                 {
