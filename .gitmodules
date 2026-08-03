@@ -1,0 +1,3 @@
+[submodule "submodules/FastNoise2Bindings"]
+	path = submodules/FastNoise2Bindings
+	url = https://github.com/Auburn/FastNoise2Bindings.git
