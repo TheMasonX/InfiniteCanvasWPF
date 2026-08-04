@@ -6,7 +6,7 @@ namespace InfiniteCanvas.ViewModels;
 public partial class MainViewModel : ObservableObject
 {
     [ObservableProperty]
-    private TileBackgroundNoiseSettingsViewModel tileBackgroundNoiseSettings = new();
+    public partial TileBackgroundNoiseSettingsViewModel TileBackgroundNoiseSettings { get; set; } = new();
 
     public void ApplySettings(CanvasUserSettings settings)
     {
@@ -63,26 +63,26 @@ public partial class TileBackgroundNoiseSettingsViewModel : ObservableObject
     private static readonly CanvasUserSettings Defaults = new();
 
     [ObservableProperty]
-    private double targetValue = Defaults.BackgroundTargetValue;
+    public partial double TargetValue { get; set; } = Defaults.BackgroundTargetValue;
 
     [ObservableProperty]
-    private double noise = Defaults.BackgroundNoise;
+    public partial double Noise { get; set; } = Defaults.BackgroundNoise;
 
     [ObservableProperty]
-    private double circleCount = Defaults.BackgroundCircleCount;
+    public partial double CircleCount { get; set; } = Defaults.BackgroundCircleCount;
 
     [ObservableProperty]
-    private double scale = Defaults.BackgroundNoiseScale;
+    public partial double Scale { get; set; } = Defaults.BackgroundNoiseScale;
 
     [ObservableProperty]
-    private double octaves = Defaults.BackgroundNoiseOctaves;
+    public partial double Octaves { get; set; } = Defaults.BackgroundNoiseOctaves;
 
     [ObservableProperty]
-    private double lacunarity = Defaults.BackgroundNoiseLacunarity;
+    public partial double Lacunarity { get; set; } = Defaults.BackgroundNoiseLacunarity;
 
     [ObservableProperty]
-    private double gain = Defaults.BackgroundNoiseGain;
+    public partial double Gain { get; set; } = Defaults.BackgroundNoiseGain;
 
     [ObservableProperty]
-    private double amplitude = Defaults.BackgroundNoiseAmplitude;
+    public partial double Amplitude { get; set; } = Defaults.BackgroundNoiseAmplitude;
 }

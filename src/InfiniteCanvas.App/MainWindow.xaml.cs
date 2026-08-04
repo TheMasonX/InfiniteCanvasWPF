@@ -16,13 +16,10 @@ namespace InfiniteCanvas.App;
 
 public partial class MainWindow : Window
 {
-    private const double _panExponent = 2.5;
-
     private LiveSpatialIndexService<SampleAnnotation> _spatialIndex = null!;
     private CameraTransform _camera = null!;
     private readonly CoalescingAsyncAction _renderAction;
     private readonly DispatcherTimer _resizeTimer;
-    private readonly DispatcherTimer _anchorPanTimer;
     private readonly ISelectionOutlineAnimator _selectionOutlineAnimator;
     private MainViewModel _mainViewModel = new();
     private readonly CancellationTokenSource _lifetime = new();
@@ -37,9 +34,6 @@ public partial class MainWindow : Window
     private SpatialBounds _sceneBounds;
     private ZeroCopyBitmapFactory? _frontBitmapFactory;
     private ZeroCopyBitmapFactory? _backBitmapFactory;
-    private Point? _lastPointerPosition;
-    private Point? _anchorPanOrigin;
-    private Point _anchorPanPointer;
     private Point? _hoverPointerPosition;
     private string? _selectedAnnotationId;
     private AnnotationDisplayOptions _annotationDisplayOptions = AnnotationDisplayOptions.Default;
@@ -51,13 +45,6 @@ public partial class MainWindow : Window
     private TileCacheBudget _tileCacheBudget = new(TileCacheBudget.DefaultMaxBytes);
     private bool _showBackgroundImages = true;
     private bool _showImageTiles = true;
-    private ViewportScrollbarAxis? _scrollbarDragAxis;
-    private double _scrollbarDragPointerOffset;
-    private Canvas? _viewportScrollbarOverlay;
-    private Border? _horizontalScrollbarTrack;
-    private Border? _horizontalScrollbarThumb;
-    private Border? _verticalScrollbarTrack;
-    private Border? _verticalScrollbarThumb;
     private IReadOnlyList<FeatureDisplayItem> _selectedAnnotationFeatures = [];
     private TileWorkCoordinator _tileCoordinator = null!;
     private int _frameClaimantId;
@@ -72,12 +59,6 @@ public partial class MainWindow : Window
 
     private Border ViewportHost => CanvasSurface.SurfaceHost;
     private Viewbox FramePresenter => CanvasSurface.FrameHost;
-    private Canvas ViewportScrollbarOverlay => CanvasSurface.ScrollbarHost;
-    private Border HorizontalScrollbarTrack => CanvasSurface.HorizontalTrack;
-    private Border HorizontalScrollbarThumb => CanvasSurface.HorizontalThumb;
-    private Border VerticalScrollbarTrack => CanvasSurface.VerticalTrack;
-    private Border VerticalScrollbarThumb => CanvasSurface.VerticalThumb;
-    private Ellipse PanAnchorVisual => CanvasSurface.AnchorVisual;
     private TextBlock LoadingOverlay => CanvasSurface.LoadingText;
     private TextBlock PixelometerWorldText => CanvasSurface.WorldReadout;
     private TextBlock PixelometerTileText => CanvasSurface.TileReadout;
@@ -93,14 +74,8 @@ public partial class MainWindow : Window
         _camera = CanvasSurface.ViewModel.Camera;
         CanvasSurface.ViewportChanged += OnCanvasViewportChanged;
         CanvasSurface.PointerMoved += OnCanvasPointerMoved;
-        CanvasSurface.PointerWheel += OnViewportMouseWheel;
+        CanvasSurface.PointerWheel += OnCanvasPointerWheel;
         CanvasSurface.SizeChanged += OnViewportSizeChanged;
-
-        _viewportScrollbarOverlay = CanvasSurface.ViewportScrollbarOverlay;
-        _horizontalScrollbarTrack = CanvasSurface.HorizontalScrollbarTrack;
-        _horizontalScrollbarThumb = CanvasSurface.HorizontalScrollbarThumb;
-        _verticalScrollbarTrack = CanvasSurface.VerticalScrollbarTrack;
-        _verticalScrollbarThumb = CanvasSurface.VerticalScrollbarThumb;
 
         // The MainViewModel is stable for the window lifetime. Regeneration
         // reuses it so user-edited settings never reset to defaults.
@@ -111,10 +86,6 @@ public partial class MainWindow : Window
         _selectionOutlineAnimator = SelectionOutlineAnimatorFactory.Create(SelectionOutlineAnimationMode.MarchingDash);
 
         _resizeTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(150), DispatcherPriority.Background, OnResizeElapsed, Dispatcher)
-        {
-            IsEnabled = false
-        };
-        _anchorPanTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(16), DispatcherPriority.Input, OnAnchorPanTick, Dispatcher)
         {
             IsEnabled = false
         };
@@ -393,7 +364,7 @@ public partial class MainWindow : Window
 
         var width = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualWidth), 1, 4096);
         var height = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualHeight), 1, 4096);
-        EnforceZoomFloor(width, height);
+        CanvasSurface.ViewModel.ApplyZoomFloor(width, height);
         _camera.ClampToBounds(_sceneBounds, width, height);
         var camera = _camera.Capture();
         var viewport = camera.GetViewportBounds(width, height);
@@ -798,45 +769,9 @@ public partial class MainWindow : Window
     {
         var width = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualWidth), 1, 4096);
         var height = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualHeight), 1, 4096);
-        EnforceZoomFloor(width, height);
+        CanvasSurface.ViewModel.ApplyZoomFloor(width, height);
         _camera.ClampToBounds(_sceneBounds, width, height);
         CanvasSurface.RefreshScrollbars();
-    }
-
-    private void EnforceZoomFloor(double viewportWidth, double viewportHeight)
-    {
-        if (_tiles.Count == 0)
-        {
-            return;
-        }
-
-        var (minimumScaleX, minimumScaleY) = ComputeMinimumZoom(viewportWidth, viewportHeight);
-        var currentScaleX = _camera.ScaleX;
-        var currentScaleY = _camera.ScaleY;
-        if (currentScaleX >= minimumScaleX && currentScaleY >= minimumScaleY)
-        {
-            return;
-        }
-
-        var minimumUniform = Math.Max(minimumScaleX, minimumScaleY);
-        if (Math.Abs(currentScaleX - currentScaleY) <= 0.0001)
-        {
-            var uniformDelta = minimumUniform / currentScaleX;
-            _camera.Zoom(uniformDelta, uniformDelta, new ScreenPoint(viewportWidth / 2, viewportHeight / 2));
-            return;
-        }
-
-        var origin = new ScreenPoint(viewportWidth / 2, viewportHeight / 2);
-        var scaleXDelta = currentScaleX < minimumScaleX ? minimumScaleX / currentScaleX : 1;
-        var scaleYDelta = currentScaleY < minimumScaleY ? minimumScaleY / currentScaleY : 1;
-        _camera.Zoom(scaleXDelta, scaleYDelta, origin);
-    }
-
-    private (double ScaleX, double ScaleY) ComputeMinimumZoom(double viewportWidth, double viewportHeight)
-    {
-        return (
-            viewportWidth / _sceneBounds.Width,
-            viewportHeight / _sceneBounds.Height);
     }
 
     private async void OnAnnotationMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -847,269 +782,6 @@ public partial class MainWindow : Window
             UpdateSelectedAnnotationFeatures(annotation);
             e.Handled = true;
             await RequestRenderAsync();
-        }
-    }
-
-    private void OnViewportMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        if (_anchorPanOrigin is not null)
-        {
-            return;
-        }
-
-        _lastPointerPosition = e.GetPosition(ViewportHost);
-        ViewportHost.CaptureMouse();
-        Mouse.OverrideCursor = Cursors.SizeAll;
-    }
-
-    private void OnViewportMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-        if (_anchorPanOrigin is not null)
-        {
-            return;
-        }
-
-        _lastPointerPosition = null;
-        ViewportHost.ReleaseMouseCapture();
-        Mouse.OverrideCursor = null;
-    }
-
-    private async void OnViewportMouseMove(object sender, MouseEventArgs e)
-    {
-        var current = e.GetPosition(ViewportHost);
-        _hoverPointerPosition = current;
-        UpdatePixelometer(current);
-
-        if (_anchorPanOrigin is not null)
-        {
-            _anchorPanPointer = current;
-        }
-
-        if (_lastPointerPosition is not Point previous || e.LeftButton != MouseButtonState.Pressed)
-        {
-            return;
-        }
-
-        _lastPointerPosition = current;
-        _camera.Pan(current.X - previous.X, current.Y - previous.Y);
-        ClampCameraToScene();
-        await RequestRenderAsync();
-    }
-
-    private void OnViewportMouseRightButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        _anchorPanOrigin = e.GetPosition(ViewportHost);
-        _anchorPanPointer = _anchorPanOrigin.Value;
-        _lastPointerPosition = null;
-        ViewportHost.CaptureMouse();
-        Mouse.OverrideCursor = Cursors.ScrollAll;
-        ShowPanAnchor(_anchorPanOrigin.Value);
-        _anchorPanTimer.Start();
-        e.Handled = true;
-    }
-
-    private void OnViewportMouseRightButtonUp(object sender, MouseButtonEventArgs e)
-    {
-        if (_anchorPanOrigin is null)
-        {
-            return;
-        }
-
-        StopAnchorPan();
-        e.Handled = true;
-    }
-
-    private async void OnAnchorPanTick(object? sender, EventArgs e)
-    {
-        if (_anchorPanOrigin is not Point anchor)
-        {
-            return;
-        }
-
-        const double deadZone = 6;
-        const double gain = 0.12;
-
-        var deltaX = _anchorPanPointer.X - anchor.X;
-        var deltaY = _anchorPanPointer.Y - anchor.Y;
-        var adjustedX = ApplyDeadZone(deltaX, deadZone);
-        var adjustedY = ApplyDeadZone(deltaY, deadZone);
-        if (adjustedX == 0 && adjustedY == 0)
-        {
-            return;
-        }
-        
-        _camera.Pan(-(adjustedX * gain), -(adjustedY * gain));
-        ClampCameraToScene();
-        await RequestRenderAsync();
-    }
-
-    private static double ApplyDeadZone(double value, double deadZone)
-    {
-        var magnitude = Math.Abs(value);
-        if (magnitude <= deadZone)
-        {
-            return 0;
-        }
-
-        return Math.Sign(value) * Math.Pow(magnitude - deadZone, _panExponent);
-    }
-
-    private void ShowPanAnchor(Point anchor)
-    {
-        Canvas.SetLeft(PanAnchorVisual, anchor.X - (PanAnchorVisual.Width / 2));
-        Canvas.SetTop(PanAnchorVisual, anchor.Y - (PanAnchorVisual.Height / 2));
-        PanAnchorVisual.Visibility = Visibility.Visible;
-    }
-
-    private void StopAnchorPan()
-    {
-        _anchorPanTimer.Stop();
-        _anchorPanOrigin = null;
-        PanAnchorVisual.Visibility = Visibility.Collapsed;
-        ViewportHost.ReleaseMouseCapture();
-        Mouse.OverrideCursor = null;
-    }
-
-    private async void OnScrollbarTrackMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        if (sender is not Border track || e.OriginalSource is Border { Name: "HorizontalScrollbarThumb" or "VerticalScrollbarThumb" })
-        {
-            return;
-        }
-
-        var axis = track == _horizontalScrollbarTrack ? ViewportScrollbarAxis.Horizontal : ViewportScrollbarAxis.Vertical;
-        if (_viewportScrollbarOverlay is null)
-        {
-            return;
-        }
-
-        var thumb = axis == ViewportScrollbarAxis.Horizontal ? _horizontalScrollbarThumb : _verticalScrollbarThumb;
-        if (thumb is null)
-        {
-            return;
-        }
-
-        var pointer = e.GetPosition(_viewportScrollbarOverlay);
-        var trackLength = axis == ViewportScrollbarAxis.Horizontal ? track.ActualWidth : track.ActualHeight;
-        var thumbLength = axis == ViewportScrollbarAxis.Horizontal ? thumb.ActualWidth : thumb.ActualHeight;
-        var pointerPosition = axis == ViewportScrollbarAxis.Horizontal ? pointer.X : pointer.Y;
-        var trackPosition = axis == ViewportScrollbarAxis.Horizontal ? Canvas.GetLeft(track) : Canvas.GetTop(track);
-        var target = (pointerPosition - trackPosition - (thumbLength / 2)) / Math.Max(1, trackLength - thumbLength);
-        await PanToScrollbarPositionAsync(axis, target);
-        e.Handled = true;
-    }
-
-    private void OnScrollbarThumbMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        if (sender is not Border thumb)
-        {
-            return;
-        }
-
-        _scrollbarDragAxis = thumb == _horizontalScrollbarThumb ? ViewportScrollbarAxis.Horizontal : ViewportScrollbarAxis.Vertical;
-        var track = _scrollbarDragAxis == ViewportScrollbarAxis.Horizontal ? _horizontalScrollbarTrack : _verticalScrollbarTrack;
-        if (track is null)
-        {
-            return;
-        }
-
-        var pointer = e.GetPosition(track);
-        var thumbPosition = _scrollbarDragAxis == ViewportScrollbarAxis.Horizontal ? Canvas.GetLeft(thumb) : Canvas.GetTop(thumb);
-        _scrollbarDragPointerOffset = (_scrollbarDragAxis == ViewportScrollbarAxis.Horizontal ? pointer.X : pointer.Y) - thumbPosition;
-        thumb.CaptureMouse();
-        e.Handled = true;
-    }
-
-    private async void OnScrollbarThumbMouseMove(object sender, MouseEventArgs e)
-    {
-        if (_scrollbarDragAxis is not ViewportScrollbarAxis axis || e.LeftButton != MouseButtonState.Pressed)
-        {
-            return;
-        }
-
-        var track = axis == ViewportScrollbarAxis.Horizontal ? _horizontalScrollbarTrack : _verticalScrollbarTrack;
-        var thumb = axis == ViewportScrollbarAxis.Horizontal ? _horizontalScrollbarThumb : _verticalScrollbarThumb;
-        if (track is null || thumb is null)
-        {
-            return;
-        }
-
-        var pointer = e.GetPosition(track);
-        var pointerPosition = axis == ViewportScrollbarAxis.Horizontal ? pointer.X : pointer.Y;
-        var trackLength = axis == ViewportScrollbarAxis.Horizontal ? track.ActualWidth : track.ActualHeight;
-        var thumbLength = axis == ViewportScrollbarAxis.Horizontal ? thumb.ActualWidth : thumb.ActualHeight;
-        await PanToScrollbarPositionAsync(axis, (pointerPosition - _scrollbarDragPointerOffset) / Math.Max(1, trackLength - thumbLength));
-        e.Handled = true;
-    }
-
-    private void OnScrollbarThumbMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-        if (sender is Border thumb)
-        {
-            thumb.ReleaseMouseCapture();
-        }
-
-        _scrollbarDragAxis = null;
-        e.Handled = true;
-    }
-
-    private async Task PanToScrollbarPositionAsync(ViewportScrollbarAxis axis, double targetPosition)
-    {
-        var width = Math.Max(1, ViewportHost.ActualWidth);
-        var height = Math.Max(1, ViewportHost.ActualHeight);
-        var delta = ViewportScrollbarPolicy.ComputePanDelta(_camera.Capture(), _sceneBounds, width, height, axis, targetPosition);
-        if (delta == 0)
-        {
-            return;
-        }
-
-        _camera.Pan(axis == ViewportScrollbarAxis.Horizontal ? delta : 0, axis == ViewportScrollbarAxis.Vertical ? delta : 0);
-        ClampCameraToScene();
-        await RequestRenderAsync();
-    }
-
-    private void UpdateViewportScrollbars(CameraSnapshot camera, double viewportWidth, double viewportHeight)
-    {
-        if (_viewportScrollbarOverlay is null || _horizontalScrollbarTrack is null || _horizontalScrollbarThumb is null || _verticalScrollbarTrack is null || _verticalScrollbarThumb is null)
-        {
-            return;
-        }
-
-        const double margin = 10;
-        const double thickness = 10;
-        const double minimumThumbLength = 24;
-        var horizontalLength = Math.Max(0, viewportWidth - (margin * 2) - thickness - 4);
-        var verticalLength = Math.Max(0, viewportHeight - (margin * 2) - thickness - 4);
-        UpdateScrollbar(ViewportScrollbarAxis.Horizontal, ViewportScrollbarPolicy.ComputeMetrics(camera, _sceneBounds, viewportWidth, viewportHeight, ViewportScrollbarAxis.Horizontal), _horizontalScrollbarTrack, _horizontalScrollbarThumb, margin, viewportHeight - margin - thickness, horizontalLength, minimumThumbLength);
-        UpdateScrollbar(ViewportScrollbarAxis.Vertical, ViewportScrollbarPolicy.ComputeMetrics(camera, _sceneBounds, viewportWidth, viewportHeight, ViewportScrollbarAxis.Vertical), _verticalScrollbarTrack, _verticalScrollbarThumb, viewportWidth - margin - thickness, margin, verticalLength, minimumThumbLength);
-    }
-
-    private static void UpdateScrollbar(ViewportScrollbarAxis axis, ViewportScrollbarMetrics metrics, Border track, Border thumb, double left, double top, double trackLength, double minimumThumbLength)
-    {
-        if (!metrics.IsScrollable || trackLength <= minimumThumbLength)
-        {
-            track.Visibility = Visibility.Collapsed;
-            thumb.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        track.Visibility = Visibility.Visible;
-        thumb.Visibility = Visibility.Visible;
-        var thumbLength = Math.Clamp(trackLength * metrics.ViewportFraction, minimumThumbLength, trackLength);
-        var thumbPosition = (trackLength - thumbLength) * metrics.PositionFraction;
-        Canvas.SetLeft(track, left);
-        Canvas.SetTop(track, top);
-        Canvas.SetLeft(thumb, axis == ViewportScrollbarAxis.Horizontal ? left + thumbPosition : left);
-        Canvas.SetTop(thumb, axis == ViewportScrollbarAxis.Vertical ? top + thumbPosition : top);
-        if (axis == ViewportScrollbarAxis.Horizontal)
-        {
-            track.Width = trackLength;
-            thumb.Width = thumbLength;
-        }
-        else
-        {
-            track.Height = trackLength;
-            thumb.Height = thumbLength;
         }
     }
 
@@ -1124,14 +796,6 @@ public partial class MainWindow : Window
         await RequestRenderAsync();
     }
 
-    private void OnViewportMouseLeave(object sender, MouseEventArgs e)
-    {
-        _hoverPointerPosition = null;
-        PixelometerWorldText.Text = "WORLD X --  Y --";
-        PixelometerTileText.Text = "TILE --";
-        PixelometerValueText.Text = "PIXEL --";
-    }
-
     private async void OnShowImageTilesChanged(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded)
@@ -1143,38 +807,18 @@ public partial class MainWindow : Window
         await RequestRenderAsync();
     }
 
-    private async void OnViewportMouseWheel(object sender, MouseWheelEventArgs e)
+    private void OnCanvasPointerWheel(object? sender, MouseWheelEventArgs e)
     {
+        // Wheel zoom is handled by the canvas control (ICW-311). The window
+        // only observes the pointer for its pixelometer readout.
         var origin = e.GetPosition(ViewportHost);
         _hoverPointerPosition = origin;
         UpdatePixelometer(origin);
-        var requestedScaleDelta = e.Delta > 0 ? 1.15 : 1 / 1.15;
-
-        var width = Math.Max(1, ViewportHost.ActualWidth);
-        var height = Math.Max(1, ViewportHost.ActualHeight);
-
-        var (minimumScaleX, minimumScaleY) = ComputeMinimumZoom(width, height);
-        var zoomDeltas = ViewportZoomPolicy.ComputeWheelDeltas(
-            _camera.ScaleX,
-            _camera.ScaleY,
-            minimumScaleX,
-            minimumScaleY,
-            requestedScaleDelta);
-        if (!zoomDeltas.HasChange)
-        {
-            return;
-        }
-
-        if (_camera.Zoom(zoomDeltas.ScaleX, zoomDeltas.ScaleY, new ScreenPoint(origin.X, origin.Y)))
-        {
-            ClampCameraToScene();
-            await RequestRenderAsync();
-        }
     }
 
     private void UpdateZoomDisplay(CameraSnapshot camera, double viewportWidth, double viewportHeight)
     {
-        var (minimumScaleX, minimumScaleY) = ComputeMinimumZoom(viewportWidth, viewportHeight);
+        var (minimumScaleX, minimumScaleY) = CanvasSurface.ViewModel.ComputeMinimumZoom(viewportWidth, viewportHeight);
         var percent = ViewportZoomPolicy.ComputeDisplayPercent(
             camera.ScaleX,
             camera.ScaleY,
@@ -1284,7 +928,7 @@ public partial class MainWindow : Window
     {
         var width = Math.Max(1, ViewportHost.ActualWidth);
         var height = Math.Max(1, ViewportHost.ActualHeight);
-        var (minimumScaleX, minimumScaleY) = ComputeMinimumZoom(width, height);
+        var (minimumScaleX, minimumScaleY) = CanvasSurface.ViewModel.ComputeMinimumZoom(width, height);
         var baseUniformScale = Math.Max(minimumScaleX, minimumScaleY);
         var targetScale = baseUniformScale * (percent / 100.0);
         var delta = targetScale / _camera.ScaleX;
@@ -1296,7 +940,7 @@ public partial class MainWindow : Window
     {
         var width = Math.Max(1, ViewportHost.ActualWidth);
         var height = Math.Max(1, ViewportHost.ActualHeight);
-        var (minimumScaleX, minimumScaleY) = ComputeMinimumZoom(width, height);
+        var (minimumScaleX, minimumScaleY) = CanvasSurface.ViewModel.ComputeMinimumZoom(width, height);
         ApplyScaleWithUniformFirst(minimumScaleX, minimumScaleY, width, height);
     }
 
@@ -1304,13 +948,13 @@ public partial class MainWindow : Window
     {
         var width = Math.Max(1, ViewportHost.ActualWidth);
         var height = Math.Max(1, ViewportHost.ActualHeight);
-        var (minimumScaleX, minimumScaleY) = ComputeMinimumZoom(width, height);
+        var (minimumScaleX, minimumScaleY) = CanvasSurface.ViewModel.ComputeMinimumZoom(width, height);
         ApplyScaleWithUniformFirst(minimumScaleY, minimumScaleY, width, height);
     }
 
     private void ApplyScaleWithUniformFirst(double preferredUniformScale, double fallbackScaleY, double viewportWidth, double viewportHeight)
     {
-        var (minimumScaleX, minimumScaleY) = ComputeMinimumZoom(viewportWidth, viewportHeight);
+        var (minimumScaleX, minimumScaleY) = CanvasSurface.ViewModel.ComputeMinimumZoom(viewportWidth, viewportHeight);
         var minimumUniform = Math.Max(minimumScaleX, minimumScaleY);
 
         if (preferredUniformScale >= minimumUniform)
@@ -1509,7 +1153,6 @@ public partial class MainWindow : Window
     {
         SaveSettings();
         _resizeTimer.Stop();
-        _anchorPanTimer.Stop();
         UnsubscribeTileGenerationEvents(_tiles);
         _lifetime.Cancel();
 

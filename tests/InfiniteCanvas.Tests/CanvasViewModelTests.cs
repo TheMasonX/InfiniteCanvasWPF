@@ -47,4 +47,51 @@ public sealed class CanvasViewModelTests
             Assert.That(viewModel.TotalItemCount, Is.EqualTo(42));
         }
     }
+
+    [Test]
+    public void ComputeMinimumZoom_ReturnsViewportOverSceneRatios()
+    {
+        var viewModel = new CanvasViewModel();
+        viewModel.SetSceneBounds(new SpatialBounds(0, 0, 1000, 500));
+
+        var (scaleX, scaleY) = viewModel.ComputeMinimumZoom(500, 250);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(scaleX, Is.EqualTo(0.5));
+            Assert.That(scaleY, Is.EqualTo(0.5));
+        }
+    }
+
+    [Test]
+    public void ApplyZoomFloor_ScalesUpCameraBelowMinimum()
+    {
+        var viewModel = new CanvasViewModel();
+        viewModel.SetSceneBounds(new SpatialBounds(0, 0, 1000, 500));
+        viewModel.Camera.Zoom(0.1, new ScreenPoint(0, 0));
+
+        viewModel.ApplyZoomFloor(500, 250);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(viewModel.Camera.ScaleX, Is.EqualTo(0.5).Within(0.0001));
+            Assert.That(viewModel.Camera.ScaleY, Is.EqualTo(0.5).Within(0.0001));
+        }
+    }
+
+    [Test]
+    public void ApplyZoomFloor_LeavesCameraAboveMinimum()
+    {
+        var viewModel = new CanvasViewModel();
+        viewModel.SetSceneBounds(new SpatialBounds(0, 0, 1000, 500));
+        viewModel.Camera.Zoom(2, new ScreenPoint(0, 0));
+
+        viewModel.ApplyZoomFloor(500, 250);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(viewModel.Camera.ScaleX, Is.EqualTo(2));
+            Assert.That(viewModel.Camera.ScaleY, Is.EqualTo(2));
+        }
+    }
 }

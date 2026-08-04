@@ -1,7 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Shapes;
 using System.Windows.Threading;
 using InfiniteCanvas.Core;
 using InfiniteCanvas.ViewModels;
@@ -10,6 +9,9 @@ namespace InfiniteCanvas.App.Controls;
 
 public partial class CanvasControl : UserControl
 {
+    private const double _mouseWheelZoomDelta = 1.2;
+    private const double _panExponent = 2.5;
+
     private Point? _lastPointerPosition;
     private Point? _anchorPanOrigin;
     private Point _anchorPanPointer;
@@ -32,12 +34,6 @@ public partial class CanvasControl : UserControl
 
     public Border SurfaceHost => ViewportHost;
     public Viewbox FrameHost => FramePresenter;
-    public Canvas ScrollbarHost => ViewportScrollbarOverlay;
-    public Border HorizontalTrack => HorizontalScrollbarTrack;
-    public Border HorizontalThumb => HorizontalScrollbarThumb;
-    public Border VerticalTrack => VerticalScrollbarTrack;
-    public Border VerticalThumb => VerticalScrollbarThumb;
-    public Ellipse AnchorVisual => PanAnchorVisual;
     public TextBlock LoadingText => LoadingOverlay;
     public TextBlock WorldReadout => PixelometerWorldText;
     public TextBlock TileReadout => PixelometerTileText;
@@ -145,7 +141,7 @@ public partial class CanvasControl : UserControl
         }
 
         const double deadZone = 6;
-        const double gain = 0.12;
+        const double gain = 0.05;
         var deltaX = ApplyDeadZone(_anchorPanPointer.X - anchor.X, deadZone);
         var deltaY = ApplyDeadZone(_anchorPanPointer.Y - anchor.Y, deadZone);
         if (deltaX == 0 && deltaY == 0)
@@ -158,10 +154,18 @@ public partial class CanvasControl : UserControl
         ViewportChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    // Sign-preserving exponential curve (ICW-311). The dead-zone guard keeps
+    // the magnitude positive, so the fractional exponent never sees a negative
+    // base and cannot produce NaN.
     private static double ApplyDeadZone(double value, double deadZone)
     {
         var magnitude = Math.Abs(value);
-        return magnitude <= deadZone ? 0 : Math.Sign(value) * (magnitude - deadZone);
+        if (magnitude <= deadZone)
+        {
+            return 0;
+        }
+
+        return Math.Sign(value) * Math.Pow(magnitude - deadZone, _panExponent);
     }
 
     private void ShowPanAnchor(Point anchor)
@@ -311,6 +315,31 @@ public partial class CanvasControl : UserControl
     private void OnViewportMouseWheel(object sender, MouseWheelEventArgs e)
     {
         var origin = e.GetPosition(ViewportHost);
+        var requestedScaleDelta = e.Delta > 0 ? _mouseWheelZoomDelta : 1 / _mouseWheelZoomDelta;
+
+        var width = Math.Max(1, ViewportHost.ActualWidth);
+        var height = Math.Max(1, ViewportHost.ActualHeight);
+
+        if (ViewModel.HasScene)
+        {
+            var (minimumScaleX, minimumScaleY) = ViewModel.ComputeMinimumZoom(width, height);
+            var zoomDeltas = ViewportZoomPolicy.ComputeWheelDeltas(
+                ViewModel.Camera.ScaleX,
+                ViewModel.Camera.ScaleY,
+                minimumScaleX,
+                minimumScaleY,
+                requestedScaleDelta);
+            if (zoomDeltas.HasChange
+                && ViewModel.Camera.Zoom(zoomDeltas.ScaleX, zoomDeltas.ScaleY, new ScreenPoint(origin.X, origin.Y)))
+            {
+                ViewModel.ApplyZoomFloor(width, height);
+                ViewModel.ApplyViewportSize(width, height);
+                UpdateViewportScrollbars();
+                ViewportChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        // Let the host observe the wheel position (for the pixelometer).
         PointerWheel?.Invoke(this, e);
         e.Handled = true;
     }

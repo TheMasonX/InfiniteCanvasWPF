@@ -8,6 +8,7 @@
 | [ADR-0004](0004-zero-copy-buffer-lifecycle-and-handoff-policy.md) | Proposed | Define ownership, handoff, and reuse policy for memory-mapped zero-copy rendering buffers |
 | [ADR-0005](0005-source-agnostic-background-tile-mips.md) | Proposed | Resolve source-scoped background tile mip payloads asynchronously while keeping rasterization non-blocking |
 | [ADR-0006](0006-viewport-aware-tile-work-scheduling.md) | Proposed | Bound, prioritize, and cancel tile work according to current viewport interest without breaking shared cache fills |
+| [ADR-0007](0007-canvas-reusable-component-boundary.md) | Proposed | Make the canvas a reusable component with injected data sources, abstract items, and abstracted input handlers |
 
 New decisions should use the next four-digit identifier and remain in this directory after supersession.
 
