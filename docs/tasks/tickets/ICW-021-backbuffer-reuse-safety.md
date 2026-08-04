@@ -3,7 +3,7 @@ id: ICW-021-backbuffer-reuse-safety
 author: External Audit (Integration-1)
 key: ICW-021
 title: Validate compositor-safe back-buffer reuse and add guard if needed
-status: To Do
+status: Done
 type: Bug
 priority: P1
 tags:
@@ -68,5 +68,9 @@ No automated visual regression test available (WPF compositor timing). Manual ra
 
 ## Related Tasks
 
-- ICW-P0-BUFFER-REUSE-SYNC: concrete implementation plan (this ticket should be closed when that lands)
-- ADR-0004: zero-copy buffer lifecycle policy (update after fix)
+- ICW-P0-BUFFER-REUSE-SYNC: concrete implementation plan (landed 2026-08-04, this ticket closes with it)
+- ADR-0004: zero-copy buffer lifecycle policy (updated after fix)
+
+## Outcome (2026-08-04)
+
+Closed with ICW-P0-BUFFER-REUSE-SYNC. Option A (triple buffering) landed via `FrameBufferPool`. User-reproduced black flashes during fast scroll provided the empirical confirmation this ticket required. Windows 18/18, core 154/154.

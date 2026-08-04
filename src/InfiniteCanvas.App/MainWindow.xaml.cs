@@ -32,8 +32,7 @@ public partial class MainWindow : Window
     private IReadOnlyDictionary<string, SpatialBounds> _tileBoundsById = new Dictionary<string, SpatialBounds>();
     private IReadOnlyList<SampleAnnotation> _annotations = [];
     private SpatialBounds _sceneBounds;
-    private ZeroCopyBitmapFactory? _frontBitmapFactory;
-    private ZeroCopyBitmapFactory? _backBitmapFactory;
+    private readonly FrameBufferPool _frameBufferPool = new();
     private Point? _hoverPointerPosition;
     private string? _selectedAnnotationId;
     private AnnotationDisplayOptions _annotationDisplayOptions = AnnotationDisplayOptions.Default;
@@ -538,36 +537,17 @@ public partial class MainWindow : Window
 
     private ZeroCopyBitmapFactory AcquireBackBuffer(int width, int height)
     {
-        if (_backBitmapFactory is not null
-            && _backBitmapFactory.Width == width
-            && _backBitmapFactory.Height == height)
-        {
-            return _backBitmapFactory;
-        }
-
-        _backBitmapFactory?.Dispose();
-        _backBitmapFactory = new ZeroCopyBitmapFactory(width, height);
-        return _backBitmapFactory;
+        return _frameBufferPool.AcquireBackBuffer(width, height);
     }
 
     private void PublishFrame(ZeroCopyBitmapFactory renderedBuffer, Grid frameVisual)
     {
         FramePresenter.Child = frameVisual;
-
-        var previousFront = _frontBitmapFactory;
-        _frontBitmapFactory = renderedBuffer;
-        _backBitmapFactory = null;
-
-        if (previousFront is not null
-            && previousFront.Width == renderedBuffer.Width
-            && previousFront.Height == renderedBuffer.Height)
-        {
-            _backBitmapFactory = previousFront;
-        }
-        else
-        {
-            previousFront?.Dispose();
-        }
+        // Triple-buffer rotation (ICW-P0-BUFFER-REUSE-SYNC). The buffer that
+        // was displayed until now moves to the retired slot instead of being
+        // recycled as the back buffer immediately, so WPF's compositor has a
+        // full frame cycle to finish reading it before it is rewritten.
+        _frameBufferPool.Publish(renderedBuffer);
     }
 
     private void FitSceneToWidth()
@@ -1158,8 +1138,7 @@ public partial class MainWindow : Window
 
         await _renderAction.DisposeAsync();
         FramePresenter.Child = null;
-        _frontBitmapFactory?.Dispose();
-        _backBitmapFactory?.Dispose();
+        _frameBufferPool.Dispose();
         _tileCoordinator.CancelAll();
         _tileCoordinator.Dispose();
         _generationGate.Dispose();

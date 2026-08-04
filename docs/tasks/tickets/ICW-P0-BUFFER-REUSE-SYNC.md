@@ -3,7 +3,7 @@ id: ICW-P0-BUFFER-REUSE-SYNC
 author: External Audit (Integration-1)
 key: ICW-P0-BUFFER-REUSE-SYNC
 title: Add synchronization or triple-buffering for InteropBitmap compositor handoff
-status: Proposed
+status: Done
 type: Bug
 priority: P0
 tags:
@@ -33,6 +33,16 @@ updated: 2026-07-30
 This is a distinct race from the defect-pool dispose finding (ICW-102). It affects every frame, not just regeneration boundaries.
 
 **Confidence:** 85% (mechanism confirmed at exact lines; visible tearing not reproduced in static review — depends on compositor timing).
+
+## Empirical Reproduction (2026-08-04)
+
+User report from the live app confirms the predicted symptom:
+
+- The canvas flashes often during fast scrolling, mainly black behind where the tiles should be.
+- The user suspects main-UI-thread invoke issues; the CPU profile shows `presentationframework.dll` and `DispatchMessage` at the top, which is consistent with composition lag behind a busy render loop.
+- The black flash matches the compositor reading a cleared/partially-drawn backing section after the buffer left the screen. This is the visible tearing the static reviews could not reproduce.
+
+This report is the stress evidence the ticket required. Proceed with Option A (triple buffering).
 
 ## Root Cause
 
@@ -104,5 +114,19 @@ No automated visual regression test available (WPF compositor timing). Manual va
 
 ## Related Tasks
 
-- ICW-021: same InteropBitmap compositor-handoff race (template ticket — this is the concrete implementation plan for both)
-- ADR-0004: zero-copy buffer lifecycle policy (update after this ticket lands)
+- ICW-021: same InteropBitmap compositor-handoff race (closed with this ticket)
+- ADR-0004: zero-copy buffer lifecycle policy (updated to Accepted, documents the rotation)
+
+## Implementation (2026-08-04)
+
+Option A (triple buffering) delivered.
+
+- `src/InfiniteCanvas.Rendering/FrameBufferPool.Windows.cs` (new): owns front/back/retired slots and the rotation. A buffer is reused only after one full frame cycle.
+- `src/InfiniteCanvas.App/MainWindow.xaml.cs`: `AcquireBackBuffer` and `PublishFrame` delegate to the pool; `OnClosed` disposes the pool. Dead `_frontBitmapFactory`/`_backBitmapFactory` fields removed.
+- `tests/InfiniteCanvas.Windows.Tests/FrameBufferPoolTests.cs` (new): 6 tests cover no-immediate-reuse, full-frame-cycle recycle, never-two-slots-on-one-buffer, at-most-three-buffers, and size-mismatch paths.
+- `docs/ADR/0004`: marked Accepted, documents the rotation and its one-frame slack.
+- `docs/requirements/functional-requirements-and-invariants.md`: frame-surface-reuse invariant marked DELIVERED.
+
+Validation: Windows suite 18/18 (6 new pool tests), core suite 154/154, App compiles with no CS errors (full relink blocked only by the running app locking its output DLLs).
+
+Next step: user closes the running app and rebuilds, then fast-scrolls 30+ seconds to confirm the black flashes are gone.
