@@ -13,18 +13,18 @@ internal static class AnnotationGenerator
     {
         var annotations = new SampleAnnotation[count];
 
-        for (var index = 0; index < count; index++)
+        for (int index = 0; index < count; index++)
         {
-            var classification = SampleImageGenerator.Classifications[random.Next(SampleImageGenerator.Classifications.Length)];
-            var (aspectMin, aspectMax) = SampleImageGenerator.GetClassAspectRange(classification);
-            var aspectRatio = aspectMin + (random.NextDouble() * (aspectMax - aspectMin));
-            var width = random.Next(160, 561);
-            var height = Math.Clamp((int)Math.Round(width / aspectRatio), 100, 620);
-            var localX = random.Next(0, Math.Max(1, (int)tileBounds.Width - width));
-            var localY = random.Next(0, Math.Max(1, (int)tileBounds.Height - height));
-            var objectId = random.NextInt64(0x100000000L, 0xFFFFFFFFFFFFL).ToString("X12");
-            var color = SampleImageGenerator.ClassificationColors[classification];
-            var defectTemplate = defectTemplatePool[random.Next(defectTemplatePool.Count)];
+            string classification = SampleImageGenerator.Classifications[random.Next(SampleImageGenerator.Classifications.Length)];
+            (double aspectMin, double aspectMax) = SampleImageGenerator.GetClassAspectRange(classification);
+            double aspectRatio = aspectMin + (random.NextDouble() * (aspectMax - aspectMin));
+            int width = random.Next(160, 561);
+            int height = Math.Clamp((int)Math.Round(width / aspectRatio), 100, 620);
+            int localX = random.Next(0, Math.Max(1, (int)tileBounds.Width - width));
+            int localY = random.Next(0, Math.Max(1, (int)tileBounds.Height - height));
+            string objectId = random.NextInt64(0x100000000L, 0xFFFFFFFFFFFFL).ToString("X12");
+            Bgra32Color color = SampleImageGenerator.ClassificationColors[classification];
+            SampleImageGenerator.DefectTemplate defectTemplate = defectTemplatePool[random.Next(defectTemplatePool.Count)];
 
             annotations[index] = new SampleAnnotation(
                 $"{tileId}-{objectId}",
@@ -33,10 +33,20 @@ internal static class AnnotationGenerator
                 new SpatialBounds(tileBounds.X + localX, tileBounds.Y + localY, width, height),
                 color,
                 classification,
-                new Dictionary<string, double>
+                () => new Dictionary<string, object>
                 {
+                    ["ID"] = index,
+                    ["Class"] = classification,
                     ["Confidence"] = Math.Round(0.75 + (random.NextDouble() * 0.249), 3),
-                    ["Severity"] = Math.Round(random.NextDouble(), 3)
+                    ["Severity"] = Math.Round(random.NextDouble(), 3),
+                    ["Area"] = width * height,
+                    ["Width"] = width,
+                    ["Height"] = height,
+                    ["AspectRatio"] = Math.Round(aspectRatio, 3),
+                    ["Left"] = tileBounds.X + localX,
+                    ["Top"] = tileBounds.Y + localY,
+                    ["Right"] = tileBounds.X + localX + width,
+                    ["Bottom"] = tileBounds.Y + localY + height
                 },
                 defectTemplate.Width,
                 defectTemplate.Height,

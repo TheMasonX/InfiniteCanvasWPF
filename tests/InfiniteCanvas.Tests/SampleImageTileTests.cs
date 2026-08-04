@@ -186,7 +186,7 @@ public class SampleImageTileTests
                 new SpatialBounds(0, 0, 10, 10),
                 new Bgra32Color(0, 0, 255, 255),
                 "First",
-                new Dictionary<string, double>(),
+                () => new Dictionary<string, object>(),
                 2,
                 2,
                 [10, 20, 30, 40]),
@@ -197,7 +197,7 @@ public class SampleImageTileTests
                 new SpatialBounds(0, 0, 10, 10),
                 new Bgra32Color(0, 0, 255, 255),
                 "Second",
-                new Dictionary<string, double>(),
+                () => new Dictionary<string, object>(),
                 2,
                 2,
                 [50, 60, 70, 80])

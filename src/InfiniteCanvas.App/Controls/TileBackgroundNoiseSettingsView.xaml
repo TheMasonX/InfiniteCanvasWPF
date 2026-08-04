@@ -8,7 +8,7 @@
              d:DesignWidth="220"
              d:DesignHeight="560"
              DataContext="{Binding ViewModel, RelativeSource={RelativeSource Self}}">
-    <Expander IsExpanded="True" Padding="8"
+    <Expander IsExpanded="False" d:IsExpanded="True" Padding="8"
               Background="#151A20" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
         <Expander.Header>
             <TextBlock Text="TILE BACKGROUND NOISE" FontFamily="Cascadia Mono" FontSize="12"

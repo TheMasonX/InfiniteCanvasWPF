@@ -185,7 +185,7 @@ public class ZeroCopyBitmapFactoryTests
             new SpatialBounds(10, 10, 2, 2),
             new Bgra32Color(0, 0, 255, 255),
             "Scratch",
-            new Dictionary<string, double>(),
+            () => new Dictionary<string, object>(),
             4,
             4,
             Enumerable.Repeat((byte)150, 16).ToArray())

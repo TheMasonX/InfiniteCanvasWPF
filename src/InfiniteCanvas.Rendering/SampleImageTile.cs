@@ -790,18 +790,36 @@ public sealed class SampleImageTile
 #endif
 }
 
-public sealed record SampleAnnotation(
-    string Id,
-    string TileId,
-    string ObjectId,
-    SpatialBounds Bounds,
-    Bgra32Color Color,
-    string Classification,
-    IReadOnlyDictionary<string, double> Features,
-    int DefectPixelWidth,
-    int DefectPixelHeight,
-    byte[] DefectPixels) : ISpatialEntity
+public class SampleAnnotation : ISpatialEntity
 {
+    public string Id { get; }
+    public string TileId { get; }
+    public string ObjectId {get; }
+    public SpatialBounds Bounds {get; }
+    public Bgra32Color Color {get; }
+    public string Classification {get; }
+
+    private readonly Lazy<IReadOnlyDictionary<string, object>> _featuresLazy;
+
+    public SampleAnnotation(string id, string tileId, string objectId, SpatialBounds bounds, Bgra32Color color, string classification, Func<IReadOnlyDictionary<string, object>> features, int defectPixelWidth, int defectPixelHeight, byte[] defectPixels)
+    {
+        Id = id;
+        TileId = tileId;
+        ObjectId = objectId;
+        Bounds = bounds;
+        Color = color;
+        Classification = classification;
+        _featuresLazy = new(features);
+        DefectPixelWidth = defectPixelWidth;
+        DefectPixelHeight = defectPixelHeight;
+        DefectPixels = defectPixels;
+    }
+
+    public IReadOnlyDictionary<string, object> Features => _featuresLazy.Value;
+    public int DefectPixelWidth {get; }
+    public int DefectPixelHeight {get; }
+    public byte[] DefectPixels {get; }
+
 #if WINDOWS
     public Bitmap? DefectBitmap { get; init; }
 #endif

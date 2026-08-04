@@ -3,7 +3,7 @@ id: ICW-101
 author: External Audit (Integration-1)
 key: ICW-101
 title: Make annotation tooltips safe and lazy
-status: In Progress
+status: Done
 type: Task
 priority: P1
 tags:
@@ -20,7 +20,10 @@ related:
   - ICW-004
 links:
   - src/InfiniteCanvas.App/MainWindow.xaml.cs
-  - src/InfiniteCanvas.App/AnnotationFeaturePresenter.cs
+  - src/InfiniteCanvas.Rendering/AnnotationFeaturePresenter.cs
+  - src/InfiniteCanvas.Rendering/DeferredAnnotationToolTip.cs
+  - tests/InfiniteCanvas.Tests/AnnotationFeaturePresenterTests.cs
+  - tests/InfiniteCanvas.Tests/AnnotationTooltipWiringTests.cs
   - docs/audits/infinitecanvaswpf-icw-implementation-audit-26-07-30-16-40-49.md
 created: 2026-07-30
 updated: 2026-08-03
@@ -33,6 +36,12 @@ The frame builder creates a WPF `ToolTip` for every visible annotation during ev
 Make tooltip construction lazy and retain the presenter as the single formatting path. The annotation visual must not allocate or format tooltip content until WPF requests the tooltip for a hovered annotation.
 
 Currently both keys are always present because `AnnotationGenerator` always populates them, but this is an accident of the current data path, not a contract guarantee. `Features` is typed as `IReadOnlyDictionary<string,double>` with no schema enforcement.
+
+## Profiler Evidence
+
+The supplied profiler capture provides the baseline: 8,192 eagerly created tooltips, about 3.98 percent inclusive CPU in `BuildFrameVisual`, and about 3.94 percent self CPU in `CreateAnnotationToolTip`.
+
+The new frame path assigns one `DeferredAnnotationToolTip` source per annotation. It does not create a WPF `ToolTip` or format presenter content during frame construction. WPF requests the source text when it opens the tooltip. The focused source regression test protects this allocation contract. A new runtime profiler capture remains useful for quantifying the post-change CPU reduction.
 
 ## Root Cause
 
@@ -64,13 +73,19 @@ The tooltip path was reverted to inline string-keyed access while the presenter 
 
 ## Validation
 
-`dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release --filter "Tooltip|AnnotationFeaturePresenter"`
+`dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release --filter "FullyQualifiedName~AnnotationFeaturePresenterTests|FullyQualifiedName~AnnotationTooltipWiringTests"` passed 4/4.
 
-Also run the Windows test project and the Release app build after the WPF control path changes.
+`dotnet test tests/InfiniteCanvas.Windows.Tests/InfiniteCanvas.Windows.Tests.csproj --configuration Release --no-restore` passed 10/10.
+
+`dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release --no-restore` passed with the existing unused `_frameClaimantId` warning.
 
 ## Notes
 
 The managed memory capture reports 8,192 `SampleAnnotation` instances and 8,192 feature dictionaries. Lazy tooltip creation targets the measured per-frame CPU cost first, while ICW-031 and ICW-111 remain responsible for the longer-term typed metrics migration.
+
+## Notes
+
+The post-change profiler percentage is not available in this environment. The recorded baseline remains valid evidence for the original defect, while the source and behavioral tests verify the intended lazy path.
 
 ## Related Tasks
 

@@ -28,10 +28,16 @@ public static class AnnotationFeaturePresenter
             $"Confidence {FormatFeatureValue(confidence)}  |  Severity {FormatFeatureValue(severity)}");
     }
 
-    private static string FormatFeatureValue(double value)
+    private static string FormatFeatureValue(object value)
     {
-        return value is <= 1.0 and >= 0.0
-            ? value.ToString("P1", CultureInfo.InvariantCulture)
-            : value.ToString("0.###", CultureInfo.InvariantCulture);
+        if (value is null)
+        {
+            return "";
+        }
+        else if (value is double d)
+        {
+            return d.ToString("F1", CultureInfo.InvariantCulture);
+        }
+        else return value.ToString() ?? "";
     }
 }

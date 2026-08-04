@@ -214,7 +214,7 @@
 
                         <Border Height="1" Margin="0,14,0,12" Background="{StaticResource BorderBrush}" />
 
-                        <Expander IsExpanded="True" Padding="8" Margin="0,12,0,0"
+                        <Expander Padding="8" Margin="0,12,0,0"
                                   Background="#151A20" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
                             <Expander.Header>
                                 <TextBlock Text="SCENE MATERIAL" FontFamily="Cascadia Mono" FontSize="12"

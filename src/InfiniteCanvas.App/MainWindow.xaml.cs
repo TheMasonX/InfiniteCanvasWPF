@@ -595,7 +595,7 @@ public partial class MainWindow : Window
                 Background = Brushes.Transparent,
                 Child = annotationVisual,
                 Tag = annotation,
-                ToolTip = CreateAnnotationToolTip(annotation)
+                ToolTip = new DeferredAnnotationToolTip(annotation)
             };
             annotationElement.MouseLeftButtonDown += OnAnnotationMouseLeftButtonDown;
             Canvas.SetLeft(annotationElement, topLeft.X);
@@ -765,16 +765,6 @@ public partial class MainWindow : Window
         return (
             viewportWidth / _sceneBounds.Width,
             viewportHeight / _sceneBounds.Height);
-    }
-
-    private static ToolTip CreateAnnotationToolTip(SampleAnnotation annotation)
-    {
-        var confidence = annotation.Features["Confidence"];
-        var severity = annotation.Features["Severity"];
-        return new ToolTip
-        {
-            Content = $"{annotation.Id}\n{annotation.Classification}\nConfidence {confidence:P1}  |  Severity {severity:P1}"
-        };
     }
 
     private async void OnAnnotationMouseLeftButtonDown(object sender, MouseButtonEventArgs e)

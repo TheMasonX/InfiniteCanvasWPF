@@ -10,21 +10,21 @@ public class AnnotationFeaturePresenterTests
     public void BuildFeatureRows_UsesTypedFeatureValuesAndStableOrdering()
     {
         var annotation = new SampleAnnotation(
-            Id: "A-1",
-            TileId: "tile-1",
-            ObjectId: "object-1",
-            Bounds: new SpatialBounds(0, 0, 10, 10),
-            Color: new Bgra32Color(255, 0, 0, 0),
-            Classification: "Crack",
-            Features: new Dictionary<string, double>
+            id: "A-1",
+            tileId: "tile-1",
+            objectId: "object-1",
+            bounds: new SpatialBounds(0, 0, 10, 10),
+            color: new Bgra32Color(255, 0, 0, 0),
+            classification: "Crack",
+            features: () => new Dictionary<string, object>
             {
                 ["Severity"] = 0.25,
                 ["Confidence"] = 0.8,
                 ["Area"] = 14.5
             },
-            DefectPixelWidth: 1,
-            DefectPixelHeight: 1,
-            DefectPixels: new byte[] { 0 });
+            defectPixelWidth: 1,
+            defectPixelHeight: 1,
+            defectPixels: new byte[] { 0 });
 
         var rows = AnnotationFeaturePresenter.BuildRows(annotation);
 
@@ -35,5 +35,46 @@ public class AnnotationFeaturePresenterTests
             Assert.That(rows[2].Value, Is.EqualTo("25.0 %"));
             Assert.That(rows[0].Value, Is.EqualTo("14.5"));
         });
+    }
+
+    [Test]
+    public void DeferredAnnotationToolTip_FormatsWhenContentIsRequested()
+    {
+        var annotation = new SampleAnnotation(
+            id: "A-2",
+            tileId: "tile-1",
+            objectId: "object-2",
+            bounds: new SpatialBounds(0, 0, 10, 10),
+            color: new Bgra32Color(255, 0, 0, 0),
+            classification: "Dent",
+            features: () => new Dictionary<string, object>
+            {
+                ["Confidence"] = 0.9,
+                ["Severity"] = 0.4
+            },
+            defectPixelWidth: 1,
+            defectPixelHeight: 1,
+            defectPixels: new byte[] { 0 });
+        var deferredToolTip = new DeferredAnnotationToolTip(annotation);
+
+        Assert.That(deferredToolTip.ToString(), Is.EqualTo(AnnotationFeaturePresenter.BuildTooltipContent(annotation)));
+    }
+
+    [Test]
+    public void DeferredAnnotationToolTip_UsesDefaultsWhenKnownFeaturesAreMissing()
+    {
+        var annotation = new SampleAnnotation(
+            id: "A-3",
+            tileId: "tile-1",
+            objectId: "object-3",
+            bounds: new SpatialBounds(0, 0, 10, 10),
+            color: new Bgra32Color(255, 0, 0, 0),
+            classification: "Dent",
+            features: () => new Dictionary<string, object>(),
+            defectPixelWidth: 1,
+            defectPixelHeight: 1,
+            defectPixels: [0]);
+
+        Assert.DoesNotThrow(() => new DeferredAnnotationToolTip(annotation).ToString());
     }
 }
