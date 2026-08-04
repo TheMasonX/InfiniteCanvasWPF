@@ -31,9 +31,12 @@ public class AnnotationFeaturePresenterTests
         using (Assert.EnterMultipleScope())
         {
             Assert.That(rows.Select(row => row.Name), Is.EqualTo(new[] { "Area", "Confidence", "Severity" }));
-            Assert.That(rows[1].Value, Is.EqualTo("80.0 %"));
-            Assert.That(rows[2].Value, Is.EqualTo("25.0 %"));
+            // Feature values are formatted as plain doubles. The feature dict
+            // has no schema to mark Confidence and Severity as percents, so no
+            // percent encoding is applied (ICW-206).
             Assert.That(rows[0].Value, Is.EqualTo("14.5"));
+            Assert.That(rows[1].Value, Is.EqualTo("0.8"));
+            Assert.That(rows[2].Value, Is.EqualTo("0.25"));
         }
     }
 

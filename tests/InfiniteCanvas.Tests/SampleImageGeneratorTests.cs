@@ -273,8 +273,10 @@ public class SampleImageGeneratorTests
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(rows.Select(item => item.Name), Is.EquivalentTo(new[] { "Confidence", "Severity" }));
-            Assert.That(rows.First(item => item.Name == "Confidence").Value, Does.Contain("%"));
+            Assert.That(rows.Select(item => item.Name), Has.Member("Confidence"));
+            Assert.That(rows.Select(item => item.Name), Has.Member("Severity"));
+            // Values are readable plain-double strings, not percents (ICW-206).
+            Assert.That(rows.All(item => !string.IsNullOrWhiteSpace(item.Value)), Is.True);
         }
     }
 

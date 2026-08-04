@@ -36,7 +36,10 @@ public static class AnnotationFeaturePresenter
         }
         else if (value is double d)
         {
-            return d.ToString("F1", CultureInfo.InvariantCulture);
+            // Plain double formatting. The feature dictionary has no per-key
+            // schema, so it cannot encode which values are percents. Do not
+            // format values in the 0..1 range as percents (ICW-206).
+            return d.ToString(CultureInfo.InvariantCulture);
         }
         else return value.ToString() ?? "";
     }

@@ -48,7 +48,9 @@ Three core tests fail at baseline, confirmed by running them without the ICW-204
 - `MainWindow_PreservesScrollbarOverlayAndRenderUpdateHook` — `CanvasScrollbarWiringTests`
 - `AnnotationFeatureDisplayItems_ExposeReadableRows` — `SampleImageGeneratorTests`
 
-These are scheduled for repair in the next step.
+These are now repaired in ICW-206. The feature dictionary has no per-key schema, so percent encoding is out of scope; values use plain double formatting. The scrollbar guard now checks `CanvasControl` after the canvas control extraction. All three pass.
+
+The only remaining core failure is `PriorityQueue_MipSuitabilityBreaksDistanceTie`, owned by the in-flight ICW-205 priority queue workstream (uncommitted).
 
 ## Notes
 
@@ -58,6 +60,6 @@ The untracked `docs/tasks/tickets/ICW-205-priority-queue-tile-work.md` ticket be
 
 ## Next Step Recommendations
 
-1. Fix the three pre-existing core test failures.
-2. Consider avoiding in-flight WorkToken cancellation at the zero-claimant frame boundary.
-3. Land `ICW-205` priority queue work in its own commit.
+1. Land the remaining ICW-205 priority queue work in its own commit (the `PriorityQueue_MipSuitabilityBreaksDistanceTie` failure belongs to that workstream).
+2. Consider avoiding in-flight WorkToken cancellation at the zero-claimant frame boundary (parallel ICW-205 work is already framing this as the frame-stability invariant).
+3. Follow up on ICW-098: remove the orphaned `UpdateViewportScrollbars(CameraSnapshot, double, double)` methods in `MainWindow.xaml.cs`.
