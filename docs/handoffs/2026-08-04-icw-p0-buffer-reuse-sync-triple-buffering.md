@@ -1,8 +1,8 @@
 # Handoff: ICW-P0-BUFFER-REUSE-SYNC Triple-Buffering + ICW-317 Persistent Frame Shell
 
 - Date: 2026-08-04
-- Status: Implementation complete, committed, awaiting visual verification
-- Tickets: docs/tasks/tickets/ICW-P0-BUFFER-REUSE-SYNC.md, docs/tasks/tickets/ICW-317-persistent-frame-shell.md
+- Status: Complete. Visually verified by the user on 2026-08-04.
+- Tickets: docs/tasks/tickets/ICW-P0-BUFFER-REUSE-SYNC.md, docs/tasks/tickets/ICW-317-persistent-frame-shell.md, docs/tasks/tickets/ICW-318-composition-fenced-buffer-handoff.md
 
 ## Summary
 
@@ -39,10 +39,8 @@ The user report is the empirical confirmation the ICW-021 audit tickets required
 - Core tests: 156/156 pass, including 2 shell wiring tests.
 - App Release build: compiles with no CS errors. Relink succeeds when the app is closed.
 
-## Recommended Next Step
+## Outcome
 
-1. Close the running app.
-2. Rebuild and fast-scroll for 30+ seconds.
-3. Confirm the black bands are gone.
-4. Watch for `AccessViolationException` in the app logs.
-5. If any band remains, the next lever is ICW-007 (pool the annotation overlay elements).
+- The user rebuilt and fast-scrolled. The black bands are gone. The fix is verified on 2026-08-04.
+- ICW-P0-BUFFER-REUSE-SYNC, ICW-021, ICW-317, and ICW-318 are closed.
+- If flashing ever recurs, the next lever is ICW-007 (pool the annotation overlay elements) plus reducing the per-frame UI-thread visual rebuild cost.

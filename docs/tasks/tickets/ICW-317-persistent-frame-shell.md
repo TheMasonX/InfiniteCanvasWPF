@@ -60,8 +60,8 @@ This is the first step of the ICW-007 direction (retained frame shell). Per-fram
 - `dotnet test tests/InfiniteCanvas.Tests --configuration Release`: 156/156 pass (2 new wiring tests).
 - `dotnet test tests/InfiniteCanvas.Windows.Tests --configuration Release`: 18/18 pass.
 - `dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release`: 0 errors.
-- Manual: fast-scroll verification is pending user confirmation.
+- Manual: fast-scroll verified by the user on 2026-08-04, together with the ICW-318 composition fence.
 
 ## Next Step
 
-User verifies the remaining occasional flash is gone. If any flash remains, the next lever is ICW-007 (pool the annotation overlay elements and persist the selection shape so the selection animation does not restart per frame).
+VERIFIED 2026-08-04: the user confirmed the remaining occasional flash is gone. If flashing recurs, the next lever is ICW-007 (pool the annotation overlay elements and persist the selection shape so the selection animation does not restart per frame).

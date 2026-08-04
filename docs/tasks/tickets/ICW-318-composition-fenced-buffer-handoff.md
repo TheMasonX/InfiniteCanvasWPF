@@ -62,8 +62,8 @@ Two composition passes give the render thread enough slack to finish the frame t
 - `dotnet test tests/InfiniteCanvas.Windows.Tests --configuration Release`: 18/18 pass.
 - `dotnet test tests/InfiniteCanvas.Tests --configuration Release`: 156/156 pass.
 - App Release build: compiles with no CS errors. Relink was blocked only by the running app locking its output DLLs.
-- Manual: fast-scroll verification is pending user confirmation.
+- Manual: fast-scroll verified by the user on 2026-08-04. The black bands are gone.
 
 ## Next Step
 
-User closes the app, rebuilds, and fast-scrolls. If black bands still appear, the remaining lever is ICW-007 (pool the annotation overlay elements) plus reducing the per-frame UI-thread visual rebuild cost, which worsens composition lag.
+VERIFIED 2026-08-04: the user confirmed the black bands are gone. If flashing recurs, the next lever is ICW-007 (pool the annotation overlay elements) plus reducing the per-frame UI-thread visual rebuild cost, which worsens composition lag.
