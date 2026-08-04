@@ -100,6 +100,14 @@ public partial class MainWindow : Window
 
         Loaded += OnLoaded;
         Closed += OnClosed;
+        // Drives the frame-buffer composition handoff (ICW-318). The pool only
+        // reuses a retired buffer after the compositor has advanced past it.
+        CompositionTarget.Rendering += OnCompositionTargetRendering;
+    }
+
+    private void OnCompositionTargetRendering(object? sender, EventArgs e)
+    {
+        _frameBufferPool.OnCompositionFrame();
     }
 
     private void InitializeSpatialState()
@@ -1172,6 +1180,7 @@ public partial class MainWindow : Window
         _lifetime.Cancel();
 
         await _renderAction.DisposeAsync();
+        CompositionTarget.Rendering -= OnCompositionTargetRendering;
         FramePresenter.Child = null;
         _frameShell = null;
         _frameImage = null;

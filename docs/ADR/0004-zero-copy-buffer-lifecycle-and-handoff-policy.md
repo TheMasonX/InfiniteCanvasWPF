@@ -18,8 +18,8 @@ Adopt the following lifecycle and ownership policy for zero-copy buffers:
 - pixel writes occur only through the owning factory, under its internal lifetime gate,
 - every presented frame is created as a frozen `InteropBitmap`,
 - ownership of active/pending factories is managed by `FrameBufferPool` at the presenter level,
-- a buffer that leaves the screen is moved to a retired slot and is rewritten only after one full frame cycle has been presented (triple-buffering, ICW-P0-BUFFER-REUSE-SYNC),
-- recycling of previously presented mappings is allowed only under this documented rotation policy,
+- a buffer that leaves the screen is rewritten only after WPF has composed at least two more frames (composition fence, ICW-318),
+- recycling of previously presented mappings is allowed only under this composition-fenced policy,
 - disposal order must preserve mapping validity while any presented bitmap may still be consumed by WPF composition.
 
 Until stress-validation evidence is finalized, this ADR remains Proposed and non-final about minimum safe buffering depth.
@@ -28,13 +28,15 @@ Until stress-validation evidence is finalized, this ADR remains Proposed and non
 
 `MainWindow` rotates front/back factories directly. This reused a just-presented buffer as the next back buffer with no handoff wait. WPF's composition thread reads the `InteropBitmap` backing section asynchronously, so the next frame could clear and rewrite a section the compositor was still reading. The user reproduced the predicted symptom: black flashes during fast scrolling, mostly behind where tiles should be (ICW-021 / ICW-P0-BUFFER-REUSE-SYNC).
 
-`FrameBufferPool` (src/InfiniteCanvas.Rendering/FrameBufferPool.Windows.cs) now owns the rotation with three slots:
+`FrameBufferPool` (src/InfiniteCanvas.Rendering/FrameBufferPool.Windows.cs) owns the buffer lifecycle with a composition fence:
 
 - front: the buffer currently presented to WPF,
-- back: the buffer the next frame renders into,
-- retired: the buffer that left the screen one frame ago, safe to recycle.
+- back: the buffer the next frame renders into (reused from a stale frame, or newly allocated),
+- retiring and confirmed: two handoff stages a buffer must pass through after it leaves the screen.
 
-On publish, the old front moves to the retired slot. A buffer is reused as the back buffer only after one full frame cycle, which gives the compositor that slack. The rotation holds at most two native sections in steady state, the same as the old double-buffer, because the retired slot is promoted to the back slot on the next acquire. The delay, not a third allocation, is what removes the race. Worst-case transient memory stays bounded by the existing 4096x4096 viewport clamp (about 64 MiB per BGRA32 section).
+`MainWindow` subscribes to `CompositionTarget.Rendering` and calls `FrameBufferPool.OnCompositionFrame()` once per pass. A retired buffer moves from retiring to confirmed on the first pass and from confirmed to reusable on the second. `AcquireBackBuffer` reuses only confirmed buffers and disposes any whose size no longer matches the viewport.
+
+The fixed one-frame delay used earlier (triple buffering, ICW-P0-BUFFER-REUSE-SYNC) was probabilistic. WPF composition can lag more than one frame when the render loop is saturated, and the user still saw black horizontal bands during fast scroll. The two-pass fence makes reuse conditional on real composition progress. Steady-state memory stays at two or three native sections; worst-case transient memory stays bounded by the existing 4096x4096 viewport clamp (about 64 MiB per BGRA32 section).
 
 ## Consequences
 
@@ -52,5 +54,5 @@ Trade-offs:
 
 Follow-ups:
 
-- keep the rotation depth at three unless profiling shows composition still lags more than one frame,
+- keep the two-pass fence unless profiling shows composition lag exceeds two frames under load,
 - consider ICW-007 (retained overlay pooling) to reduce per-frame UI-thread visual rebuild cost, which worsens composition lag during fast scroll.
