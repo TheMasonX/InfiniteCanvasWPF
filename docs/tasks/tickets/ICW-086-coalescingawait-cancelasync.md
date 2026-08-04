@@ -1,5 +1,6 @@
 ---
 id: ICW-086
+key: ICW-086
 status: To Do
 title: Replace `await CancelAsync` patterns with `CancelAsync` in async disposals and handlers
 type: Task

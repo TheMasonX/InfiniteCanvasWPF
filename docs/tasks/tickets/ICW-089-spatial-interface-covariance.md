@@ -1,5 +1,6 @@
 ---
 id: ICW-089
+key: ICW-089
 status: To Do
 title: Review `ISpatialIndexService<T>` variance and query contract
 type: Task

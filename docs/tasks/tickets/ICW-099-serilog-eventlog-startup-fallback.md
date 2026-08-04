@@ -3,7 +3,7 @@ id: ICW-099
 author: External Audit (Integration-1)
 key: ICW-099
 title: Harden Serilog EventLog sink initialization (STALE - see description)
-status: Deprecated
+status: Archived
 type: Task
 priority: P3
 tags:

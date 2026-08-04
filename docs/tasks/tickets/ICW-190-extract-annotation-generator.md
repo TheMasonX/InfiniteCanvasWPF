@@ -1,5 +1,6 @@
 ---
 id: ICW-190
+key: ICW-190
 status: To Do
 title: Extract `AnnotationGenerator` from `SampleImageGenerator`
 type: Task

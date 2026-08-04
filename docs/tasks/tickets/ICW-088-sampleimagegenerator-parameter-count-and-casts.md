@@ -1,5 +1,6 @@
 ---
 id: ICW-088
+key: ICW-088
 status: To Do
 title: Reduce parameter count and unnecessary casts in `SampleImageGenerator` methods
 type: Task

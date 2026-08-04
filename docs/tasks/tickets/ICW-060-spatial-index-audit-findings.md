@@ -3,7 +3,7 @@ id: ICW-060-spatial-index-audit-findings
 author: External Audit (Integration-1)
 key: ICW-060
 title: Audit findings - spatial indexing subsystem (STALE - see description)
-status: Deprecated
+status: Archived
 type: Task
 priority: P2
 tags:

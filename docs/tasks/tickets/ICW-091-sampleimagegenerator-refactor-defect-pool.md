@@ -1,5 +1,6 @@
 ---
 id: ICW-091
+key: ICW-091
 status: To Do
 title: Simplify defect template pool creation and remove redundant casts
 type: Task

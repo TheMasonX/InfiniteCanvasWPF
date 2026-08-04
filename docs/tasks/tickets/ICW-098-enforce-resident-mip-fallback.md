@@ -1,6 +1,11 @@
 ---
 id: ICW-098
-status: todo
+key: ICW-098
+status: To Do
+title: Enforce resident-mip fallback for rendering during mip transitions
+type: Bug
+priority: P2
+tags: [rendering, cache, bugfix]
 summary: Enforce resident-mip fallback for rendering during mip transitions
 scope:
   - src/InfiniteCanvas.Rendering/SampleImageTile.cs

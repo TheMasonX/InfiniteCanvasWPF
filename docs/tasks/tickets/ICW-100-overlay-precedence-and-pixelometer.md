@@ -1,6 +1,11 @@
 ---
 id: ICW-100
-status: todo
+key: ICW-100
+status: To Do
+title: Define overlay precedence and align pixelometer sampling with rendered mip
+type: Task
+priority: P2
+tags: [rendering, pixelometer, contract]
 summary: Define overlay precedence and align pixelometer sampling with rendered mip
 scope:
   - src/InfiniteCanvas.Rendering/DefectOverlaySampler.cs

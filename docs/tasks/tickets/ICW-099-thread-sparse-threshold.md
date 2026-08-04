@@ -1,6 +1,11 @@
 ---
 id: ICW-099
-status: todo
+key: ICW-099
+status: To Do
+title: Thread `MinimumSparseTilePixelSize` into render pipeline and UI
+type: Improvement
+priority: P3
+tags: [ui, settings, rendering]
 summary: Thread `MinimumSparseTilePixelSize` setting into render pipeline and UI
 scope:
   - src/InfiniteCanvas.Core/CanvasUserSettings.cs

@@ -1,13 +1,16 @@
 ---
 id: ICW-098
+key: ICW-098
 status: Proposed
-summary: Finish or remove partially landed viewport scrollbar slice
-assignee: TBD
-priority: High
-labels:
+title: Finish or remove partially landed viewport scrollbar slice
+type: Task
+priority: P2
+tags:
   - ui
   - stability
   - mainwindow
+assignee: TBD
+summary: Finish or remove partially landed viewport scrollbar slice
 validation: pwsh -File scripts/Validate-TaskTracker.ps1 -Path docs/tasks && dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --filter CanvasScrollbarWiringTests
 ---
 

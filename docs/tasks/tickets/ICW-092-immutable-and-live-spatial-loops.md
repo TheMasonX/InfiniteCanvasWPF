@@ -1,5 +1,6 @@
 ---
 id: ICW-092
+key: ICW-092
 status: To Do
 title: Replace manual loops with LINQ `.Where` in spatial index implementations where appropriate
 type: Task

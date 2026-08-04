@@ -4,7 +4,7 @@ author: Copilot
 key: ICW-148
 title: Register FastNoise2Bindings as a proper git submodule
 status: Done
-type: Chore
+type: Task
 priority: P2
 tags:
   - submodule

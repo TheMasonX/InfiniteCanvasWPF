@@ -1,5 +1,10 @@
 ---
 id: ICW-140
+key: ICW-140
+title: Preserve resident mip fallback while native mip0 generates
+type: Improvement
+priority: P2
+tags: [rendering, cache]
 status: Done
 summary: Preserve resident mip fallback while native mip0 generates
 scope:

@@ -1,5 +1,6 @@
 ---
 id: ICW-191
+key: ICW-191
 status: To Do
 title: Extract `DefectTemplateFactory` and simplify defect-pool creation
 type: Task

@@ -1,13 +1,16 @@
 ---
 id: ICW-100
+key: ICW-100
 status: Proposed
-summary: Reconcile duplicate and orphaned ticket IDs in `docs/tasks/tickets/`
-assignee: TBD
-priority: High
-labels:
+title: Reconcile duplicate and orphaned ticket IDs in docs/tasks/tickets
+type: Task
+priority: P2
+tags:
   - process
   - backlog
   - docs
+assignee: TBD
+summary: Reconcile duplicate and orphaned ticket IDs in `docs/tasks/tickets/`
 validation: pwsh -File scripts/Validate-TaskTracker.ps1 -Path docs/tasks && git status --porcelain | Out-String
 ---
 

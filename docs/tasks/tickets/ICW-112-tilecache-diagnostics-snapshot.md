@@ -1,5 +1,6 @@
 ---
 id: ICW-112
+key: ICW-112
 title: Expose structured TileCache diagnostics snapshot API
 status: To Do
 type: Task
