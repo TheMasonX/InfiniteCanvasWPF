@@ -19,14 +19,14 @@ public class ViewportScrollbarPolicyTests
         var vertical = ViewportScrollbarPolicy.ComputeMetrics(
             camera.Capture(), Scene, 400, 200, ViewportScrollbarAxis.Vertical);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(horizontal.IsScrollable, Is.True);
             Assert.That(horizontal.ViewportFraction, Is.EqualTo(0.2));
             Assert.That(horizontal.PositionFraction, Is.EqualTo(0.3125));
             Assert.That(vertical.ViewportFraction, Is.EqualTo(0.2));
             Assert.That(vertical.PositionFraction, Is.EqualTo(0.25));
-        });
+        }
     }
 
     [Test]
@@ -35,12 +35,12 @@ public class ViewportScrollbarPolicyTests
         var metrics = ViewportScrollbarPolicy.ComputeMetrics(
             new CameraTransform().Capture(), Scene, 1_000, 500, ViewportScrollbarAxis.Horizontal);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(metrics.IsScrollable, Is.False);
             Assert.That(metrics.ViewportFraction, Is.EqualTo(1));
             Assert.That(metrics.PositionFraction, Is.EqualTo(0));
-        });
+        }
     }
 
     [Test]

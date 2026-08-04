@@ -42,13 +42,13 @@ public class TileWorkCoordinatorTests
 
         Assert.That(admitted, Is.True);
         var counters = coordinator.GetCounters();
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(counters.AdmittedCount, Is.EqualTo(1));
             Assert.That(counters.CoalescedCount, Is.EqualTo(0));
             Assert.That(counters.ActiveCount, Is.EqualTo(1));
             Assert.That(counters.QueuedCount, Is.EqualTo(0));
-        });
+        }
     }
 
     [Test]
@@ -60,12 +60,12 @@ public class TileWorkCoordinatorTests
 
         Assert.That(admitted, Is.True);
         var counters = coordinator.GetCounters();
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(counters.AdmittedCount, Is.EqualTo(1));
             Assert.That(counters.CoalescedCount, Is.EqualTo(1));
             Assert.That(counters.ActiveCount, Is.EqualTo(1));
-        });
+        }
     }
 
     [Test]
@@ -84,12 +84,12 @@ public class TileWorkCoordinatorTests
         Assert.That(admitted2, Is.True);
 
         var counters = coordinator.GetCounters();
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(counters.ActiveCount, Is.EqualTo(1));
             Assert.That(counters.QueuedCount, Is.EqualTo(1));
             Assert.That(counters.AdmittedCount, Is.EqualTo(2));
-        });
+        }
 
         hold1.Set();
     }
@@ -251,12 +251,12 @@ public class TileWorkCoordinatorTests
             Is.EqualTo(0).After(2, 100), "ActiveCount must reach 0 after CancelAll");
 
         var counters = coordinator.GetCounters();
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(counters.CanceledCount, Is.EqualTo(2));
             Assert.That(counters.ActiveCount, Is.EqualTo(0));
             Assert.That(counters.QueuedCount, Is.EqualTo(0));
-        });
+        }
     }
 
     [Test]
@@ -297,12 +297,12 @@ public class TileWorkCoordinatorTests
         coordinator.Request(Key3, Factory(30), ClaimantA, CancellationToken.None);
 
         var counters = coordinator.GetCounters();
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(counters.ActiveCount, Is.EqualTo(1));
             Assert.That(counters.QueuedCount, Is.EqualTo(2));
             Assert.That(counters.PendingCount, Is.EqualTo(3));
-        });
+        }
 
         hold.Set();
     }
@@ -339,14 +339,14 @@ public class TileWorkCoordinatorTests
         Assert.That(started2.Wait(TimeSpan.FromSeconds(2)), Is.True);
 
         var counters = coordinator.GetCounters();
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(counters.CompletedCount, Is.EqualTo(1));
             Assert.That(counters.ActiveCount, Is.EqualTo(1));
             Assert.That(counters.QueuedCount, Is.EqualTo(1));
             // One completed, one promoted to active (blocking), one still queued.
             Assert.That(counters.PendingCount, Is.EqualTo(2));
-        });
+        }
 
         hold2.Set();
     }
@@ -390,13 +390,13 @@ public class TileWorkCoordinatorTests
 
         Thread.Sleep(500);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(completedPixels, Is.Not.Null);
             Assert.That(completedPixels!.Length, Is.EqualTo(1));
             Assert.That(completedPixels[0], Is.EqualTo(99));
             Assert.That(completedKey, Is.EqualTo(Key1));
-        });
+        }
 
         var counters = coordinator.GetCounters();
         Assert.That(counters.CompletedCount, Is.EqualTo(1));
@@ -419,12 +419,12 @@ public class TileWorkCoordinatorTests
 
         Thread.Sleep(500);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(capturedException, Is.Not.Null);
             Assert.That(capturedException, Is.TypeOf<InvalidOperationException>());
             Assert.That(failedKey, Is.EqualTo(Key1));
-        });
+        }
 
         var counters = coordinator.GetCounters();
         Assert.That(counters.FailedCount, Is.EqualTo(1));
@@ -466,14 +466,14 @@ public class TileWorkCoordinatorTests
 
         Thread.Sleep(500);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(pixelsA, Is.Not.Null);
             Assert.That(pixelsB, Is.Not.Null);
             // Both should get the same result (value from first factory, 77).
             Assert.That(pixelsA![0], Is.EqualTo(77));
             Assert.That(pixelsB![0], Is.EqualTo(77));
-        });
+        }
     }
 
     [Test]

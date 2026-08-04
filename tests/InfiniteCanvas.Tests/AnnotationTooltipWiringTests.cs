@@ -10,14 +10,14 @@ public class AnnotationTooltipWiringTests
     {
         var codeBehind = File.ReadAllText(Path.Combine(RepositoryRoot, "src", "InfiniteCanvas.App", "MainWindow.xaml.cs"));
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(codeBehind, Does.Contain("ToolTip = new DeferredAnnotationToolTip(annotation)"));
             Assert.That(codeBehind, Does.Not.Contain("ToolTip = CreateAnnotationToolTip(annotation)"));
             Assert.That(codeBehind, Does.Not.Contain("annotation.Features[\"Confidence\"]"));
             Assert.That(codeBehind, Does.Not.Contain("annotation.Features[\"Severity\"]"));
             Assert.That(codeBehind, Does.Not.Contain("private static ToolTip CreateAnnotationToolTip"));
-        });
+        }
     }
 
     private static string FindRepositoryRoot()

@@ -199,30 +199,42 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
             tryReserveCacheEntry is null ? null : (key, byteCost) => tryReserveCacheEntry(tile, key, byteCost));
         var sourceDimensions = BackgroundTileMipPolicy.GetDimensions(tile.PixelWidth, tile.PixelHeight, residentMipLevel);
         var placeholder = tile.PlaceholderValue;
+        var cameraOffsetX = camera.OffsetX;
+        var cameraOffsetY = camera.OffsetY;
+        var cameraScaleX = camera.ScaleX;
+        var cameraScaleY = camera.ScaleY;
+        var tileX = tile.Bounds.X;
+        var tileY = tile.Bounds.Y;
+        var tileWidth = tile.Bounds.Width;
+        var tileHeight = tile.Bounds.Height;
+        var sourceWidth = sourceDimensions.Width;
+        var sourceHeight = sourceDimensions.Height;
+        var maxSourceX = sourceWidth - 1;
+        var maxSourceY = sourceHeight - 1;
 
         for (var y = top; y < bottom; y++)
         {
-            var worldY = (y - camera.OffsetY) / camera.ScaleY;
+            var rowOffset = y * _layout.Stride;
+            var destinationOffset = rowOffset + (left * 4);
+            var worldY = (y - cameraOffsetY) / cameraScaleY;
             var sourceY = Math.Clamp(
-                (int)((worldY - tile.Bounds.Y) * sourceDimensions.Height / tile.Bounds.Height),
+                (int)((worldY - tileY) * sourceHeight / tileHeight),
                 0,
-                sourceDimensions.Height - 1);
+                maxSourceY);
+            var sourceRowOffset = sourceY * sourceWidth;
 
             for (var x = left; x < right; x++)
             {
-                var worldX = (x - camera.OffsetX) / camera.ScaleX;
+                var worldX = (x - cameraOffsetX) / cameraScaleX;
                 var sourceX = Math.Clamp(
-                    (int)((worldX - tile.Bounds.X) * sourceDimensions.Width / tile.Bounds.Width),
+                    (int)((worldX - tileX) * sourceWidth / tileWidth),
                     0,
-                    sourceDimensions.Width - 1);
+                    maxSourceX);
                 var value = hasSourcePixels
-                    ? sourcePixels![(sourceY * sourceDimensions.Width) + sourceX]
+                    ? sourcePixels![sourceRowOffset + sourceX]
                     : placeholder;
-                var offset = _layout.GetPixelOffset(x, y);
-                destination[offset] = value;
-                destination[offset + 1] = value;
-                destination[offset + 2] = value;
-                destination[offset + 3] = byte.MaxValue;
+                WritePackedGrayPixel(destination, destinationOffset, value);
+                destinationOffset += 4;
             }
         }
     }
@@ -257,6 +269,8 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
             var source = (byte*)bitmapData.Scan0;
             for (var y = top; y < bottom; y++)
             {
+                var rowOffset = y * _layout.Stride;
+                var destinationOffset = rowOffset + (left * 4);
                 var worldY = (y - camera.OffsetY) / camera.ScaleY;
                 var sourceY = Math.Clamp((int)(worldY - imageTopWorld), 0, bitmap.Height - 1);
                 var sourceRow = source + (sourceY * bitmapData.Stride);
@@ -266,13 +280,10 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
                     var worldX = (x - camera.OffsetX) / camera.ScaleX;
                     var sourceX = Math.Clamp((int)(worldX - imageLeftWorld), 0, bitmap.Width - 1);
                     var value = sourceRow[sourceX * 3];
-                    var offset = _layout.GetPixelOffset(x, y);
-                    var currentValue = destination[offset];
+                    var currentValue = destination[destinationOffset];
                     var displayValue = DefectOverlaySampler.ResolveDisplayValue(currentValue, annotation, worldX, worldY);
-                    destination[offset] = displayValue;
-                    destination[offset + 1] = displayValue;
-                    destination[offset + 2] = displayValue;
-                    destination[offset + 3] = byte.MaxValue;
+                    WritePackedGrayPixel(destination, destinationOffset, displayValue);
+                    destinationOffset += 4;
                 }
             }
         }
@@ -280,6 +291,11 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
         {
             bitmap.UnlockBits(bitmapData);
         }
+    }
+
+    private static unsafe void WritePackedGrayPixel(byte* destination, int offset, byte value)
+    {
+        *(uint*)(destination + offset) = 0xFF000000u | ((uint)value * 0x00010101u);
     }
 
     public void Dispose()

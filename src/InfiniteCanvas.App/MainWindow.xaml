@@ -255,7 +255,8 @@
                         <DataGrid x:Name="FeatureDataGrid" AutoGenerateColumns="False" HeadersVisibility="Column"
                                   CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True"
                                   BorderThickness="1" BorderBrush="{StaticResource BorderBrush}" Background="#111418"
-                                  Height="180" ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=SelectedAnnotationFeatures}">
+                                  MinHeight="200" MaxHeight="450"
+                                  ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=SelectedAnnotationFeatures}">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
                                 <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="100" MinWidth="60" />

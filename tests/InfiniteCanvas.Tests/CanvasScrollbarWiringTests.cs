@@ -11,7 +11,7 @@ public class CanvasScrollbarWiringTests
         var xaml = File.ReadAllText(Path.Combine(RepositoryRoot, "src", "InfiniteCanvas.App", "MainWindow.xaml"));
         var codeBehind = File.ReadAllText(Path.Combine(RepositoryRoot, "src", "InfiniteCanvas.App", "MainWindow.xaml.cs"));
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(xaml, Does.Contain("ViewportScrollbarOverlay"));
             Assert.That(xaml, Does.Contain("HorizontalScrollbarTrack"));
@@ -22,7 +22,7 @@ public class CanvasScrollbarWiringTests
             Assert.That(codeBehind, Does.Contain("private void UpdateViewportScrollbars("));
             Assert.That(codeBehind, Does.Contain("UpdateViewportScrollbars(camera, width, height);"));
             Assert.That(codeBehind, Does.Contain("ViewportScrollbarPolicy.ComputeMetrics"));
-        });
+        }
     }
 
     private static string FindRepositoryRoot()

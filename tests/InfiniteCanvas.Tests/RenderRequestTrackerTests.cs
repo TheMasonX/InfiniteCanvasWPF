@@ -13,12 +13,12 @@ public class RenderRequestTrackerTests
         var first = tracker.BeginRequest();
         var second = tracker.BeginRequest();
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(first, Is.LessThan(second));
             Assert.That(tracker.IsCurrent(second), Is.True);
             Assert.That(tracker.IsCurrent(first), Is.False);
-        });
+        }
     }
 
     [Test]
@@ -29,10 +29,10 @@ public class RenderRequestTrackerTests
 
         tracker.Advance();
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(tracker.CurrentVersion, Is.GreaterThan(requestVersion));
             Assert.That(tracker.IsCurrent(requestVersion), Is.False);
-        });
+        }
     }
 }

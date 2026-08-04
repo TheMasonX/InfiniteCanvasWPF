@@ -59,13 +59,13 @@ public class CanvasUserSettingsTests
             CanvasUserSettingsStore.Save(path, settings);
             var loaded = CanvasUserSettingsStore.Load(path);
 
-            Assert.Multiple(() =>
+            using (Assert.EnterMultipleScope())
             {
                 Assert.That(loaded.ShowSparseImageTiles, Is.False);
                 Assert.That(loaded.ShowImageTiles, Is.False);
                 Assert.That(loaded.ShowBackgroundImages, Is.False);
                 Assert.That(loaded.BackgroundTargetValue, Is.EqualTo(160));
-            });
+            }
         }
         finally
         {

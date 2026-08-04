@@ -30,11 +30,11 @@ public class SampleImageTileTests
         _ = tile.TryGetPixelsNonBlocking(2, out _, out _);
         SpinWait.SpinUntil(() => tile.IsMipGenerated(2), TimeSpan.FromSeconds(2));
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(tile.IsMipGenerated(2), Is.True);
             Assert.That(nativeGenerationStarted.Wait(TimeSpan.FromMilliseconds(50)), Is.False);
-        });
+        }
     }
 
     [Test]
@@ -206,10 +206,10 @@ public class SampleImageTileTests
         var firstMatch = DefectOverlaySampler.ResolveDisplayValue(128, annotations, 5, 5);
         var noMatch = DefectOverlaySampler.ResolveDisplayValue(128, annotations, 20, 20);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(firstMatch, Is.EqualTo(80));
             Assert.That(noMatch, Is.EqualTo(128));
-        });
+        }
     }
 }

@@ -17,13 +17,13 @@ public class ZeroCopyBitmapFactoryTests
         var bitmap = factory.GenerateFrozenBitmap(
             [new ScreenPoint(50, 40), new ScreenPoint(double.NaN, 0)]);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(bitmap.IsFrozen, Is.True);
             Assert.That(bitmap.PixelWidth, Is.EqualTo(100));
             Assert.That(bitmap.PixelHeight, Is.EqualTo(80));
             Assert.That(bitmap.Format, Is.EqualTo(System.Windows.Media.PixelFormats.Bgra32));
-        });
+        }
     }
 
     [Test]
@@ -45,12 +45,12 @@ public class ZeroCopyBitmapFactoryTests
 
         var bitmap = factory.GenerateFrozenBitmap([tile], tile.Annotations, new CameraTransform().Capture());
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(bitmap.IsFrozen, Is.True);
             Assert.That(bitmap.PixelWidth, Is.EqualTo(64));
             Assert.That(bitmap.PixelHeight, Is.EqualTo(32));
-        });
+        }
     }
 
     [Test]
@@ -62,11 +62,11 @@ public class ZeroCopyBitmapFactoryTests
         factory.GenerateFrozenBitmap(tiles, [], new CameraTransform().Capture());
         SpinWait.SpinUntil(() => tiles[0].IsImageGenerated, TimeSpan.FromSeconds(1));
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(tiles[0].IsImageGenerated, Is.True);
             Assert.That(tiles[1].IsImageGenerated, Is.False);
-        });
+        }
     }
 
     [Test]
@@ -76,11 +76,11 @@ public class ZeroCopyBitmapFactoryTests
 
         _ = tile.Pixels;
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(tile.BitmapGenerationDuration, Is.Null);
             Assert.That(tile.BitmapConversionDuration, Is.Null);
-        });
+        }
     }
 
     [Test]
@@ -117,13 +117,13 @@ public class ZeroCopyBitmapFactoryTests
             circleCount: 0,
             tileLabel: "TILE-01");
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(native.Length, Is.EqualTo(64 * 32));
             Assert.That(mip.Length, Is.EqualTo(16 * 8));
             Assert.That(native.Take(12 * 44).Any(value => value < 64), Is.True);
             Assert.That(mip.Any(value => value < 64), Is.True);
-        });
+        }
     }
 
     [Test]
@@ -170,6 +170,57 @@ public class ZeroCopyBitmapFactoryTests
     }
 
     [Test]
+    public void GenerateFrozenBitmap_PreservesExactPixelsForClampedTileBounds()
+    {
+        var pixels = Enumerable.Range(0, 16).Select(value => (byte)(10 + value)).ToArray();
+        var tile = new SampleImageTile(
+            "edge-tile",
+            new SpatialBounds(-1, -1, 4, 4),
+            4,
+            4,
+            () => pixels,
+            []);
+        _ = tile.Pixels;
+        using var factory = new ZeroCopyBitmapFactory(4, 4);
+
+        var bitmap = factory.GenerateFrozenBitmap([tile], [], new CameraTransform().Capture());
+        var output = new byte[4 * 4 * 4];
+        bitmap.CopyPixels(output, 4 * 4, 0);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(ReadGray(output, 4, 0, 0), Is.EqualTo(15));
+            Assert.That(ReadGray(output, 4, 2, 2), Is.EqualTo(25));
+            Assert.That(ReadGray(output, 4, 3, 0), Is.EqualTo(0));
+            Assert.That(output[((0 * 4) + 0) * 4 + 3], Is.EqualTo(byte.MaxValue));
+        }
+    }
+
+    [Test]
+    public void GenerateFrozenBitmap_UsesResidentSelectedMip()
+    {
+        var tile = new SampleImageTile(
+            "mip-tile",
+            new SpatialBounds(0, 0, 8, 8),
+            8,
+            8,
+            () => Enumerable.Repeat((byte)11, 64).ToArray(),
+            [],
+            mipPixelFactory: mipLevel => Enumerable.Repeat((byte)(40 + mipLevel), 16).ToArray());
+        tile.TryGetPixelsNonBlocking(1, out _, out _);
+        Assert.That(SpinWait.SpinUntil(() => tile.IsMipGenerated(1), TimeSpan.FromSeconds(1)), Is.True);
+        using var factory = new ZeroCopyBitmapFactory(4, 4);
+        var camera = new CameraTransform();
+        Assert.That(camera.Zoom(0.5, new ScreenPoint(0, 0)), Is.True);
+
+        var bitmap = factory.GenerateFrozenBitmap([tile], [], camera.Capture());
+        var output = new byte[4 * 4 * 4];
+        bitmap.CopyPixels(output, 4 * 4, 0);
+
+        Assert.That(ReadGray(output, 4, 2, 2), Is.EqualTo(41));
+    }
+
+    [Test]
     public void GenerateFrozenBitmap_RendersDefectBitmapUnalteredOutsideLogicalBounds()
     {
         using var defectBitmap = new Bitmap(4, 4, PixelFormat.Format24bppRgb);
@@ -199,12 +250,17 @@ public class ZeroCopyBitmapFactoryTests
         bitmap.CopyPixels(pixels, 24 * 4, 0);
         var outsideLogicalBoundsOffset = ((9 * 24) + 9) * 4;
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(pixels[outsideLogicalBoundsOffset], Is.EqualTo(150));
             Assert.That(pixels[outsideLogicalBoundsOffset + 1], Is.EqualTo(150));
             Assert.That(pixels[outsideLogicalBoundsOffset + 2], Is.EqualTo(150));
             Assert.That(pixels[outsideLogicalBoundsOffset + 3], Is.EqualTo(255));
-        });
+        }
+    }
+
+    private static byte ReadGray(byte[] pixels, int width, int x, int y)
+    {
+        return pixels[((y * width) + x) * 4];
     }
 }

@@ -17,11 +17,11 @@ public class BoundedNumericTests
     {
         var parsed = BoundedNumeric.TryParse(text, NumericKind.Integer, minimum, maximum, out var value);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(parsed, Is.True);
             Assert.That(value, Is.EqualTo((double)expected));
-        });
+        }
     }
 
     [TestCase("5.5", 0, 8)]
@@ -46,11 +46,11 @@ public class BoundedNumericTests
     {
         var parsed = BoundedNumeric.TryParse(text, NumericKind.Double, minimum, maximum, out var value);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(parsed, Is.True);
             Assert.That(value, Is.EqualTo(expected));
-        });
+        }
     }
 
     [TestCase("NaN", 0, 1)]

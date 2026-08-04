@@ -58,12 +58,12 @@ public class CoalescingAsyncActionTests
 
         await Task.WhenAll(completion, followUp);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(runCount, Is.EqualTo(2));
             Assert.That(reportedFaults, Has.Count.EqualTo(1));
             Assert.That(reportedFaults[0], Is.TypeOf<InvalidOperationException>());
-        });
+        }
     }
 
     [Test]
@@ -94,12 +94,12 @@ public class CoalescingAsyncActionTests
         await runStarted.Task;
         await action.DisposeAsync();
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(completion.IsCanceled, Is.True);
             Assert.That(
                 () => action.RequestAsync(),
                 Throws.TypeOf<ObjectDisposedException>());
-        });
+        }
     }
 }

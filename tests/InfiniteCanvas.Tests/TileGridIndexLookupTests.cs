@@ -14,7 +14,7 @@ public class TileGridIndexLookupTests
         var second = TileGridIndexLookup.TryGetTileIndex(150, 25, sceneBounds, 100, 50, 2, 6, out var secondIndex);
         var third = TileGridIndexLookup.TryGetTileIndex(25, 125, sceneBounds, 100, 50, 2, 6, out var thirdIndex);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(first, Is.True);
             Assert.That(firstIndex, Is.EqualTo(0));
@@ -22,7 +22,7 @@ public class TileGridIndexLookupTests
             Assert.That(secondIndex, Is.EqualTo(1));
             Assert.That(third, Is.True);
             Assert.That(thirdIndex, Is.EqualTo(4));
-        });
+        }
     }
 
     [Test]
@@ -36,13 +36,13 @@ public class TileGridIndexLookupTests
         var invalidGrid = TileGridIndexLookup.TryGetTileIndex(10, 10, sceneBounds, 0, 50, 2, 4, out _);
         var invalidCount = TileGridIndexLookup.TryGetTileIndex(10, 10, sceneBounds, 100, 50, 2, 0, out _);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(rightEdge, Is.False);
             Assert.That(bottomEdge, Is.False);
             Assert.That(negative, Is.False);
             Assert.That(invalidGrid, Is.False);
             Assert.That(invalidCount, Is.False);
-        });
+        }
     }
 }

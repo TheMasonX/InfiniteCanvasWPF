@@ -12,7 +12,7 @@ public class SampleImageGeneratorTests
         var first = SampleImageGenerator.GenerateSet(2, 64, 32, 128, 8, objectsPerTile: 3, columns: 2, seed: 42);
         var second = SampleImageGenerator.GenerateSet(2, 64, 32, 128, 8, objectsPerTile: 3, columns: 2, seed: 42);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(first, Has.Count.EqualTo(2));
             Assert.That(first[0].Pixels, Is.EqualTo(second[0].Pixels));
@@ -23,7 +23,7 @@ public class SampleImageGeneratorTests
             Assert.That(first[0].Annotations[0].DefectPixels,
                 Is.EqualTo(second[0].Annotations[0].DefectPixels));
             Assert.That(first[1].Bounds.X, Is.EqualTo(64));
-        });
+        }
     }
 
     [Test]
@@ -43,7 +43,7 @@ public class SampleImageGeneratorTests
     {
         var tiles = SampleImageGenerator.GenerateSet(objectsPerTile: 1);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(tiles, Has.Count.EqualTo(64));
             Assert.That(tiles, Has.All.Property(nameof(SampleImageTile.IsImageGenerated)).False);
@@ -58,7 +58,7 @@ public class SampleImageGeneratorTests
             Assert.That(tiles[63].Bounds.X, Is.EqualTo(8192));
             Assert.That(tiles[63].Bounds.Y, Is.EqualTo(126976));
             Assert.That(tiles.Sum(tile => tile.Annotations.Count), Is.EqualTo(64));
-        });
+        }
     }
 
     [Test]
@@ -71,11 +71,11 @@ public class SampleImageGeneratorTests
         var key = new BackgroundTileCacheKey("synthetic", tile.Id, tile.CurrentGenerationEpoch, 0);
         var bytes = checked((long)tile.PixelWidth * tile.PixelHeight);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(defaultBudget, Is.GreaterThanOrEqualTo((long)defaultTileCost));
             Assert.That(cacheBudget.TryReserve(tile, key, bytes), Is.Not.Null);
-        });
+        }
     }
 
     [Test]
@@ -90,14 +90,14 @@ public class SampleImageGeneratorTests
         cacheBudget.SetPinnedTiles([tiles[0]]);
 
         ICacheReservation? firstReservation = null;
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             firstReservation = cacheBudget.TryReserve(tiles[0], firstKey, firstBytes);
             Assert.That(firstReservation, Is.Not.Null);
             Assert.That(cacheBudget.TryReserve(tiles[1], secondKey, secondBytes), Is.Null);
             Assert.That(cacheBudget.ResidentTileCount, Is.EqualTo(1));
             Assert.That(cacheBudget.UsedBytes, Is.EqualTo(firstBytes));
-        });
+        }
 
         firstReservation?.Dispose();
     }
@@ -109,12 +109,12 @@ public class SampleImageGeneratorTests
         var smallCamera = new CameraSnapshot(0.25, 0.25, 0, 0);
         var largeCamera = new CameraSnapshot(4, 4, 0, 0);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(tile.ShouldGenerateForPixelSize(smallCamera, 64), Is.False);
             Assert.That(tile.ShouldGenerateForPixelSize(largeCamera, 64), Is.True);
             Assert.That(tile.ShouldGenerateForPixelSize(largeCamera, 0), Is.True);
-        });
+        }
     }
 
     [Test]
@@ -125,12 +125,12 @@ public class SampleImageGeneratorTests
         var first = tile.Pixels;
         var second = tile.Pixels;
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(tile.IsImageGenerated, Is.True);
             Assert.That(second, Is.SameAs(first));
             Assert.That(first, Has.Length.EqualTo(64 * 32));
-        });
+        }
     }
 
     [Test]
@@ -139,11 +139,11 @@ public class SampleImageGeneratorTests
         var tile = SampleImageGenerator.GenerateSet(1, 64, 32, objectsPerTile: 1)[0];
         var annotation = tile.Annotations[0];
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(annotation.DefectPixels, Has.Length.EqualTo(annotation.DefectPixelWidth * annotation.DefectPixelHeight));
             Assert.That(annotation.DefectPixels.Any(value => value > 0), Is.True);
-        });
+        }
     }
 
     [Test]
@@ -154,18 +154,18 @@ public class SampleImageGeneratorTests
         var inside = tile.TryGetPixelValue(tile.Bounds.X + 10, tile.Bounds.Y + 5, out var insideValue);
         var outside = tile.TryGetPixelValue(tile.Bounds.Right, tile.Bounds.Bottom, out _);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(inside, Is.True);
             Assert.That(insideValue, Is.EqualTo((byte)128));
             Assert.That(outside, Is.False);
-        });
+        }
     }
 
     [Test]
     public void GenerateSet_ValidatesEachParameterWithAccurateName()
     {
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(
                 () => SampleImageGenerator.GenerateSet(pixelWidth: 0),
@@ -185,7 +185,7 @@ public class SampleImageGeneratorTests
             Assert.That(
                 () => SampleImageGenerator.GenerateSet(objectsPerTile: SampleImageGenerator.MaxObjectsPerTile + 1),
                 Throws.TypeOf<ArgumentOutOfRangeException>().With.Property(nameof(ArgumentOutOfRangeException.ParamName)).EqualTo("objectsPerTile"));
-        });
+        }
     }
 
     [Test]
@@ -211,12 +211,12 @@ public class SampleImageGeneratorTests
         var tile = SampleImageGenerator.GenerateSet(1, 64, 32, targetValue: 128, noise: 8, objectsPerTile: 0, seed: 42)[0];
         var pixels = tile.Pixels;
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(pixels.Distinct().Count(), Is.GreaterThan(3), "Background tiles should include visible variation rather than a uniform fill.");
             Assert.That(pixels.Any(value => value < 110), Is.True, "Background tiles should contain darker defect-like circles near the target gray.");
             Assert.That(pixels.Any(value => value > 140), Is.True, "Background tiles should contain brighter noise variation.");
-        });
+        }
     }
 
     [Test]
@@ -224,12 +224,12 @@ public class SampleImageGeneratorTests
     {
         var pixels = SampleImageGenerator.GenerateMonochromeMipPixels(32, 32, 128, 8, seed: 42, circleCount: 0, SampleImageGenerator.NoiseSettings.Default);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(pixels, Has.Length.EqualTo(32 * 32));
             Assert.That(pixels.Distinct().Count(), Is.GreaterThan(3));
             Assert.That(pixels.Count(value => value != 128), Is.GreaterThan(32 * 32 / 2));
-        });
+        }
     }
 
     [Test]
@@ -247,11 +247,11 @@ public class SampleImageGeneratorTests
         var firstSet = SampleImageGenerator.GenerateSet(2, 32, 32, targetValue: 128, noise: 8, objectsPerTile: 0, columns: 2, rows: 1, seed: 42);
         var secondSet = SampleImageGenerator.GenerateSet(2, 32, 32, targetValue: 128, noise: 8, objectsPerTile: 0, columns: 2, rows: 1, seed: 42);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(firstSet[0].Pixels, Is.EqualTo(secondSet[0].Pixels));
             Assert.That(firstSet[1].Pixels, Is.Not.EqualTo(firstSet[0].Pixels));
-        });
+        }
     }
 
     [Test]
@@ -271,11 +271,11 @@ public class SampleImageGeneratorTests
 
         var rows = annotation.GetFeatureDisplayItems();
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(rows.Select(item => item.Name), Is.EquivalentTo(new[] { "Confidence", "Severity" }));
             Assert.That(rows.First(item => item.Name == "Confidence").Value, Does.Contain("%"));
-        });
+        }
     }
 
     [Test]
@@ -287,12 +287,12 @@ public class SampleImageGeneratorTests
         var inside = annotation.TryGetDefectValue(annotation.Bounds.X + (annotation.Bounds.Width / 2), annotation.Bounds.Y + (annotation.Bounds.Height / 2), out var insideValue);
         var outside = annotation.TryGetDefectValue(annotation.Bounds.Right + 1, annotation.Bounds.Bottom + 1, out _);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(inside, Is.True);
             Assert.That(insideValue, Is.InRange((byte)0, byte.MaxValue));
             Assert.That(outside, Is.False);
-        });
+        }
     }
 
     [Test]
@@ -353,11 +353,11 @@ public class SampleImageGeneratorTests
         var first = SampleImageGenerator.GenerateMonochromeMipPixels(17, 9, 128, 8, 3, seed: 1729, circleCount: 2);
         var second = SampleImageGenerator.GenerateMonochromeMipPixels(17, 9, 128, 8, 3, seed: 1729, circleCount: 2);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(first, Is.EqualTo(second));
             Assert.That(first, Has.Length.EqualTo(3 * 2));
-        });
+        }
     }
 
     [Test]

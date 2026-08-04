@@ -16,23 +16,23 @@ public class MainViewModelTests
 
         var snapshot = mainViewModel.CreateBackgroundNoiseSnapshot();
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(snapshot.TargetValue, Is.EqualTo((byte)160));
             Assert.That(snapshot.Noise, Is.EqualTo((byte)12));
             Assert.That(snapshot.CircleCount, Is.EqualTo(5));
-        });
+        }
 
         mainViewModel.TileBackgroundNoiseSettings.TargetValue = 24;
         mainViewModel.TileBackgroundNoiseSettings.Noise = 2;
         mainViewModel.TileBackgroundNoiseSettings.CircleCount = 1;
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(snapshot.TargetValue, Is.EqualTo((byte)160));
             Assert.That(snapshot.Noise, Is.EqualTo((byte)12));
             Assert.That(snapshot.CircleCount, Is.EqualTo(5));
-        });
+        }
     }
 
     [Test]
@@ -48,12 +48,12 @@ public class MainViewModelTests
 
         mainViewModel.ApplySettings(settings);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(mainViewModel.TileBackgroundNoiseSettings.TargetValue, Is.EqualTo(200));
             Assert.That(mainViewModel.TileBackgroundNoiseSettings.Noise, Is.EqualTo(18));
             Assert.That(mainViewModel.TileBackgroundNoiseSettings.CircleCount, Is.EqualTo(6));
-        });
+        }
     }
 
     [Test]
@@ -77,7 +77,7 @@ public class MainViewModelTests
         var regenerated = new MainViewModel();
         regenerated.ApplyBackgroundNoiseSnapshot(generationInput);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(regenerated.TileBackgroundNoiseSettings.TargetValue, Is.EqualTo(160.0));
             Assert.That(regenerated.TileBackgroundNoiseSettings.Noise, Is.EqualTo(12.0));
@@ -87,7 +87,7 @@ public class MainViewModelTests
             Assert.That(regenerated.TileBackgroundNoiseSettings.Lacunarity, Is.EqualTo(3.1));
             Assert.That(regenerated.TileBackgroundNoiseSettings.Gain, Is.EqualTo(0.4));
             Assert.That(regenerated.TileBackgroundNoiseSettings.Amplitude, Is.EqualTo(2.2));
-        });
+        }
 
         // The generator must receive the same snapshot that remains in the
         // bound view model after regeneration.
@@ -100,7 +100,7 @@ public class MainViewModelTests
         var settings = new CanvasUserSettings();
         var viewModel = new TileBackgroundNoiseSettingsViewModel();
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(viewModel.TargetValue, Is.EqualTo(settings.BackgroundTargetValue));
             Assert.That(viewModel.Noise, Is.EqualTo(settings.BackgroundNoise));
@@ -110,6 +110,6 @@ public class MainViewModelTests
             Assert.That(viewModel.Lacunarity, Is.EqualTo(settings.BackgroundNoiseLacunarity));
             Assert.That(viewModel.Gain, Is.EqualTo(settings.BackgroundNoiseGain));
             Assert.That(viewModel.Amplitude, Is.EqualTo(settings.BackgroundNoiseAmplitude));
-        });
+        }
     }
 }

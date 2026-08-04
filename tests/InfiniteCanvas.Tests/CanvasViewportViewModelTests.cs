@@ -47,11 +47,11 @@ public class CanvasViewportViewModelTests
 
         viewModel.ApplyFrame(new SpatialBounds(0, 0, 10, 10), 1);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(viewModel.VisibleItemCount, Is.EqualTo(1));
             Assert.That(viewModel.TotalItemCount, Is.EqualTo(2));
             Assert.That(viewModel.LastSnapshotPublishedAtUtc, Is.Null);
-        });
+        }
     }
 }

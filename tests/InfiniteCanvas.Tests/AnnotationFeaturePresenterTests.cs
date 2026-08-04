@@ -28,13 +28,13 @@ public class AnnotationFeaturePresenterTests
 
         var rows = AnnotationFeaturePresenter.BuildRows(annotation);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(rows.Select(row => row.Name), Is.EqualTo(new[] { "Area", "Confidence", "Severity" }));
             Assert.That(rows[1].Value, Is.EqualTo("80.0 %"));
             Assert.That(rows[2].Value, Is.EqualTo("25.0 %"));
             Assert.That(rows[0].Value, Is.EqualTo("14.5"));
-        });
+        }
     }
 
     [Test]
