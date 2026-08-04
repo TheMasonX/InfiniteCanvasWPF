@@ -3,7 +3,7 @@ id: ICW-022-mainwindow-decomposition-and-tests
 author: External Audit (Integration-1)
 key: ICW-022
 title: Extract testable logic from MainWindow code-behind and backfill unit tests
-status: To Do
+status: In Progress
 type: Task
 priority: P2
 tags:
@@ -27,7 +27,7 @@ links:
   - tests/InfiniteCanvas.Tests
   - docs/audits/infinitecanvaswpf-icw-implementation-audit-26-07-30-16-40-49.md
 created: 2026-07-25
-updated: 2026-07-30
+updated: 2026-08-04
 ---
 
 # ICW-022 — Extract testable logic from MainWindow code-behind and backfill unit tests
@@ -37,6 +37,12 @@ updated: 2026-07-30
 **Audit finding:** MainWindow combines viewport composition, render presentation, settings editing, and lifecycle logic in one shell; the XAML repeats visual patterns that would benefit from styles and subcontrols. The file is 1600+ lines. Multiple audit items depend on this decomposition.
 
 ## Scope
+
+### Current slice — temporary Canvas control duplication
+
+1. Add `Controls/CanvasControl.xaml` and `Controls/CanvasControl.xaml.cs` with a duplicated viewport surface, overlays, scrollbar chrome, pixelometer, and pointer interaction hooks.
+2. Add `CanvasViewModel` for camera and viewport state owned by the new control.
+3. Keep MainWindow unchanged. Do not replace the live viewport until the duplicate builds and receives focused tests.
 
 ### Phase 1 — Compatibility & Settings Hardening (acceptance criteria from external audit)
 
@@ -68,6 +74,8 @@ These items must be completed before structural decomposition begins:
 ### Acceptance Criteria
 
 - MainWindow becomes a thin shell composing focused subcontrols.
+- The duplicate Canvas control builds independently while MainWindow still owns the live viewport.
+- Canvas camera and viewport state lives on its dedicated view model.
 - Viewport and settings interactions backed by presenter/controller classes rather than code-behind.
 - Repeated XAML patterns use shared styles/templates.
 - Pure logic is unit-testable without instantiating the full window.
@@ -78,7 +86,9 @@ These items must be completed before structural decomposition begins:
 |---|---|
 | `src/InfiniteCanvas.App/MainWindow.xaml` | Extract subcontrols into separate files, consolidate styles |
 | `src/InfiniteCanvas.App/MainWindow.xaml.cs` | Delegate to presenter/controller classes |
-| `src/InfiniteCanvas.App/Controls/ViewportHostControl.xaml` (new) | Viewport composition subcontrol |
+| `src/InfiniteCanvas.App/Controls/CanvasControl.xaml` (new) | Temporary duplicated viewport composition control |
+| `src/InfiniteCanvas.App/Controls/CanvasControl.xaml.cs` (new) | Canvas input and overlay interaction boundary |
+| `src/InfiniteCanvas.ViewModels/CanvasViewModel.cs` (new) | Canvas camera and viewport state |
 | `src/InfiniteCanvas.App/Controls/SettingsSidebarControl.xaml` (new) | Settings panel subcontrol |
 | `tests/InfiniteCanvas.Tests` | Add tests for extracted logic |
 
@@ -88,6 +98,12 @@ These items must be completed before structural decomposition begins:
 dotnet test tests/InfiniteCanvas.Tests --configuration Release
 dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release
 ```
+
+Current slice evidence:
+
+- `dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release` passes. The existing `_frameClaimantId` warning remains.
+- `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~CanvasViewModelTests` passes 2 tests.
+- A normal test restore is blocked by the pre-existing Rendering project target mismatch. The focused test passes with existing restore assets.
 
 ## Related Tasks
 

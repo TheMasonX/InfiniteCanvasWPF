@@ -1,6 +1,8 @@
 #if WINDOWS
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -223,20 +225,105 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
                 maxSourceY);
             var sourceRowOffset = sourceY * sourceWidth;
 
-            for (var x = left; x < right; x++)
+            var x = left;
+            if (Sse2.IsSupported)
             {
-                var worldX = (x - cameraOffsetX) / cameraScaleX;
-                var sourceX = Math.Clamp(
-                    (int)((worldX - tileX) * sourceWidth / tileWidth),
-                    0,
-                    maxSourceX);
-                var value = hasSourcePixels
-                    ? sourcePixels![sourceRowOffset + sourceX]
-                    : placeholder;
+                for (; x + 3 < right; x += 4)
+                {
+                    var value0 = GetTilePixelValue(
+                        x,
+                        cameraOffsetX,
+                        cameraScaleX,
+                        tileX,
+                        tileWidth,
+                        sourceWidth,
+                        maxSourceX,
+                        sourcePixels,
+                        sourceRowOffset,
+                        hasSourcePixels,
+                        placeholder);
+                    var value1 = GetTilePixelValue(
+                        x + 1,
+                        cameraOffsetX,
+                        cameraScaleX,
+                        tileX,
+                        tileWidth,
+                        sourceWidth,
+                        maxSourceX,
+                        sourcePixels,
+                        sourceRowOffset,
+                        hasSourcePixels,
+                        placeholder);
+                    var value2 = GetTilePixelValue(
+                        x + 2,
+                        cameraOffsetX,
+                        cameraScaleX,
+                        tileX,
+                        tileWidth,
+                        sourceWidth,
+                        maxSourceX,
+                        sourcePixels,
+                        sourceRowOffset,
+                        hasSourcePixels,
+                        placeholder);
+                    var value3 = GetTilePixelValue(
+                        x + 3,
+                        cameraOffsetX,
+                        cameraScaleX,
+                        tileX,
+                        tileWidth,
+                        sourceWidth,
+                        maxSourceX,
+                        sourcePixels,
+                        sourceRowOffset,
+                        hasSourcePixels,
+                        placeholder);
+                    WriteGrayPixels4(destination, destinationOffset, value0, value1, value2, value3);
+                    destinationOffset += 16;
+                }
+            }
+
+            for (; x < right; x++)
+            {
+                var value = GetTilePixelValue(
+                    x,
+                    cameraOffsetX,
+                    cameraScaleX,
+                    tileX,
+                    tileWidth,
+                    sourceWidth,
+                    maxSourceX,
+                    sourcePixels,
+                    sourceRowOffset,
+                    hasSourcePixels,
+                    placeholder);
                 WritePackedGrayPixel(destination, destinationOffset, value);
                 destinationOffset += 4;
             }
         }
+    }
+
+    private static byte GetTilePixelValue(
+        int screenX,
+        double cameraOffsetX,
+        double cameraScaleX,
+        double tileX,
+        double tileWidth,
+        int sourceWidth,
+        int maxSourceX,
+        byte[]? sourcePixels,
+        int sourceRowOffset,
+        bool hasSourcePixels,
+        byte placeholder)
+    {
+        var worldX = (screenX - cameraOffsetX) / cameraScaleX;
+        var sourceX = Math.Clamp(
+            (int)((worldX - tileX) * sourceWidth / tileWidth),
+            0,
+            maxSourceX);
+        return hasSourcePixels
+            ? sourcePixels![sourceRowOffset + sourceX]
+            : placeholder;
     }
 
     private unsafe void DrawDefectPatch(byte* destination, SampleAnnotation annotation, CameraSnapshot camera)
@@ -296,6 +383,41 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
     private static unsafe void WritePackedGrayPixel(byte* destination, int offset, byte value)
     {
         *(uint*)(destination + offset) = 0xFF000000u | ((uint)value * 0x00010101u);
+    }
+
+    private static unsafe void WriteGrayPixels4(
+        byte* destination,
+        int offset,
+        byte value0,
+        byte value1,
+        byte value2,
+        byte value3)
+    {
+        var packed = (uint)value0
+            | ((uint)value1 << 8)
+            | ((uint)value2 << 16)
+            | ((uint)value3 << 24);
+        var grayscale = Vector128.CreateScalar(packed).AsByte();
+        var duplicatedChannels = Sse2.UnpackLow(grayscale, grayscale);
+        var expanded = Sse2.UnpackLow(duplicatedChannels, duplicatedChannels);
+        var alpha = Vector128.Create(
+            (byte)0,
+            0,
+            0,
+            byte.MaxValue,
+            0,
+            0,
+            0,
+            byte.MaxValue,
+            0,
+            0,
+            0,
+            byte.MaxValue,
+            0,
+            0,
+            0,
+            byte.MaxValue);
+        Sse2.Store(destination + offset, Sse2.Or(expanded, alpha));
     }
 
     public void Dispose()

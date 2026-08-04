@@ -26,7 +26,7 @@ links:
   - docs/tasks/tickets/ICW-097-cpu-pixel-processing-optimization.md
   - docs/tasks/tickets/ICW-132-rendering-performance-stage-instrumentation.md
 created: 2026-07-25
-updated: 2026-08-03
+updated: 2026-08-04
 ---
 
 ## Summary
@@ -43,6 +43,7 @@ Implementation began with the benchmark harness. The harness measures the shippe
 - Add `TileDrawBenchmarks.Windows.cs` as the Phase 0 benchmark surface. Exercise native and nonzero mip scales with resident and placeholder tiles.
 - Move invariant camera and tile calculations outside the inner loops. Prefer incremental source-coordinate or fixed-point stepping over repeated division when the result matches the current truncation and clamp semantics.
 - Use a packed scalar BGRA store as the validated baseline for any later SIMD destination writer.
+- Use an SSE2 four-pixel destination writer for contiguous grayscale output. Keep scalar source-coordinate lookup and scalar tail handling.
 - Evaluate `System.Numerics` or hardware intrinsics for contiguous pixel work. Use a scalar fallback when the row width, source stride, overlap rule, or platform does not support the vector path.
 - Keep `DefectOverlaySampler.ResolveDisplayValue` semantics and annotation overlap ordering unchanged. Do not replace the compositor with a managed duplicate buffer.
 - Add stage counters through ICW-132 so vector benchmarks distinguish projection setup, source lookup, overlay composition, and destination writes.
@@ -66,7 +67,7 @@ Implementation began with the benchmark harness. The harness measures the shippe
   - `dotnet test tests/InfiniteCanvas.Windows.Tests/InfiniteCanvas.Windows.Tests.csproj --configuration Release`
   - `dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release`
   - `dotnet run --project benchmarks/InfiniteCanvas.Benchmarks/InfiniteCanvas.Benchmarks.csproj --configuration Release --framework net10.0-windows --no-build -- --filter "*TileMaterializationBenchmarks*"`
-- Result: Benchmark harness and rendering builds passed. `ZeroCopyBitmapFactoryTests` passed 12/12 after adding clamped-edge and resident-mip assertions. The repeated post-hoist Release run measured 7.467 to 9.933 ms across the eight cases. The repeated packed-store Release run measured 6.536 to 9.514 ms across the same cases. These runs provide matched evidence for the scalar packed-store slice, but stage diagnostics and a separate archived report remain open.
+- Result: Benchmark harness and rendering builds passed. `ZeroCopyBitmapFactoryTests` passed 12/12 after adding clamped-edge and resident-mip assertions. The repeated post-hoist Release run measured 7.467 to 9.933 ms. The packed-store run measured 6.536 to 9.514 ms. The SSE2 run measured 6.361 to 8.472 ms across the same eight cases. These runs provide matched evidence for the destination-write slices, but stage diagnostics and a separate archived report remain open.
 
 ## Notes
 
@@ -75,6 +76,8 @@ The capture also reports `Bgra32BufferLayout.GetPixelOffset` at about 4.79 perce
 The implementation sequence starts with a direct compositor benchmark. Safe invariant hoisting follows only after the benchmark builds and runs.
 
 The scalar packed-store comparison uses the same benchmark matrix on the same Intel Core i5-6600K host. Placeholder cases moved from 7.467 to 7.717 ms down to 6.536 to 6.705 ms. Resident cases moved from 9.593 to 9.933 ms down to 9.241 to 9.514 ms. Treat these ranges as run observations, not a single aggregate percentage.
+
+The SSE2 writer expands four grayscale values into sixteen BGRA bytes with one unaligned vector store. Source-coordinate calculation remains scalar to preserve truncation and clamp behavior. The SSE2 run measured 6.361 to 6.660 ms for placeholder cases and 8.124 to 8.472 ms for resident cases.
 
 The managed CPU capture reports `presentationframework.dll` at about 40.43 percent inclusive CPU and `MainWindow.RenderFrameAsync` at about 17.75 percent. The application hot path is therefore broader than `DrawTile`; use ICW-132 stage attribution before widening the vectorization scope.
 
