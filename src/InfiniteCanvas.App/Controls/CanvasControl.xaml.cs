@@ -10,7 +10,11 @@ namespace InfiniteCanvas.App.Controls;
 public partial class CanvasControl : UserControl
 {
     private const double _mouseWheelZoomDelta = 1.2;
-    private const double _panExponent = 2.5;
+
+    private const double _panExponent = 1.8;
+    private const double _panDeadZone = 1;
+    private const double _panScale = 0.1;
+    private const double _panGain = 0.075;
 
     private Point? _lastPointerPosition;
     private Point? _anchorPanOrigin;
@@ -140,16 +144,14 @@ public partial class CanvasControl : UserControl
             return;
         }
 
-        const double deadZone = 6;
-        const double gain = 0.05;
-        var deltaX = ApplyDeadZone(_anchorPanPointer.X - anchor.X, deadZone);
-        var deltaY = ApplyDeadZone(_anchorPanPointer.Y - anchor.Y, deadZone);
+        var deltaX = ApplyDeadZone((_anchorPanPointer.X - anchor.X) * _panScale, _panDeadZone);
+        var deltaY = ApplyDeadZone((_anchorPanPointer.Y - anchor.Y) * _panScale, _panDeadZone);
         if (deltaX == 0 && deltaY == 0)
         {
             return;
         }
 
-        ViewModel.Pan(-(deltaX * gain), -(deltaY * gain), ViewportHost.ActualWidth, ViewportHost.ActualHeight);
+        ViewModel.Pan(-(deltaX * _panGain), -(deltaY * _panGain), ViewportHost.ActualWidth, ViewportHost.ActualHeight);
         UpdateViewportScrollbars();
         ViewportChanged?.Invoke(this, EventArgs.Empty);
     }

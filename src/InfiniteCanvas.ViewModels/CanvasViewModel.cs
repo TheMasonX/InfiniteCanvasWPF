@@ -11,24 +11,7 @@ public partial class CanvasViewModel : ObservableObject
     public partial SpatialBounds SceneBounds { get; set; }
 
     [ObservableProperty]
-    public partial SpatialBounds [ObservableProperty]
-private SpatialBounds viewport;
-[ObservableProperty]
-private SpatialBounds viewport;
-[ObservableProperty]
-partial SpatialBounds Viewport { get; set; }
-[ObservableProperty]
-private SpatialBounds viewport;
-[ObservableProperty]
-partial SpatialBounds Viewport { get; set; }
-[ObservableProperty]
-public partial SpatialBounds SceneBounds { get; set; }
-
-
-[ObservableProperty]
-private SpatialBounds viewport;  // This is the problematic line
-[ObservableProperty]
-private partial SpatialBounds Viewport { get; set; }; }
+    public partial SpatialBounds Viewport { get; set; }
 
     [ObservableProperty]
     public partial int VisibleItemCount { get; set; }
