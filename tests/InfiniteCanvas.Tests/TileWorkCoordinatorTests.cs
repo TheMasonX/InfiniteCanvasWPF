@@ -99,11 +99,56 @@ public class TileWorkCoordinatorTests
     {
         using var coordinator = new TileWorkCoordinator(maxConcurrency: 4);
         var admitted = coordinator.Request(Key1, Factory(10), ClaimantA, CancellationToken.None,
-            tryReserve: () => false);
+            tryReserve: _ => null);
 
         Assert.That(admitted, Is.False);
         var counters = coordinator.GetCounters();
         Assert.That(counters.AdmittedCount, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void QueuedCancellation_DisposesReservationExactlyOnce()
+    {
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 1);
+        var started = new ManualResetEventSlim(false);
+        var hold = new ManualResetEventSlim(false);
+        var queuedReservation = new TestReservation();
+
+        coordinator.Request(
+            Key1,
+            BlockingFactory(started, hold),
+            ClaimantA,
+            CancellationToken.None,
+            tryReserve: _ => new TestReservation());
+        Assert.That(started.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        coordinator.Request(
+            Key2,
+            Factory(20),
+            ClaimantB,
+            CancellationToken.None,
+            tryReserve: _ => queuedReservation);
+
+        coordinator.PublishInterestSet(ViewportInterestSet.Empty);
+
+        Assert.That(queuedReservation.DisposeCount, Is.EqualTo(1));
+        hold.Set();
+    }
+
+    [Test]
+    public void FailedWork_DisposesReservationExactlyOnce()
+    {
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 1);
+        var reservation = new TestReservation();
+
+        coordinator.Request(
+            Key1,
+            _ => throw new InvalidOperationException("boom"),
+            ClaimantA,
+            CancellationToken.None,
+            tryReserve: _ => reservation);
+
+        Assert.That(() => reservation.DisposeCount, Is.EqualTo(1).After(2, 100));
     }
 
     [Test]
@@ -609,5 +654,17 @@ public class TileWorkCoordinatorTests
         counters = coordinator.GetCounters();
         Assert.That(counters.CompletedCount, Is.EqualTo(2));
         Assert.That(counters.ActiveCount, Is.EqualTo(0));
+    }
+
+    private sealed class TestReservation : ICacheReservation
+    {
+        private int _disposeCount;
+
+        public int DisposeCount => Volatile.Read(ref _disposeCount);
+
+        public void Dispose()
+        {
+            Interlocked.Increment(ref _disposeCount);
+        }
     }
 }

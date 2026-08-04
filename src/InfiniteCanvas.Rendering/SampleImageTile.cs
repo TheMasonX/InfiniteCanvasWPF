@@ -13,7 +13,6 @@ public sealed class SampleImageTile
     private readonly Func<CancellationToken, byte[]> _pixelFactory;
     private readonly Func<int, CancellationToken, byte[]>? _mipPixelFactory;
     private readonly byte _placeholderValue;
-    private readonly int _pixelCost;
     private readonly Dictionary<int, byte[]> _mipPixels = new();
     private readonly HashSet<int> _mipGenerationQueued = new();
     private byte[]? _pixels;
@@ -50,6 +49,7 @@ public sealed class SampleImageTile
     /// If null, CancellationToken.None is used (no auto-removal).
     /// </summary>
     public Func<CancellationToken>? ClaimantTokenProvider { get; set; }
+    public Action<BackgroundTileCacheKey>? ReleaseReservedCacheEntry { get; set; }
     public event EventHandler? PixelsGenerated;
     public event EventHandler? PixelsGenerationFailed;
 
@@ -87,7 +87,6 @@ public sealed class SampleImageTile
             : mipPixelFactory is null
                 ? null
                 : (mipLevel, _) => ValidateMipPixels(mipPixelFactory(mipLevel), pixelWidth, pixelHeight, mipLevel);
-        _pixelCost = checked(pixelWidth * pixelHeight);
         Annotations = annotations;
         // Optional shared defect template pool reference for lifecycle disposal.
         DefectTemplatePool = null;
@@ -125,7 +124,22 @@ public sealed class SampleImageTile
 
     public byte PlaceholderValue => _placeholderValue;
 
-    public int PixelCost => _pixelCost;
+    public long ResidentByteCount
+    {
+        get
+        {
+            lock (_cacheGate)
+            {
+                long total = _pixels?.LongLength ?? 0;
+                foreach (var mip in _mipPixels.Values)
+                {
+                    total += mip.LongLength;
+                }
+
+                return total;
+            }
+        }
+    }
 
     public bool IsImageGenerated => Volatile.Read(ref _pixels) is not null;
 
@@ -180,7 +194,9 @@ public sealed class SampleImageTile
         }
     }
 
-    public bool TryGetPixelsNonBlocking(out byte[] pixels, Func<bool>? tryReserveCacheEntry = null)
+    public bool TryGetPixelsNonBlocking(
+        out byte[] pixels,
+        Func<BackgroundTileCacheKey, long, ICacheReservation?>? tryReserveCacheEntry = null)
     {
         var cached = Volatile.Read(ref _pixels);
         if (cached is not null)
@@ -230,7 +246,7 @@ public sealed class SampleImageTile
     public bool TryGetPixelsNonBlocking(
         int mipLevel,
         out byte[] pixels,
-        Func<bool>? tryReserveCacheEntry = null)
+        Func<BackgroundTileCacheKey, long, ICacheReservation?>? tryReserveCacheEntry = null)
     {
         return TryGetPixelsNonBlocking(mipLevel, out pixels, out _, tryReserveCacheEntry);
     }
@@ -239,7 +255,7 @@ public sealed class SampleImageTile
         int mipLevel,
         out byte[] pixels,
         out int residentMipLevel,
-        Func<bool>? tryReserveCacheEntry = null)
+        Func<BackgroundTileCacheKey, long, ICacheReservation?>? tryReserveCacheEntry = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(mipLevel);
 
@@ -324,15 +340,13 @@ public sealed class SampleImageTile
 
         // Notify the coordinator that work for this tile at the old revision
         // is no longer needed. We remove by tile ID across all old revisions.
-        if (_coordinator is not null)
+        var oldRevision = epoch - 1;
+        var claimant = GetClaimantId();
+        for (var mip = 0; mip <= BackgroundTileMipPolicy.MaxMipLevel; mip++)
         {
-            var oldRevision = epoch - 1;
-            var claimant = GetClaimantId();
-            for (var mip = 0; mip <= BackgroundTileMipPolicy.MaxMipLevel; mip++)
-            {
-                var oldKey = new BackgroundTileCacheKey("synthetic", Id, oldRevision, mip);
-                _coordinator.RemoveClaimant(oldKey, claimant);
-            }
+            var oldKey = new BackgroundTileCacheKey("synthetic", Id, oldRevision, mip);
+            _coordinator?.RemoveClaimant(oldKey, claimant);
+            ReleaseReservedCacheEntry?.Invoke(oldKey);
         }
 
         lock (_cacheGate)
@@ -430,16 +444,67 @@ public sealed class SampleImageTile
         return true;
     }
 
-    private void EnsurePixelsGenerationStarted(Func<bool>? tryReserveCacheEntry)
+    public bool IsCacheEntryGenerated(BackgroundTileCacheKey key)
     {
-        if (Interlocked.CompareExchange(ref _generationQueued, 1, 0) != 0)
+        if (!string.Equals(key.TileId, Id, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        lock (_cacheGate)
+        {
+            return key.MipLevel == 0 ? _pixels is not null : _mipPixels.ContainsKey(key.MipLevel);
+        }
+    }
+
+    public void EvictCacheEntry(BackgroundTileCacheKey key)
+    {
+        if (!string.Equals(key.TileId, Id, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
 
         if (_coordinator is not null)
         {
-            var key = new BackgroundTileCacheKey("synthetic", Id, Volatile.Read(ref _generationEpoch), 0);
+            _coordinator.RemoveClaimant(key, GetClaimantId());
+        }
+
+        lock (_cacheGate)
+        {
+            if (key.MipLevel == 0)
+            {
+                _pixels = null;
+                Interlocked.Exchange(ref _generationQueued, 0);
+#if WINDOWS
+                Interlocked.Exchange(ref _backgroundFetched, 0);
+#endif
+            }
+            else
+            {
+                _mipPixels.Remove(key.MipLevel);
+                _mipGenerationQueued.Remove(key.MipLevel);
+            }
+        }
+    }
+
+    private static long GetByteCostForMip(int nativeWidth, int nativeHeight, int mipLevel)
+    {
+        var dimensions = BackgroundTileMipPolicy.GetDimensions(nativeWidth, nativeHeight, mipLevel);
+        return checked((long)dimensions.Width * dimensions.Height);
+    }
+
+    private void EnsurePixelsGenerationStarted(Func<BackgroundTileCacheKey, long, ICacheReservation?>? tryReserveCacheEntry)
+    {
+        if (Interlocked.CompareExchange(ref _generationQueued, 1, 0) != 0)
+        {
+            return;
+        }
+
+        var key = new BackgroundTileCacheKey("synthetic", Id, Volatile.Read(ref _generationEpoch), 0);
+        var reservationBytes = GetByteCostForMip(PixelWidth, PixelHeight, 0);
+
+        if (_coordinator is not null)
+        {
             var admitted = _coordinator.Request(
                 key,
                 async token =>
@@ -453,7 +518,9 @@ public sealed class SampleImageTile
                 GetClaimantToken(),
                 onCompleted: OnCoordinatorPixelsGenerated,
                 onFailed: OnCoordinatorPixelsGenerationFailed,
-                tryReserve: tryReserveCacheEntry);
+                tryReserve: tryReserveCacheEntry is null
+                    ? null
+                    : reserveKey => tryReserveCacheEntry(reserveKey, reservationBytes));
 
             if (!admitted)
             {
@@ -463,7 +530,8 @@ public sealed class SampleImageTile
             return;
         }
 
-        if (tryReserveCacheEntry is not null && !tryReserveCacheEntry())
+        var reservation = tryReserveCacheEntry?.Invoke(key, reservationBytes);
+        if (tryReserveCacheEntry is not null && reservation is null)
         {
             Interlocked.Exchange(ref _generationQueued, 0);
             return;
@@ -494,10 +562,15 @@ public sealed class SampleImageTile
                 {
                     PixelsGenerated?.Invoke(this, EventArgs.Empty);
                 }
+                else
+                {
+                    reservation?.Dispose();
+                }
             }
             catch (Exception ex)
             {
                 Interlocked.Exchange(ref _generationQueued, 0);
+                reservation?.Dispose();
                 try
                 {
                     Serilog.Log.Error(ex, "Pixel generation failed for tile {TileId}", Id);
@@ -542,6 +615,7 @@ public sealed class SampleImageTile
 
         if (!published)
         {
+            ReleaseReservedCacheEntry?.Invoke(key);
             Log.Debug("TileGen DISCARD {TileId} mip{MipLevel} expectedEpoch={ExpectedEpoch} currentEpoch={CurrentEpoch} pixelsAlreadySet={PixelsSet}",
                 Id, key.MipLevel, expectedEpoch, currentEpoch, _pixels is not null);
         }
@@ -560,7 +634,7 @@ public sealed class SampleImageTile
         PixelsGenerationFailed?.Invoke(this, EventArgs.Empty);
     }
 
-    private void EnsureMipPixelsGenerationStarted(int mipLevel, Func<bool>? tryReserveCacheEntry)
+    private void EnsureMipPixelsGenerationStarted(int mipLevel, Func<BackgroundTileCacheKey, long, ICacheReservation?>? tryReserveCacheEntry)
     {
         lock (_cacheGate)
         {
@@ -570,10 +644,12 @@ public sealed class SampleImageTile
             }
         }
 
+        var key = new BackgroundTileCacheKey("synthetic", Id, Volatile.Read(ref _generationEpoch), mipLevel);
+        var reservationBytes = GetByteCostForMip(PixelWidth, PixelHeight, mipLevel);
+
         if (_coordinator is not null)
         {
             var capturedMipLevel = mipLevel;
-            var key = new BackgroundTileCacheKey("synthetic", Id, Volatile.Read(ref _generationEpoch), mipLevel);
             var admitted = _coordinator.Request(
                 key,
                 async token =>
@@ -585,7 +661,9 @@ public sealed class SampleImageTile
                 GetClaimantToken(),
                 onCompleted: OnCoordinatorMipGenerated,
                 onFailed: OnCoordinatorPixelsGenerationFailed,
-                tryReserve: tryReserveCacheEntry);
+                tryReserve: tryReserveCacheEntry is null
+                    ? null
+                    : reserveKey => tryReserveCacheEntry(reserveKey, reservationBytes));
 
             if (!admitted)
             {
@@ -598,7 +676,8 @@ public sealed class SampleImageTile
             return;
         }
 
-        if (tryReserveCacheEntry is not null && !tryReserveCacheEntry())
+        var reservation = tryReserveCacheEntry?.Invoke(key, reservationBytes);
+        if (tryReserveCacheEntry is not null && reservation is null)
         {
             lock (_cacheGate)
             {
@@ -630,6 +709,10 @@ public sealed class SampleImageTile
                 {
                     PixelsGenerated?.Invoke(this, EventArgs.Empty);
                 }
+                else
+                {
+                    reservation?.Dispose();
+                }
             }
             catch (Exception ex)
             {
@@ -637,6 +720,7 @@ public sealed class SampleImageTile
                 {
                     _mipGenerationQueued.Remove(mipLevel);
                 }
+                reservation?.Dispose();
                 try
                 {
                     Serilog.Log.Error(ex, "Mip generation failed for tile {TileId} mip {MipLevel}", Id, mipLevel);
@@ -667,6 +751,7 @@ public sealed class SampleImageTile
 
         if (!published)
         {
+            ReleaseReservedCacheEntry?.Invoke(key);
             Log.Debug("TileGen DISCARD mip {TileId} mip{MipLevel} expectedEpoch={ExpectedEpoch} currentEpoch={CurrentEpoch}",
                 Id, mipLevel, expectedEpoch, currentEpoch);
         }
@@ -760,7 +845,7 @@ public sealed class TileCacheBudget
     public const long DefaultMaxBytes = 4L * 1024 * 1024 * 1024;
 
     private readonly long _maxBytes;
-    private readonly Dictionary<string, SampleImageTile> _trackedTiles = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<BackgroundTileCacheKey, CacheEntry> _trackedEntries = new();
     private readonly HashSet<string> _pinnedTileIds = new(StringComparer.OrdinalIgnoreCase);
     private long _usedBytes;
     private int _evictionCount;
@@ -785,9 +870,23 @@ public sealed class TileCacheBudget
     {
         get
         {
-            lock (_trackedTiles)
+            lock (_trackedEntries)
             {
-                return _trackedTiles.Count;
+                return _trackedEntries.Values
+                    .Select(entry => entry.Tile.Id)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Count();
+            }
+        }
+    }
+
+    public int ResidentVariantCount
+    {
+        get
+        {
+            lock (_trackedEntries)
+            {
+                return _trackedEntries.Count;
             }
         }
     }
@@ -796,7 +895,7 @@ public sealed class TileCacheBudget
     {
         ArgumentNullException.ThrowIfNull(tiles);
 
-        lock (_trackedTiles)
+        lock (_trackedEntries)
         {
             _pinnedTileIds.Clear();
             foreach (var tile in tiles)
@@ -806,20 +905,26 @@ public sealed class TileCacheBudget
         }
     }
 
-    public bool TryReserve(SampleImageTile tile)
+    public ICacheReservation? TryReserve(SampleImageTile tile, BackgroundTileCacheKey key, long byteCost)
     {
         ArgumentNullException.ThrowIfNull(tile);
-
-        lock (_trackedTiles)
+        if (byteCost <= 0)
         {
-            if (_trackedTiles.ContainsKey(tile.Id))
+            throw new ArgumentOutOfRangeException(nameof(byteCost));
+        }
+
+        var evicted = new List<CacheEntry>();
+
+        lock (_trackedEntries)
+        {
+            if (_trackedEntries.ContainsKey(key))
             {
-                return true;
+                return NoOpReservation.Instance;
             }
 
-            _trackedTiles[tile.Id] = tile;
-            var cost = tile.PixelCost;
-            Interlocked.Add(ref _usedBytes, cost);
+            var entry = new CacheEntry(key, tile, byteCost);
+            _trackedEntries[key] = entry;
+            Interlocked.Add(ref _usedBytes, byteCost);
 
             while (UsedBytes > _maxBytes)
             {
@@ -827,55 +932,67 @@ public sealed class TileCacheBudget
                 // Fall back to un-generated tiles if no generated ones are
                 // available — un-generated tiles hold budget but provide
                 // nothing to display.
-                var evictedTile = _trackedTiles.Values.FirstOrDefault(candidate =>
-                    !string.Equals(candidate.Id, tile.Id, StringComparison.OrdinalIgnoreCase)
-                    && !_pinnedTileIds.Contains(candidate.Id)
-                    && candidate.IsImageGenerated)
-                    ?? _trackedTiles.Values.FirstOrDefault(candidate =>
-                        !string.Equals(candidate.Id, tile.Id, StringComparison.OrdinalIgnoreCase)
-                        && !_pinnedTileIds.Contains(candidate.Id));
+                var evictedEntry = _trackedEntries.Values.FirstOrDefault(candidate =>
+                    !candidate.Key.Equals(key)
+                    && !_pinnedTileIds.Contains(candidate.Tile.Id)
+                    && candidate.Tile.IsCacheEntryGenerated(candidate.Key))
+                    ?? _trackedEntries.Values.FirstOrDefault(candidate =>
+                        !candidate.Key.Equals(key)
+                        && !_pinnedTileIds.Contains(candidate.Tile.Id));
 
-                if (evictedTile is null)
+                if (evictedEntry is null)
                 {
-                    _trackedTiles.Remove(tile.Id);
-                    Interlocked.Add(ref _usedBytes, -cost);
-                    Log.Warning("Cache EVICT REJECTED: no evictable tiles. Tile={TileId} cost={Cost} used={UsedBytes} max={MaxBytes} pinned={PinnedCount} tracked={TrackedCount}",
-                        tile.Id, cost, UsedBytes, _maxBytes, _pinnedTileIds.Count, _trackedTiles.Count);
-                    return false;
+                    _trackedEntries.Remove(key);
+                    Interlocked.Add(ref _usedBytes, -byteCost);
+                    Log.Warning("Cache EVICT REJECTED: no evictable entries. Tile={TileId} keyMip={MipLevel} cost={Cost} used={UsedBytes} max={MaxBytes} pinned={PinnedCount} tracked={TrackedCount}",
+                        tile.Id, key.MipLevel, byteCost, UsedBytes, _maxBytes, _pinnedTileIds.Count, _trackedEntries.Count);
+                    return null;
                 }
 
-                _trackedTiles.Remove(evictedTile.Id);
-                Interlocked.Add(ref _usedBytes, -evictedTile.PixelCost);
-                Log.Debug("Cache EVICT {EvictedTileId} cost={EvictedCost} generated={WasGenerated} (to admit {NewTileId} cost={NewCost}) used={UsedBytes} max={MaxBytes} evictions={EvictionCount}",
-                    evictedTile.Id, evictedTile.PixelCost, evictedTile.IsImageGenerated, tile.Id, cost, UsedBytes, _maxBytes, _evictionCount + 1);
-                evictedTile.ResetImageCache();
+                _trackedEntries.Remove(evictedEntry.Key);
+                Interlocked.Add(ref _usedBytes, -evictedEntry.ByteCost);
+                Log.Debug("Cache EVICT {EvictedTileId} mip{EvictedMip} cost={EvictedCost} generated={WasGenerated} (to admit {NewTileId} mip{NewMip} cost={NewCost}) used={UsedBytes} max={MaxBytes} evictions={EvictionCount}",
+                    evictedEntry.Tile.Id,
+                    evictedEntry.Key.MipLevel,
+                    evictedEntry.ByteCost,
+                    evictedEntry.Tile.IsCacheEntryGenerated(evictedEntry.Key),
+                    tile.Id,
+                    key.MipLevel,
+                    byteCost,
+                    UsedBytes,
+                    _maxBytes,
+                    _evictionCount + 1);
+                evicted.Add(evictedEntry);
                 Interlocked.Increment(ref _evictionCount);
             }
-
-            return true;
         }
+
+        foreach (var evictedEntry in evicted)
+        {
+            evictedEntry.Tile.EvictCacheEntry(evictedEntry.Key);
+        }
+
+        return new CacheReservation(this, key);
     }
 
-    public void Release(SampleImageTile tile)
+    public void Release(BackgroundTileCacheKey key)
     {
-        ArgumentNullException.ThrowIfNull(tile);
-
-        lock (_trackedTiles)
+        lock (_trackedEntries)
         {
-            if (!_trackedTiles.Remove(tile.Id))
+            if (!_trackedEntries.Remove(key, out var entry))
             {
                 return;
             }
 
-            Interlocked.Add(ref _usedBytes, -tile.PixelCost);
+            Interlocked.Add(ref _usedBytes, -entry.ByteCost);
         }
     }
 
     public void Clear()
     {
-        lock (_trackedTiles)
+        lock (_trackedEntries)
         {
-            _trackedTiles.Clear();
+            _trackedEntries.Clear();
             _pinnedTileIds.Clear();
             Interlocked.Exchange(ref _usedBytes, 0);
             Interlocked.Exchange(ref _evictionCount, 0);
@@ -884,12 +1001,49 @@ public sealed class TileCacheBudget
 
     public string DescribeStatus()
     {
-        return $"Cache {FormatBytes(UsedBytes)}/{FormatBytes(_maxBytes)}  |  {ResidentTileCount:N0} tiles  |  {EvictionCount:N0} evictions";
+        return $"Cache {FormatBytes(UsedBytes)}/{FormatBytes(_maxBytes)}  |  {ResidentTileCount:N0} tiles  |  {ResidentVariantCount:N0} variants  |  {EvictionCount:N0} evictions";
     }
 
     private static string FormatBytes(long bytes)
     {
         const long gibibyte = 1024L * 1024 * 1024;
         return $"{bytes / (double)gibibyte:F2} GiB";
+    }
+
+    private sealed record CacheEntry(
+        BackgroundTileCacheKey Key,
+        SampleImageTile Tile,
+        long ByteCost);
+
+    private sealed class NoOpReservation : ICacheReservation
+    {
+        public static NoOpReservation Instance { get; } = new();
+
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed class CacheReservation : ICacheReservation
+    {
+        private readonly TileCacheBudget _owner;
+        private readonly BackgroundTileCacheKey _key;
+        private int _disposed;
+
+        public CacheReservation(TileCacheBudget owner, BackgroundTileCacheKey key)
+        {
+            _owner = owner;
+            _key = key;
+        }
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            {
+                return;
+            }
+
+            _owner.Release(_key);
+        }
     }
 }

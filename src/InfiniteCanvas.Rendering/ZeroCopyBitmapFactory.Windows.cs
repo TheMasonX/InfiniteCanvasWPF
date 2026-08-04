@@ -127,7 +127,7 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
         IReadOnlyList<SampleImageTile> tiles,
         IReadOnlyList<SampleAnnotation> annotations,
         CameraSnapshot camera,
-        Func<SampleImageTile, bool>? tryReserveCacheEntry = null,
+        Func<SampleImageTile, BackgroundTileCacheKey, long, ICacheReservation?>? tryReserveCacheEntry = null,
         double minimumSparseTilePixelSize = 0,
         bool showBackgroundImages = true,
         bool showSparseImageTiles = true)
@@ -176,7 +176,7 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
         byte* destination,
         SampleImageTile tile,
         CameraSnapshot camera,
-        Func<SampleImageTile, bool>? tryReserveCacheEntry,
+        Func<SampleImageTile, BackgroundTileCacheKey, long, ICacheReservation?>? tryReserveCacheEntry,
         double minimumSparseTilePixelSize)
     {
         var topLeft = camera.WorldToScreen(tile.Bounds.X, tile.Bounds.Y);
@@ -196,7 +196,7 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
             mipLevel,
             out sourcePixels,
             out var residentMipLevel,
-            tryReserveCacheEntry is null ? null : () => tryReserveCacheEntry(tile));
+            tryReserveCacheEntry is null ? null : (key, byteCost) => tryReserveCacheEntry(tile, key, byteCost));
         var sourceDimensions = BackgroundTileMipPolicy.GetDimensions(tile.PixelWidth, tile.PixelHeight, residentMipLevel);
         var placeholder = tile.PlaceholderValue;
 

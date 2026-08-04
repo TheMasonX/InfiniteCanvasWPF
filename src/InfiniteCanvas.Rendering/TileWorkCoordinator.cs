@@ -103,8 +103,8 @@ public sealed class TileWorkCoordinator : IDisposable
     /// When this token fires, the claimant is considered removed.</param>
     /// <param name="onCompleted">Optional callback invoked (on an unknown thread) when the fill completes successfully.</param>
     /// <param name="onFailed">Optional callback invoked (on an unknown thread) when the fill fails.</param>
-    /// <param name="tryReserve">Optional reservation function that must return true for the work to be admitted.
-    /// Released on cancellation, failure, or rejected admission.</param>
+    /// <param name="tryReserve">Optional reservation function that must return a non-null lease for the work to be admitted.
+    /// The lease is disposed on cancellation or failure.</param>
     /// <returns>True if the request was admitted or coalesced; false if the reservation was rejected.</returns>
     public bool Request(
         BackgroundTileCacheKey key,
@@ -113,7 +113,7 @@ public sealed class TileWorkCoordinator : IDisposable
         CancellationToken claimantToken,
         Action<BackgroundTileCacheKey, byte[]>? onCompleted = null,
         Action<BackgroundTileCacheKey, Exception>? onFailed = null,
-        Func<bool>? tryReserve = null)
+        Func<BackgroundTileCacheKey, ICacheReservation?>? tryReserve = null)
     {
         ArgumentNullException.ThrowIfNull(factory);
         ArgumentNullException.ThrowIfNull(claimantId);
@@ -133,14 +133,15 @@ public sealed class TileWorkCoordinator : IDisposable
             }
 
             // Attempt reservation before admission.
-            if (tryReserve is not null && !tryReserve())
+            var reservation = tryReserve?.Invoke(key);
+            if (tryReserve is not null && reservation is null)
             {
                 Log.Warning("CoordReq REJECTED {SourceId}/{TileId} mip{MipLevel} rev{Rev} — reservation failed (budget full/no evictable tiles)",
                     key.SourceId, key.TileId, key.MipLevel, key.ContentRevision);
                 return false;
             }
 
-            var item = new TileWorkItem(key, factory, _disposeCts.Token);
+            var item = new TileWorkItem(key, factory, reservation, _disposeCts.Token);
             item.AddClaimant(claimantId, claimantToken, onCompleted, onFailed);
             _items[key] = item;
             Interlocked.Increment(ref _admittedCount);
@@ -443,6 +444,7 @@ public sealed class TileWorkCoordinator : IDisposable
             _activeCount = Math.Max(0, _activeCount - 1);
             _items.Remove(item.CacheKey);
             ReleaseReservation(item.CacheKey);
+            item.DisposeReservation();
         }
     }
 
@@ -480,6 +482,7 @@ public sealed class TileWorkCoordinator : IDisposable
             // and reservation cleanup on this path.
             _items.Remove(key);
             ReleaseReservation(key);
+            item.DisposeReservation();
         }
 
         // Running work remains in _items until the worker physically stops.
@@ -606,21 +609,35 @@ public sealed class TileWorkCoordinator : IDisposable
         private readonly List<ClaimantEntry> _claimants = new();
         private readonly Lock _claimantLock = new();
         private readonly CancellationTokenSource _workCts;
+        private readonly ICacheReservation? _reservation;
         private int _running;
+        private int _reservationDisposed;
 
         public TileWorkItem(
             BackgroundTileCacheKey cacheKey,
             Func<CancellationToken, ValueTask<byte[]>> factory,
+            ICacheReservation? reservation,
             CancellationToken disposeToken)
         {
             CacheKey = cacheKey;
             Factory = factory;
+            _reservation = reservation;
             _workCts = CancellationTokenSource.CreateLinkedTokenSource(disposeToken);
         }
 
         public BackgroundTileCacheKey CacheKey { get; }
         public Func<CancellationToken, ValueTask<byte[]>> Factory { get; }
         public TileWorkItemState State { get; set; } = TileWorkItemState.Queued;
+
+        public void DisposeReservation()
+        {
+            if (Interlocked.Exchange(ref _reservationDisposed, 1) != 0)
+            {
+                return;
+            }
+
+            _reservation?.Dispose();
+        }
 
         /// <summary>
         /// Token passed to the factory. Canceled when the last claimant is removed
@@ -725,7 +742,11 @@ public sealed class TileWorkCoordinator : IDisposable
             Action<BackgroundTileCacheKey, byte[]>?[] callbacks;
             lock (_claimantLock)
             {
-                callbacks = _claimants.Select(c => c.OnCompleted).ToArray();
+                callbacks = _claimants
+                    .Select(c => c.OnCompleted)
+                    .Where(c => c is not null)
+                    .Distinct()
+                    .ToArray()!;
             }
 
             foreach (var cb in callbacks)
@@ -743,7 +764,11 @@ public sealed class TileWorkCoordinator : IDisposable
             Action<BackgroundTileCacheKey, Exception>?[] callbacks;
             lock (_claimantLock)
             {
-                callbacks = _claimants.Select(c => c.OnFailed).ToArray();
+                callbacks = _claimants
+                    .Select(c => c.OnFailed)
+                    .Where(c => c is not null)
+                    .Distinct()
+                    .ToArray()!;
             }
 
             foreach (var cb in callbacks)

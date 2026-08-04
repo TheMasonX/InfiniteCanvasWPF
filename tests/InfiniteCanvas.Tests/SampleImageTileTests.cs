@@ -7,6 +7,66 @@ namespace InfiniteCanvas.Tests;
 public class SampleImageTileTests
 {
     [Test]
+    public void CoarseMipRequest_DoesNotStartNativeGeneration()
+    {
+        var nativeGenerationStarted = new ManualResetEventSlim(false);
+        var tile = new SampleImageTile(
+            "tile-coarse-only",
+            new SpatialBounds(0, 0, 8, 8),
+            8,
+            8,
+            () =>
+            {
+                nativeGenerationStarted.Set();
+                return Enumerable.Repeat((byte)11, 64).ToArray();
+            },
+            [],
+            mipPixelFactory: mipLevel =>
+            {
+                var dims = BackgroundTileMipPolicy.GetDimensions(8, 8, mipLevel);
+                return Enumerable.Repeat((byte)(20 + mipLevel), dims.Width * dims.Height).ToArray();
+            });
+
+        _ = tile.TryGetPixelsNonBlocking(2, out _, out _);
+        SpinWait.SpinUntil(() => tile.IsMipGenerated(2), TimeSpan.FromSeconds(2));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tile.IsMipGenerated(2), Is.True);
+            Assert.That(nativeGenerationStarted.Wait(TimeSpan.FromMilliseconds(50)), Is.False);
+        });
+    }
+
+    [Test]
+    public void ResidentByteCount_IncludesNativeAndResidentMips()
+    {
+        var tile = new SampleImageTile(
+            "tile-resident-bytes",
+            new SpatialBounds(0, 0, 8, 8),
+            8,
+            8,
+            () => Enumerable.Repeat((byte)1, 64).ToArray(),
+            [],
+            mipPixelFactory: mipLevel =>
+            {
+                var dims = BackgroundTileMipPolicy.GetDimensions(8, 8, mipLevel);
+                return Enumerable.Repeat((byte)mipLevel, dims.Width * dims.Height).ToArray();
+            });
+
+        _ = tile.Pixels;
+        Assert.That(tile.TryGetPixelsNonBlocking(1, out _, out _), Is.True);
+        Assert.That(tile.TryGetPixelsNonBlocking(2, out _, out _), Is.True);
+
+        SpinWait.SpinUntil(() => tile.IsMipGenerated(1) && tile.IsMipGenerated(2), TimeSpan.FromSeconds(2));
+
+        var mip1 = BackgroundTileMipPolicy.GetDimensions(8, 8, 1);
+        var mip2 = BackgroundTileMipPolicy.GetDimensions(8, 8, 2);
+        var expected = 64 + (mip1.Width * mip1.Height) + (mip2.Width * mip2.Height);
+
+        Assert.That(tile.ResidentByteCount, Is.EqualTo(expected));
+    }
+
+    [Test]
     public void ResidentMipFallback_PrefersClosestResidentMipOverNativeLevelZero()
     {
         var mipThreeGenerationStarted = new ManualResetEventSlim(false);

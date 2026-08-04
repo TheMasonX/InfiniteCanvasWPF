@@ -3,7 +3,7 @@ id: ICW-151-preserve-noise-settings-viewmodel-on-regeneration
 author: Copilot
 key: ICW-151
 title: Preserve noise settings control state across regeneration
-status: Proposed
+status: Done
 type: Bug
 priority: P1
 tags:
@@ -31,9 +31,9 @@ updated: 2026-08-03
 
 ## Summary
 
-`RegenerateSceneAsync` captures the current noise values for tile generation, then replaces the window data context with a new `MainViewModel`. The generated scene uses the edited values, but the controls reset to the new view model defaults.
+`MainWindow` now keeps one `MainViewModel` for the window lifetime, so regeneration no longer resets bound noise controls to defaults.
 
-This is a partial fix, not a complete lifecycle fix. The current snapshot workaround preserves generation input but does not preserve the bound control state.
+`RegenerateSceneAsync` now reads generator input from the same bound settings snapshot that remains visible in the UI.
 
 ## Scope
 
@@ -54,14 +54,18 @@ This is a partial fix, not a complete lifecycle fix. The current snapshot workar
 
 ## Validation
 
+- Command: `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release --filter "FullyQualifiedName~MainViewModelTests"`
+- Result: Passed. 4 passed, 0 failed.
 - Command: `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release`
+- Result: Passed. 132 passed, 0 failed.
 - Command: `dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release`
-- Result: Research complete. Implementation and focused regression tests are pending.
+- Result: Passed. Build succeeded. Existing warning remains: `CS0169` on unused `_frameClaimantId`.
 
 ## Notes
 
-- The existing Wave A task marked the generation-input symptom Done. The remaining defect is the user-visible control reset after the snapshot is captured.
-- Keep this task separate from ICW-067 because the reusable control work does not by itself fix data-context lifetime.
+- `InitializeSpatialState` now initializes spatial services only. It does not replace `DataContext`.
+- `MainViewModel` now supports explicit `ApplyBackgroundNoiseSnapshot` restore and uses `CanvasUserSettings` as the default source for all noise settings.
+- `SampleImageGenerator` noise defaults now align with settings defaults for octaves.
 
 ## Related Tasks
 

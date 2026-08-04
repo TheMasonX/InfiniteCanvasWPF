@@ -3,7 +3,7 @@ id: ICW-150-mip-aware-background-cache-accounting-and-generation
 author: Copilot
 key: ICW-150
 title: Mip-aware background generation and cache accounting
-status: Proposed
+status: In Progress
 type: Bug
 priority: P0
 tags:
@@ -69,14 +69,14 @@ For 108 tiles, one native `8192 x 4096` Gray8 payload costs 32 MiB. The current 
 - Command: `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release`
 - Command: `dotnet test tests/InfiniteCanvas.Windows.Tests/InfiniteCanvas.Windows.Tests.csproj --configuration Release`
 - Command: `dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release`
-- Result: Research complete. Implementation and focused regression tests are pending.
+- Result: Focused validation passed for changed areas. Core focused tests: 57/57 passed (`SampleImageTileTests`, `TileWorkCoordinatorTests`, `SampleImageGeneratorTests`). Windows focused tests: 10/10 passed (`ZeroCopyBitmapFactoryTests`). App Release build succeeded with one pre-existing warning (`MainWindow._frameClaimantId` unused).
 
 ## Notes
 
 - `BackgroundTileMipPolicy.SelectMipLevel` already returns level 6 for the reported zoom. The defect is downstream scheduling and accounting.
 - `SampleImageTile._pixelCost` is fixed at native dimensions. `TileCacheBudget.TryReserve` tracks only `tile.Id` and charges that value.
 - Existing ADR-0005 requires variant keys and actual payload byte costs. ICW-150 implements the missing materializer/cache portion of that decision.
-- Land the lease-release and resident-mip accounting prerequisites before changing reservation ownership.
+- ICW-P0-LEASE-RELEASE and ICW-P1-PIXELCOST-MIPS are now being implemented as part of this bug slice to keep accounting and release semantics consistent.
 
 ## Related Tasks
 

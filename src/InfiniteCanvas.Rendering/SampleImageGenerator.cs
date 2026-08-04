@@ -34,7 +34,7 @@ public static class SampleImageGenerator
             Amplitude = amplitude;
         }
 
-        public static NoiseSettings Default => new NoiseSettings(scale: 1, octaves: 3, lacunarity: 2.5, gain: 0.6, amplitude: 1.0);
+        public static NoiseSettings Default => new NoiseSettings(scale: 1, octaves: 5, lacunarity: 2.5, gain: 0.6, amplitude: 1.0);
     }
 
     public static readonly string[] Classifications = ["Scratch", "Inclusion", "Stain", "Edge defect"];
@@ -75,7 +75,7 @@ public static class SampleImageGenerator
         byte targetValue = 128,
         byte noise = 8,
         double noiseScale = 1.0,
-        int noiseOctaves = 3,
+        int noiseOctaves = 5,
         double noiseLacunarity = 2.5,
         double noiseGain = 0.6,
         double noiseAmplitude = 1.0,

@@ -44,6 +44,18 @@ public partial class MainViewModel : ObservableObject
             NoiseGain: Math.Clamp(TileBackgroundNoiseSettings.Gain, 0, 1),
             NoiseAmplitude: Math.Clamp(TileBackgroundNoiseSettings.Amplitude, 0, 4));
     }
+
+    public void ApplyBackgroundNoiseSnapshot(TileBackgroundNoiseSnapshot snapshot)
+    {
+        TileBackgroundNoiseSettings.TargetValue = snapshot.TargetValue;
+        TileBackgroundNoiseSettings.Noise = snapshot.Noise;
+        TileBackgroundNoiseSettings.CircleCount = snapshot.CircleCount;
+        TileBackgroundNoiseSettings.Scale = snapshot.NoiseScale;
+        TileBackgroundNoiseSettings.Octaves = snapshot.NoiseOctaves;
+        TileBackgroundNoiseSettings.Lacunarity = snapshot.NoiseLacunarity;
+        TileBackgroundNoiseSettings.Gain = snapshot.NoiseGain;
+        TileBackgroundNoiseSettings.Amplitude = snapshot.NoiseAmplitude;
+    }
 }
 
 public sealed record TileBackgroundNoiseSnapshot(
@@ -58,27 +70,31 @@ public sealed record TileBackgroundNoiseSnapshot(
 
 public partial class TileBackgroundNoiseSettingsViewModel : ObservableObject
 {
-    [ObservableProperty]
-    private double targetValue = 128;
+    // Centralize defaults in CanvasUserSettings so the initial control state
+    // can never drift from the canonical persisted settings values.
+    private static readonly CanvasUserSettings Defaults = new();
 
     [ObservableProperty]
-    private double noise = 8;
+    private double targetValue = Defaults.BackgroundTargetValue;
 
     [ObservableProperty]
-    private double circleCount = 3;
+    private double noise = Defaults.BackgroundNoise;
 
     [ObservableProperty]
-    private double scale = 1;
+    private double circleCount = Defaults.BackgroundCircleCount;
 
     [ObservableProperty]
-    private double octaves = 5;
+    private double scale = Defaults.BackgroundNoiseScale;
 
     [ObservableProperty]
-    private double lacunarity = 2.5;
+    private double octaves = Defaults.BackgroundNoiseOctaves;
 
     [ObservableProperty]
-    private double gain = 0.6;
+    private double lacunarity = Defaults.BackgroundNoiseLacunarity;
 
     [ObservableProperty]
-    private double amplitude = 1;
+    private double gain = Defaults.BackgroundNoiseGain;
+
+    [ObservableProperty]
+    private double amplitude = Defaults.BackgroundNoiseAmplitude;
 }

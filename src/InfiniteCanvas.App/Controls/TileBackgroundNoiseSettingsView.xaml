@@ -3,45 +3,50 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:InfiniteCanvas.App.Controls"
              mc:Ignorable="d"
              d:DesignWidth="220"
-             d:DesignHeight="180"
+             d:DesignHeight="560"
              DataContext="{Binding ViewModel, RelativeSource={RelativeSource Self}}">
-        <Expander Header="TILE BACKGROUND NOISE" IsExpanded="True" Padding="8"
-                          Background="#151A20" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+    <Expander IsExpanded="True" Padding="8"
+              Background="#151A20" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+        <Expander.Header>
+            <TextBlock Text="TILE BACKGROUND NOISE" FontFamily="Cascadia Mono" FontSize="12"
+                       FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" />
+        </Expander.Header>
         <StackPanel>
-            <TextBlock Text="Target value" Margin="0,8,0,4" FontSize="12"
-                       Foreground="{StaticResource SecondaryTextBrush}" />
-            <Slider Minimum="0" Maximum="255" TickFrequency="1" IsSnapToTickEnabled="True"
-                    Value="{Binding TargetValue, Mode=TwoWay}" />
-            <TextBlock Text="Noise amplitude" Margin="0,8,0,4" FontSize="12"
-                       Foreground="{StaticResource SecondaryTextBrush}" />
-            <Slider Minimum="0" Maximum="24" TickFrequency="1" IsSnapToTickEnabled="True"
-                    Value="{Binding Noise, Mode=TwoWay}" />
-            <TextBlock Text="Defect circles" Margin="0,8,0,4" FontSize="12"
-                       Foreground="{StaticResource SecondaryTextBrush}" />
-            <Slider Minimum="0" Maximum="8" TickFrequency="1" IsSnapToTickEnabled="True"
-                    Value="{Binding CircleCount, Mode=TwoWay}" />
-            <TextBlock Text="Noise scale" Margin="0,8,0,4" FontSize="12"
-                       Foreground="{StaticResource SecondaryTextBrush}" />
-            <Slider Minimum="0.01" Maximum="8" TickFrequency="0.1" IsSnapToTickEnabled="True"
-                    Value="{Binding Scale, Mode=TwoWay}" />
-            <TextBlock Text="Noise octaves" Margin="0,8,0,4" FontSize="12"
-                       Foreground="{StaticResource SecondaryTextBrush}" />
-            <Slider Minimum="1" Maximum="12" TickFrequency="1" IsSnapToTickEnabled="True"
-                    Value="{Binding Octaves, Mode=TwoWay}" />
-            <TextBlock Text="Lacunarity" Margin="0,8,0,4" FontSize="12"
-                       Foreground="{StaticResource SecondaryTextBrush}" />
-            <Slider Minimum="0.1" Maximum="8" TickFrequency="0.1" IsSnapToTickEnabled="True"
-                    Value="{Binding Lacunarity, Mode=TwoWay}" />
-            <TextBlock Text="Gain" Margin="0,8,0,4" FontSize="12"
-                       Foreground="{StaticResource SecondaryTextBrush}" />
-            <Slider Minimum="0" Maximum="1" TickFrequency="0.05" IsSnapToTickEnabled="True"
-                    Value="{Binding Gain, Mode=TwoWay}" />
-            <TextBlock Text="Amplitude" Margin="0,8,0,4" FontSize="12"
-                       Foreground="{StaticResource SecondaryTextBrush}" />
-            <Slider Minimum="0" Maximum="4" TickFrequency="0.1" IsSnapToTickEnabled="True"
-                    Value="{Binding Amplitude, Mode=TwoWay}" />
+            <controls:SliderTextBox Label="Target value"
+                                    Minimum="0" Maximum="255" TickFrequency="1"
+                                    NumericType="Integer"
+                                    Value="{Binding TargetValue, Mode=TwoWay}" />
+            <controls:SliderTextBox Label="Noise amplitude"
+                                    Minimum="0" Maximum="24" TickFrequency="1"
+                                    NumericType="Integer"
+                                    Value="{Binding Noise, Mode=TwoWay}" />
+            <controls:SliderTextBox Label="Defect circles"
+                                    Minimum="0" Maximum="8" TickFrequency="1"
+                                    NumericType="Integer"
+                                    Value="{Binding CircleCount, Mode=TwoWay}" />
+            <controls:SliderTextBox Label="Noise scale"
+                                    Minimum="0.01" Maximum="8" TickFrequency="0.1"
+                                    NumericType="Double"
+                                    Value="{Binding Scale, Mode=TwoWay}" />
+            <controls:SliderTextBox Label="Noise octaves"
+                                    Minimum="1" Maximum="12" TickFrequency="1"
+                                    NumericType="Integer"
+                                    Value="{Binding Octaves, Mode=TwoWay}" />
+            <controls:SliderTextBox Label="Lacunarity"
+                                    Minimum="0.1" Maximum="8" TickFrequency="0.1"
+                                    NumericType="Double"
+                                    Value="{Binding Lacunarity, Mode=TwoWay}" />
+            <controls:SliderTextBox Label="Gain"
+                                    Minimum="0" Maximum="1" TickFrequency="0.05"
+                                    NumericType="Double"
+                                    Value="{Binding Gain, Mode=TwoWay}" />
+            <controls:SliderTextBox Label="Amplitude"
+                                    Minimum="0" Maximum="4" TickFrequency="0.1"
+                                    NumericType="Double"
+                                    Value="{Binding Amplitude, Mode=TwoWay}" />
         </StackPanel>
     </Expander>
 </UserControl>

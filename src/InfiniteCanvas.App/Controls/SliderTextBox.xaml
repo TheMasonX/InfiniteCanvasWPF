@@ -1,0 +1,33 @@
+<UserControl x:Class="InfiniteCanvas.App.Controls.SliderTextBox"
+             x:Name="Root"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignWidth="220"
+             d:DesignHeight="52">
+    <StackPanel>
+        <TextBlock Text="{Binding Label, ElementName=Root, FallbackValue=Label}"
+                   Margin="0,8,0,4" FontSize="12"
+                   Foreground="{StaticResource SecondaryTextBrush}" />
+        <DockPanel>
+            <TextBox x:Name="ValueTextBox"
+                     d:Text="{Binding Value, ElementName=Root, FallbackValue=85.0}"
+                     DockPanel.Dock="Right"
+                     Width="88" Margin="8,0,0,0"
+                     VerticalContentAlignment="Center"
+                     TextAlignment="Right"
+                     LostFocus="OnValueTextBoxLostFocus"
+                     KeyDown="OnValueTextBoxKeyDown"
+                     GotFocus="OnValueTextBoxGotFocus" />
+            <Slider x:Name="ValueSlider"
+                    Minimum="{Binding Minimum, ElementName=Root}"
+                    Maximum="{Binding Maximum, ElementName=Root}"
+                    TickFrequency="{Binding TickFrequency, ElementName=Root}"
+                    IsSnapToTickEnabled="True"
+                    Value="{Binding Value, ElementName=Root, Mode=TwoWay, FallbackValue=85.0}"
+                    VerticalAlignment="Center" />
+        </DockPanel>
+    </StackPanel>
+</UserControl>

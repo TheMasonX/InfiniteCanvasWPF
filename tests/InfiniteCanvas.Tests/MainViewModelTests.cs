@@ -55,4 +55,61 @@ public class MainViewModelTests
             Assert.That(mainViewModel.TileBackgroundNoiseSettings.CircleCount, Is.EqualTo(6));
         });
     }
+
+    [Test]
+    public void Regeneration_RestoresEveryEditedNoiseFieldIntoFreshViewModel()
+    {
+        var edited = new MainViewModel();
+        edited.TileBackgroundNoiseSettings.TargetValue = 160;
+        edited.TileBackgroundNoiseSettings.Noise = 12;
+        edited.TileBackgroundNoiseSettings.CircleCount = 5;
+        edited.TileBackgroundNoiseSettings.Scale = 2.5;
+        edited.TileBackgroundNoiseSettings.Octaves = 7;
+        edited.TileBackgroundNoiseSettings.Lacunarity = 3.1;
+        edited.TileBackgroundNoiseSettings.Gain = 0.4;
+        edited.TileBackgroundNoiseSettings.Amplitude = 2.2;
+
+        // This snapshot is the generation input captured before regeneration.
+        var generationInput = edited.CreateBackgroundNoiseSnapshot();
+
+        // Simulate RegenerateSceneAsync publishing a fresh MainViewModel and
+        // restoring the captured snapshot so the controls keep the edited values.
+        var regenerated = new MainViewModel();
+        regenerated.ApplyBackgroundNoiseSnapshot(generationInput);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(regenerated.TileBackgroundNoiseSettings.TargetValue, Is.EqualTo(160.0));
+            Assert.That(regenerated.TileBackgroundNoiseSettings.Noise, Is.EqualTo(12.0));
+            Assert.That(regenerated.TileBackgroundNoiseSettings.CircleCount, Is.EqualTo(5.0));
+            Assert.That(regenerated.TileBackgroundNoiseSettings.Scale, Is.EqualTo(2.5));
+            Assert.That(regenerated.TileBackgroundNoiseSettings.Octaves, Is.EqualTo(7.0));
+            Assert.That(regenerated.TileBackgroundNoiseSettings.Lacunarity, Is.EqualTo(3.1));
+            Assert.That(regenerated.TileBackgroundNoiseSettings.Gain, Is.EqualTo(0.4));
+            Assert.That(regenerated.TileBackgroundNoiseSettings.Amplitude, Is.EqualTo(2.2));
+        });
+
+        // The generator must receive the same snapshot that remains in the
+        // bound view model after regeneration.
+        Assert.That(regenerated.CreateBackgroundNoiseSnapshot(), Is.EqualTo(generationInput));
+    }
+
+    [Test]
+    public void TileBackgroundNoiseSettings_DefaultsMatchCanvasUserSettings()
+    {
+        var settings = new CanvasUserSettings();
+        var viewModel = new TileBackgroundNoiseSettingsViewModel();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.TargetValue, Is.EqualTo(settings.BackgroundTargetValue));
+            Assert.That(viewModel.Noise, Is.EqualTo(settings.BackgroundNoise));
+            Assert.That(viewModel.CircleCount, Is.EqualTo(settings.BackgroundCircleCount));
+            Assert.That(viewModel.Scale, Is.EqualTo(settings.BackgroundNoiseScale));
+            Assert.That(viewModel.Octaves, Is.EqualTo(settings.BackgroundNoiseOctaves));
+            Assert.That(viewModel.Lacunarity, Is.EqualTo(settings.BackgroundNoiseLacunarity));
+            Assert.That(viewModel.Gain, Is.EqualTo(settings.BackgroundNoiseGain));
+            Assert.That(viewModel.Amplitude, Is.EqualTo(settings.BackgroundNoiseAmplitude));
+        });
+    }
 }

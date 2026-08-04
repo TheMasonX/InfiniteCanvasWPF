@@ -214,23 +214,27 @@
 
                         <Border Height="1" Margin="0,14,0,12" Background="{StaticResource BorderBrush}" />
 
-                        <TextBlock Text="SCENE MATERIAL" FontFamily="Cascadia Mono" FontSize="12"
-                                   FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
-                        <TextBlock Text="Tiles X" Margin="0,10,0,4" FontSize="12"
-                                   Foreground="{StaticResource SecondaryTextBrush}" />
-                        <TextBox x:Name="TilesXTextBox" Text="2" />
-
-                        <TextBlock Text="Tiles Y" Margin="0,8,0,4" FontSize="12"
-                                   Foreground="{StaticResource SecondaryTextBrush}" />
-                        <TextBox x:Name="TilesYTextBox" Text="32" />
-
-                        <TextBlock Text="Objects per tile" Margin="0,8,0,4" FontSize="12"
-                                   Foreground="{StaticResource SecondaryTextBrush}" />
-                        <TextBox x:Name="ObjectsPerTileTextBox" Text="16" />
-
-                        <TextBlock Text="Generation seed" Margin="0,8,0,4" FontSize="12"
-                                   Foreground="{StaticResource SecondaryTextBrush}" />
-                        <TextBox x:Name="GenerationSeedTextBox" Text="1729" />
+                        <Expander IsExpanded="True" Padding="8" Margin="0,12,0,0"
+                                  Background="#151A20" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                            <Expander.Header>
+                                <TextBlock Text="SCENE MATERIAL" FontFamily="Cascadia Mono" FontSize="12"
+                                           FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" />
+                            </Expander.Header>
+                            <StackPanel>
+                                <controls:SliderTextBox x:Name="TilesXSliderTextBox" Label="Tiles X"
+                                                        Minimum="1" Maximum="2000" TickFrequency="1"
+                                                        NumericType="Integer" Value="2" />
+                                <controls:SliderTextBox x:Name="TilesYSliderTextBox" Label="Tiles Y"
+                                                        Minimum="1" Maximum="2000" TickFrequency="1"
+                                                        NumericType="Integer" Value="32" />
+                                <controls:SliderTextBox x:Name="ObjectsPerTileSliderTextBox" Label="Objects per tile"
+                                                        Minimum="0" Maximum="256" TickFrequency="1"
+                                                        NumericType="Integer" Value="16" />
+                                <controls:SliderTextBox x:Name="GenerationSeedSliderTextBox" Label="Generation seed"
+                                                        Minimum="0" Maximum="2147483647" TickFrequency="1"
+                                                        NumericType="Integer" ShowSlider="False" Value="1729" />
+                            </StackPanel>
+                        </Expander>
 
                         <Grid x:Name="ButtonGrid" Margin="0,12,0,0">
                             <Grid.ColumnDefinitions>

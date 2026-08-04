@@ -55,6 +55,10 @@ public readonly record struct BackgroundTileCacheKey(
     long ContentRevision,
     int MipLevel);
 
+public interface ICacheReservation : IDisposable
+{
+}
+
 public readonly record struct BackgroundTileRequest
 {
     public BackgroundTileRequest(BackgroundTileDescriptor descriptor, int mipLevel)

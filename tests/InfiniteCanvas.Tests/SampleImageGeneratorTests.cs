@@ -67,11 +67,14 @@ public class SampleImageGeneratorTests
         var cacheBudget = new TileCacheBudget(TileCacheBudget.DefaultMaxBytes);
         var defaultTileCost = checked(SampleImageGenerator.DefaultPixelWidth * SampleImageGenerator.DefaultPixelHeight);
         var defaultBudget = TileCacheBudget.DefaultMaxBytes;
+        var tile = SampleImageGenerator.GenerateSet(1, 64, 32, objectsPerTile: 0)[0];
+        var key = new BackgroundTileCacheKey("synthetic", tile.Id, tile.CurrentGenerationEpoch, 0);
+        var bytes = checked((long)tile.PixelWidth * tile.PixelHeight);
 
         Assert.Multiple(() =>
         {
             Assert.That(defaultBudget, Is.GreaterThanOrEqualTo((long)defaultTileCost));
-            Assert.That(cacheBudget.TryReserve(SampleImageGenerator.GenerateSet(1, 64, 32, objectsPerTile: 0)[0]), Is.True);
+            Assert.That(cacheBudget.TryReserve(tile, key, bytes), Is.Not.Null);
         });
     }
 
@@ -79,16 +82,24 @@ public class SampleImageGeneratorTests
     public void TileCacheBudget_RejectsNewTileWhenCapacityIsReservedByPinnedTiles()
     {
         var tiles = SampleImageGenerator.GenerateSet(2, 64, 32, objectsPerTile: 0);
-        var cacheBudget = new TileCacheBudget(tiles[0].PixelCost);
+        var firstBytes = checked((long)tiles[0].PixelWidth * tiles[0].PixelHeight);
+        var secondBytes = checked((long)tiles[1].PixelWidth * tiles[1].PixelHeight);
+        var firstKey = new BackgroundTileCacheKey("synthetic", tiles[0].Id, tiles[0].CurrentGenerationEpoch, 0);
+        var secondKey = new BackgroundTileCacheKey("synthetic", tiles[1].Id, tiles[1].CurrentGenerationEpoch, 0);
+        var cacheBudget = new TileCacheBudget(firstBytes);
         cacheBudget.SetPinnedTiles([tiles[0]]);
 
+        ICacheReservation? firstReservation = null;
         Assert.Multiple(() =>
         {
-            Assert.That(cacheBudget.TryReserve(tiles[0]), Is.True);
-            Assert.That(cacheBudget.TryReserve(tiles[1]), Is.False);
+            firstReservation = cacheBudget.TryReserve(tiles[0], firstKey, firstBytes);
+            Assert.That(firstReservation, Is.Not.Null);
+            Assert.That(cacheBudget.TryReserve(tiles[1], secondKey, secondBytes), Is.Null);
             Assert.That(cacheBudget.ResidentTileCount, Is.EqualTo(1));
-            Assert.That(cacheBudget.UsedBytes, Is.EqualTo(tiles[0].PixelCost));
+            Assert.That(cacheBudget.UsedBytes, Is.EqualTo(firstBytes));
         });
+
+        firstReservation?.Dispose();
     }
 
     [Test]

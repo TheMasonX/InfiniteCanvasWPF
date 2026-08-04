@@ -23,7 +23,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _resizeTimer;
     private readonly DispatcherTimer _anchorPanTimer;
     private readonly ISelectionOutlineAnimator _selectionOutlineAnimator;
-    private MainViewModel _mainViewModel = null!;
+    private MainViewModel _mainViewModel = new();
     private readonly CancellationTokenSource _lifetime = new();
     private readonly SemaphoreSlim _generationGate = new(1, 1);
     private readonly string _settingsPath = System.IO.Path.Combine(
@@ -80,6 +80,9 @@ public partial class MainWindow : Window
         _verticalScrollbarTrack = (Border?)FindName("VerticalScrollbarTrack");
         _verticalScrollbarThumb = (Border?)FindName("VerticalScrollbarThumb");
 
+        // The MainViewModel is stable for the window lifetime. Regeneration
+        // reuses it so user-edited settings never reset to defaults.
+        DataContext = _mainViewModel;
         InitializeSpatialState();
         _tileCoordinator = new TileWorkCoordinator();
         _renderAction = new CoalescingAsyncAction(DispatchRenderFrameAsync, OnRenderActionFaulted);
@@ -107,8 +110,6 @@ public partial class MainWindow : Window
     {
         _spatialIndex = new LiveSpatialIndexService<SampleAnnotation>(new StrTreeSpatialIndexBuilder<SampleAnnotation>());
         _viewModel = new CanvasViewportViewModel<SampleAnnotation>(_spatialIndex);
-        _mainViewModel = new MainViewModel();
-        DataContext = _mainViewModel;
     }
 
     private void OnAboutButtonClicked(object sender, RoutedEventArgs e)
@@ -138,10 +139,10 @@ public partial class MainWindow : Window
 
     private void ApplyGenerationControlsToUi()
     {
-        TilesXTextBox.Text = _tileColumns.ToString();
-        TilesYTextBox.Text = _tileRows.ToString();
-        ObjectsPerTileTextBox.Text = _objectsPerTile.ToString();
-        GenerationSeedTextBox.Text = _generationSeed.ToString();
+        TilesXSliderTextBox.Value = _tileColumns;
+        TilesYSliderTextBox.Value = _tileRows;
+        ObjectsPerTileSliderTextBox.Value = _objectsPerTile;
+        GenerationSeedSliderTextBox.Value = _generationSeed;
     }
 
     private void ApplySettingsToUi(CanvasUserSettings settings)
@@ -173,10 +174,6 @@ public partial class MainWindow : Window
             LoadingOverlay.Visibility = Visibility.Visible;
             RegenerateButton.IsEnabled = false;
 
-            // Preserve the previous MainViewModel's background noise settings
-            // before InitializeSpatialState creates a new MainViewModel.
-            var previousNoiseSettings = _mainViewModel?.CreateBackgroundNoiseSnapshot();
-
             InitializeSpatialState();
             _selectedAnnotationId = null;
             _camera = new CameraTransform();
@@ -195,10 +192,9 @@ public partial class MainWindow : Window
             StatusText.Text = $"Generating metadata for {tileCount:N0} inspection tiles";
             SceneSummaryText.Text = $"{tileCount:N0} TILE INSPECTION SCENE ({_tileColumns} x {_tileRows})";
 
-            // Restore background noise settings from the previous MainViewModel
-            // so that user-configured values survive scene regeneration.
-            var backgroundNoiseSettings = previousNoiseSettings
-                ?? _mainViewModel!.CreateBackgroundNoiseSnapshot();
+            // The noise settings view model is stable for the window lifetime,
+            // so the generator reads the same snapshot that remains bound to UI.
+            var backgroundNoiseSettings = _mainViewModel.CreateBackgroundNoiseSnapshot();
             _tiles = await Task.Run(
                 () => SampleImageGenerator.GenerateSet(
                     imageCount: tileCount,
@@ -223,6 +219,7 @@ public partial class MainWindow : Window
                 _tiles[i].Coordinator = _tileCoordinator;
                 _tiles[i].ClaimantIdProvider = null; // Use per-tile claimant identity
                 _tiles[i].ClaimantTokenProvider = () => _frameTileCts?.Token ?? CancellationToken.None;
+                _tiles[i].ReleaseReservedCacheEntry = _tileCacheBudget.Release;
             }
 
             SubscribeTileGenerationEvents(_tiles);
@@ -292,11 +289,6 @@ public partial class MainWindow : Window
 
     private void OnTilePixelsGenerationFailed(object? sender, EventArgs e)
     {
-        if (sender is SampleImageTile tile)
-        {
-            _tileCacheBudget.Release(tile);
-        }
-
         // Trigger a re-render so the pipeline can retry generation for tiles
         // that failed. Without this, a generation failure would silently end
         // the render loop if no other event triggers a frame.
@@ -385,13 +377,7 @@ public partial class MainWindow : Window
             if (_tiles[i].Bounds.Intersects(viewport))
             {
                 var epoch = _tiles[i].CurrentGenerationEpoch;
-                visibleTileKeys.Add(new BackgroundTileCacheKey("synthetic", _tiles[i].Id, epoch, 0));
-                // Also add the selected mip level as a separate key so the
-                // coordinator recognizes both the native and mip requests.
-                if (mipLevel > 0)
-                {
-                    visibleTileKeys.Add(new BackgroundTileCacheKey("synthetic", _tiles[i].Id, epoch, mipLevel));
-                }
+                visibleTileKeys.Add(new BackgroundTileCacheKey("synthetic", _tiles[i].Id, epoch, mipLevel));
             }
         }
 
@@ -1431,29 +1417,16 @@ public partial class MainWindow : Window
     {
         validationError = string.Empty;
 
-        if (!int.TryParse(TilesXTextBox.Text, out var columns) || columns <= 0)
-        {
-            validationError = "Tiles X must be a positive integer.";
-            return false;
-        }
+        // The SliderTextBox controls clamp each value to its configured range,
+        // so only the cross-field tile-count cap needs explicit validation here.
+        var columns = (int)Math.Round(TilesXSliderTextBox.Value);
+        var rows = (int)Math.Round(TilesYSliderTextBox.Value);
+        var objectsPerTile = (int)Math.Round(ObjectsPerTileSliderTextBox.Value);
+        var seed = (int)Math.Round(GenerationSeedSliderTextBox.Value);
 
-        if (!int.TryParse(TilesYTextBox.Text, out var rows) || rows <= 0)
+        if (columns <= 0 || rows <= 0)
         {
-            validationError = "Tiles Y must be a positive integer.";
-            return false;
-        }
-
-        if (!int.TryParse(ObjectsPerTileTextBox.Text, out var objectsPerTile)
-            || objectsPerTile < 0
-            || objectsPerTile > SampleImageGenerator.MaxObjectsPerTile)
-        {
-            validationError = $"Objects per tile must be between 0 and {SampleImageGenerator.MaxObjectsPerTile:N0}.";
-            return false;
-        }
-
-        if (!int.TryParse(GenerationSeedTextBox.Text, out var seed))
-        {
-            validationError = "Generation seed must be a valid integer.";
+            validationError = "Tiles X and Tiles Y must be positive integers.";
             return false;
         }
 
@@ -1492,12 +1465,10 @@ public partial class MainWindow : Window
     {
         var settings = new CanvasUserSettings
         {
-            TileColumns = int.TryParse(TilesXTextBox.Text, out var columns) && columns > 0 ? columns : _tileColumns,
-            TileRows = int.TryParse(TilesYTextBox.Text, out var rows) && rows > 0 ? rows : _tileRows,
-            ObjectsPerTile = int.TryParse(ObjectsPerTileTextBox.Text, out var objectsPerTile) && objectsPerTile >= 0
-                ? objectsPerTile
-                : _objectsPerTile,
-            GenerationSeed = int.TryParse(GenerationSeedTextBox.Text, out var seed) ? seed : _generationSeed,
+            TileColumns = (int)Math.Round(TilesXSliderTextBox.Value),
+            TileRows = (int)Math.Round(TilesYSliderTextBox.Value),
+            ObjectsPerTile = (int)Math.Round(ObjectsPerTileSliderTextBox.Value),
+            GenerationSeed = (int)Math.Round(GenerationSeedSliderTextBox.Value),
             AnnotationDisplayMode = DisplayModeComboBox.SelectedIndex,
             OutlineThickness = OutlineThicknessSlider.Value,
             LabelSize = LabelSizeSlider.Value,
@@ -1598,7 +1569,7 @@ public partial class MainWindow : Window
             // bypassing it (which would create untracked, unevictable tiles).
             var hasSourcePixels = tile.TryGetPixelsNonBlocking(
                 mipLevel, out sourcePixels, out var residentMipLevel,
-                tryReserveCacheEntry: () => _tileCacheBudget.TryReserve(tile));
+                tryReserveCacheEntry: (cacheKey, byteCost) => _tileCacheBudget.TryReserve(tile, cacheKey, byteCost));
 
             var sourceDimensions = BackgroundTileMipPolicy.GetDimensions(tile.PixelWidth, tile.PixelHeight, residentMipLevel);
             var sourceX = Math.Clamp((int)((worldX - tile.Bounds.X) * sourceDimensions.Width / tile.Bounds.Width), 0, Math.Max(0, sourceDimensions.Width - 1));
