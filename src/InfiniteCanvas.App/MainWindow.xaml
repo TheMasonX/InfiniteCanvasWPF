@@ -50,12 +50,12 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="VISIBLE" Margin="0,0,8,0" VerticalAlignment="Center"
                                FontFamily="Cascadia Mono" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
-                    <TextBlock Text="{Binding VisibleItemCount, StringFormat=N0}" MinWidth="72"
+                    <TextBlock Text="{Binding ViewModel.VisibleItemCount, ElementName=CanvasSurface, StringFormat=N0}" MinWidth="72"
                                FontFamily="Cascadia Mono" FontSize="18" FontWeight="SemiBold" />
                     <Border Width="1" Height="28" Margin="18,0" Background="{StaticResource BorderBrush}" />
                     <TextBlock Text="TOTAL" Margin="0,0,8,0" VerticalAlignment="Center"
                                FontFamily="Cascadia Mono" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
-                    <TextBlock Text="{Binding TotalItemCount, StringFormat=N0}" MinWidth="72"
+                    <TextBlock Text="{Binding ViewModel.TotalItemCount, ElementName=CanvasSurface, StringFormat=N0}" MinWidth="72"
                                FontFamily="Cascadia Mono" FontSize="18" FontWeight="SemiBold" />
                 </StackPanel>
             </Grid>

@@ -39,6 +39,49 @@ public readonly record struct TileWorkCoordinatorCounters(
 }
 
 /// <summary>
+/// Deterministic priority tuple for the tile work heap (ICW-205).
+/// Orders by visibility class, then squared center distance, then mip
+/// suitability, then a monotonic FIFO sequence assigned at admission.
+/// </summary>
+internal readonly struct TileWorkPriority : IComparable<TileWorkPriority>, IEquatable<TileWorkPriority>
+{
+    public TileWorkPriority(int rank, double squaredDistance, int mipDistance, long sequence)
+    {
+        Rank = rank;
+        SquaredDistance = squaredDistance;
+        MipDistance = mipDistance;
+        Sequence = sequence;
+    }
+
+    /// <summary>0 = visible, 1 = prefetch, 2 = stale/outside interest set.</summary>
+    public int Rank { get; }
+
+    /// <summary>Squared distance from the camera center. Smaller is higher priority.</summary>
+    public double SquaredDistance { get; }
+
+    /// <summary>Absolute difference from the selected mip level. Smaller is higher priority.</summary>
+    public int MipDistance { get; }
+
+    /// <summary>Monotonic FIFO sequence assigned at admission. Smaller is earlier.</summary>
+    public long Sequence { get; }
+
+    public int CompareTo(TileWorkPriority other)
+    {
+        var rankCompare = Rank.CompareTo(other.Rank);
+        if (rankCompare != 0) return rankCompare;
+        var distanceCompare = SquaredDistance.CompareTo(other.SquaredDistance);
+        if (distanceCompare != 0) return distanceCompare;
+        var mipCompare = MipDistance.CompareTo(other.MipDistance);
+        if (mipCompare != 0) return mipCompare;
+        return Sequence.CompareTo(other.Sequence);
+    }
+
+    public bool Equals(TileWorkPriority other) => CompareTo(other) == 0;
+    public override bool Equals(object? obj) => obj is TileWorkPriority other && Equals(other);
+    public override int GetHashCode() => HashCode.Combine(Rank, SquaredDistance, MipDistance, Sequence);
+}
+
+/// <summary>
 /// Bounded, deduplicated, cancellable coordinator for background tile generation work.
 /// Manages concurrency, coalesces equal cache-key requests, separates claimant interest
 /// from shared-fill ownership, and exposes structured diagnostic counters.
@@ -46,6 +89,9 @@ public readonly record struct TileWorkCoordinatorCounters(
 /// <remarks>
 /// This is the foundation for ICW-142 (bounded cancellable tile materialization).
 /// ICW-143 adds viewport interest snapshots and priority ordering.
+/// ICW-205 replaces the FIFO queue with a heap ordered by visibility class,
+/// center distance, and mip suitability, and enforces the hard no-flash rule:
+/// a visible tile's in-flight work survives frame-boundary token fire.
 ///
 /// Design rules (from ADR-0006):
 /// - A frame's viewport update publishes an interest snapshot; only the claimants
@@ -54,6 +100,8 @@ public readonly record struct TileWorkCoordinatorCounters(
 ///   the underlying generation if another claimant still needs it.
 /// - Cache reservations are acquired at admission and released exactly once on
 ///   cancellation, failure, or rejected admission.
+/// - In-flight work for a key still in the interest set survives its last
+///   claimant leaving (no-flash rule).
 /// </remarks>
 public sealed class TileWorkCoordinator : IDisposable
 {
@@ -66,9 +114,11 @@ public sealed class TileWorkCoordinator : IDisposable
     // All mutable state is guarded by _lock.
     private readonly Lock _lock = new();
     private readonly Dictionary<BackgroundTileCacheKey, TileWorkItem> _items = new();
-    private readonly Queue<BackgroundTileCacheKey> _queue = new();
+    private readonly PriorityQueue<BackgroundTileCacheKey, TileWorkPriority> _queue = new();
+    private readonly Dictionary<BackgroundTileCacheKey, long> _removedKeys = new();
     private ViewportInterestSet _interestSet = ViewportInterestSet.Empty;
     private int _activeCount;
+    private long _sequence;
 
     // Diagnostic counters (interlocked for lock-free reads).
     private int _admittedCount;
@@ -141,7 +191,10 @@ public sealed class TileWorkCoordinator : IDisposable
                 return false;
             }
 
-            var item = new TileWorkItem(key, factory, reservation, _disposeCts.Token);
+            var item = new TileWorkItem(key, factory, reservation, _disposeCts.Token, ShouldCancelWhenNoClaimants)
+            {
+                Sequence = ++_sequence
+            };
             item.AddClaimant(claimantId, claimantToken, onCompleted, onFailed);
             _items[key] = item;
             Interlocked.Increment(ref _admittedCount);
@@ -155,8 +208,8 @@ public sealed class TileWorkCoordinator : IDisposable
             else
             {
                 Log.Debug("CoordReq QUEUE {SourceId}/{TileId} mip{MipLevel} rev{Rev} queueDepth={QueueDepth}",
-                    key.SourceId, key.TileId, key.MipLevel, key.ContentRevision, _queue.Count);
-                _queue.Enqueue(key);
+                    key.SourceId, key.TileId, key.MipLevel, key.ContentRevision, LiveQueuedCount);
+                _queue.Enqueue(key, ComputePriority(key));
             }
 
             return true;
@@ -181,8 +234,12 @@ public sealed class TileWorkCoordinator : IDisposable
             if (!item.RemoveClaimant(claimantId))
                 return;
 
-            // Cancel the work only if no claimants remain.
-            if (item.ClaimantCount == 0)
+            // No-flash rule (ICW-205): cancel only when the key is not held
+            // by the published interest set. A visible tile's work survives
+            // its frame-token fire so the next frame re-claims the same key
+            // and generation completes exactly once instead of restarting
+            // every frame.
+            if (item.ClaimantCount == 0 && !_interestSet.Contains(key))
             {
                 Log.Information("Coord CANCEL {SourceId}/{TileId} mip{MipLevel} rev{Rev} — last claimant {Claimant} removed",
                     key.SourceId, key.TileId, key.MipLevel, key.ContentRevision, claimantId);
@@ -203,11 +260,14 @@ public sealed class TileWorkCoordinator : IDisposable
         {
             if (_disposed) return;
 
-            // Collect keys whose last claimant was removed.
+            // Collect keys whose last claimant was removed and which are not
+            // held by the published interest set (no-flash rule, ICW-205).
             var toCancel = new List<(BackgroundTileCacheKey Key, TileWorkItem Item)>();
             foreach (var (key, item) in _items)
             {
-                if (item.RemoveClaimant(claimantId) && item.ClaimantCount == 0)
+                if (item.RemoveClaimant(claimantId)
+                    && item.ClaimantCount == 0
+                    && !_interestSet.Contains(key))
                 {
                     toCancel.Add((key, item));
                 }
@@ -249,6 +309,7 @@ public sealed class TileWorkCoordinator : IDisposable
             }
 
             _queue.Clear();
+            _removedKeys.Clear();
         }
     }
 
@@ -307,6 +368,10 @@ public sealed class TileWorkCoordinator : IDisposable
                     CancelWorkItem(key, item);
                 }
             }
+
+            // Rebuild the heap so queued priorities match the new interest
+            // set and camera center. Once per published frame.
+            RebuildQueue();
         }
     }
 
@@ -319,7 +384,7 @@ public sealed class TileWorkCoordinator : IDisposable
         {
             return new TileWorkCoordinatorCounters(
                 ActiveCount: _activeCount,
-                QueuedCount: _queue.Count,
+                QueuedCount: LiveQueuedCount,
                 AdmittedCount: Volatile.Read(ref _admittedCount),
                 CoalescedCount: Volatile.Read(ref _coalescedCount),
                 CompletedCount: Volatile.Read(ref _completedCount),
@@ -474,7 +539,9 @@ public sealed class TileWorkCoordinator : IDisposable
         else
         {
             // Queued work: notify the tile so it can reset its generation flag.
-            RemoveFromQueue(key);
+            // Tombstone the exact item sequence so a later re-admission of the
+            // same cache key is never skipped by this cancellation.
+            _removedKeys[key] = item.Sequence;
             item.DispatchFailed(new OperationCanceledException(
                 "Tile work was canceled before execution"));
 
@@ -491,26 +558,89 @@ public sealed class TileWorkCoordinator : IDisposable
         // The worker termination path owns removal and reservation cleanup.
     }
 
+    /// <summary>
+    /// True when the work item is still needed: it has a live claimant, or its
+    /// key is held by the published interest set. The interest-set case covers
+    /// the momentary zero-claimant window between frame boundaries (no-flash
+    /// rule, ICW-205).
+    /// </summary>
+    private bool IsItemAlive(TileWorkItem item) =>
+        item.ClaimantCount > 0 || _interestSet.Contains(item.CacheKey);
+
+    /// <summary>
+    /// True when a work token must be canceled once its last claimant leaves.
+    /// Work is canceled only when the key is not held by the interest set.
+    /// </summary>
+    private bool ShouldCancelWhenNoClaimants(BackgroundTileCacheKey key) => !_interestSet.Contains(key);
+
+    /// <summary>
+    /// Number of queued entries that are not tombstoned by cancellation.
+    /// </summary>
+    private int LiveQueuedCount => Math.Max(0, _queue.Count - _removedKeys.Count);
+
+    /// <summary>
+    /// Computes the heap priority for a key from the current interest set.
+    /// </summary>
+    private TileWorkPriority ComputePriority(BackgroundTileCacheKey key)
+    {
+        var rank = _interestSet.IsVisible(key) ? 0
+            : _interestSet.Contains(key) ? 1
+            : 2;
+        var squaredDistance = _interestSet.SquaredDistanceFromCenter is not null
+            ? _interestSet.SquaredDistanceFromCenter(key)
+            : 0d;
+        var mipDistance = _interestSet.SelectedMipLevel is { } selected
+            ? Math.Abs(key.MipLevel - selected)
+            : 0;
+        var sequence = _items.TryGetValue(key, out var item) ? item.Sequence : 0;
+        return new TileWorkPriority(rank, squaredDistance, mipDistance, sequence);
+    }
+
+    /// <summary>
+    /// Rebuilds the heap from live queued items in <c>_items</c>.
+    /// Cancelled or orphaned entries are dropped. Priorities are recomputed
+    /// for the current interest set; FIFO sequence is preserved.
+    /// </summary>
+    private void RebuildQueue()
+    {
+        var liveQueued = new List<(BackgroundTileCacheKey Key, TileWorkPriority Priority)>(_items.Count);
+        foreach (var (key, item) in _items)
+        {
+            if (item.State != TileWorkItemState.Queued)
+                continue;
+
+            if (!IsItemAlive(item))
+                continue;
+
+            liveQueued.Add((key, ComputePriority(key)));
+        }
+
+        _queue.Clear();
+        _removedKeys.Clear();
+        foreach (var (key, priority) in liveQueued)
+        {
+            _queue.Enqueue(key, priority);
+        }
+    }
+
     private void DrainQueue()
     {
         DrainQueueWithLivenessCheck(CancellationToken.None);
     }
 
     /// <summary>
-    /// Drains the queue but checks claimant-token liveness before promoting
-    /// each queued item. If a queued item has no live claimants (their tokens
-    /// fired and auto-removed them), it is canceled and skipped rather than
-    /// promoted. This prevents stale-token items from blocking usable items
-    /// behind them or wasting concurrency slots.
+    /// Drains the priority queue and promotes queued items while slots are free.
+    /// Queued items are already ordered by visibility class, center distance,
+    /// and mip suitability (ICW-205), so no scan-ahead is needed.
     ///
-    /// When a viewport interest set has been published via PublishInterestSet,
-    /// visible tiles drain before prefetch tiles. This ensures the viewport
-    /// sees the highest-priority generation first during rapid navigation.
+    /// A queued item with no live claimants is canceled only when its key is
+    /// not held by the published interest set. An in-interest-set item may
+    /// have a momentary zero-claimant window between frame boundaries; the
+    /// next frame re-claims the same key through coalescing (no-flash rule).
     ///
     /// The claimantToken parameter is provided for backward compatibility
-    /// with the Phase 0 skeleton. The primary liveness check now uses the
-    /// item's ClaimantCount: if all claimants have been auto-removed (their
-    /// CancellationToken fired), the item is canceled.
+    /// with the Phase 0 skeleton. The primary liveness check uses the item's
+    /// ClaimantCount plus interest-set membership.
     /// </summary>
     public void DrainQueueWithLivenessCheck(CancellationToken claimantToken)
     {
@@ -521,76 +651,34 @@ public sealed class TileWorkCoordinator : IDisposable
             while (_activeCount < _maxConcurrency && _queue.Count > 0)
             {
                 var key = _queue.Dequeue();
-                if (!_items.TryGetValue(key, out var item) || item.State != TileWorkItemState.Queued)
-                    continue;
 
-                // If no live claimants remain (their tokens fired via the
-                // auto-removal callback in AddClaimant), cancel this item
-                // and skip it rather than promoting stale work.
-                if (item.ClaimantCount == 0)
+                if (!_items.TryGetValue(key, out var item) || item.State != TileWorkItemState.Queued)
+                {
+                    // Orphaned heap entry (item removed or already promoted).
+                    _removedKeys.Remove(key);
+                    continue;
+                }
+
+                // Skip a queued entry canceled at this sequence. A later
+                // re-admission of the same key has a new sequence and is live.
+                if (_removedKeys.TryGetValue(key, out var canceledSequence)
+                    && canceledSequence == item.Sequence)
+                {
+                    _removedKeys.Remove(key);
+                    continue;
+                }
+
+                // If no live claimants remain and the key is not held by the
+                // interest set, cancel and skip rather than promoting stale work.
+                if (!IsItemAlive(item))
                 {
                     CancelWorkItem(key, item);
                     continue;
                 }
 
-                // Priority: if an interest set has been published and this
-                // item is not visible, scan ahead for a visible item to
-                // promote first. This ensures viewport-visible tiles are
-                // generated before prefetch or stale tiles.
-                if (_interestSet.VisibleKeys.Count > 0 && !_interestSet.IsVisible(key))
-                {
-                    // Re-enqueue this prefetch/non-interest item and look
-                    // for a visible one ahead of it in the queue.
-                    var deferred = new List<BackgroundTileCacheKey> { key };
-                    bool foundVisible = false;
-                    var remaining = new List<BackgroundTileCacheKey>(_queue.Count);
-                    while (_queue.Count > 0)
-                    {
-                        var candidate = _queue.Dequeue();
-                        if (!foundVisible
-                            && _items.TryGetValue(candidate, out var candidateItem)
-                            && candidateItem.State == TileWorkItemState.Queued
-                            && candidateItem.ClaimantCount > 0
-                            && _interestSet.IsVisible(candidate))
-                        {
-                            // Found a visible item — start it now.
-                            StartWorkItem(candidateItem);
-                            foundVisible = true;
-                        }
-                        else
-                        {
-                            remaining.Add(candidate);
-                        }
-                    }
-
-                    // Re-enqueue the deferred and remaining items.
-                    foreach (var d in deferred) { _queue.Enqueue(d); }
-                    foreach (var r in remaining) { _queue.Enqueue(r); }
-
-                    if (foundVisible) continue;
-
-                    // No visible item found — start the original prefetch item.
-                }
-
+                _removedKeys.Remove(key);
                 StartWorkItem(item);
             }
-        }
-    }
-
-    private void RemoveFromQueue(BackgroundTileCacheKey key)
-    {
-        // Rebuild the queue excluding the canceled key.
-        var remaining = new List<BackgroundTileCacheKey>(_queue.Count);
-        while (_queue.Count > 0)
-        {
-            var k = _queue.Dequeue();
-            if (!k.Equals(key))
-                remaining.Add(k);
-        }
-
-        foreach (var k in remaining)
-        {
-            _queue.Enqueue(k);
         }
     }
 
@@ -610,6 +698,7 @@ public sealed class TileWorkCoordinator : IDisposable
         private readonly Lock _claimantLock = new();
         private readonly CancellationTokenSource _workCts;
         private readonly ICacheReservation? _reservation;
+        private readonly Func<BackgroundTileCacheKey, bool>? _cancelWhenNoClaimants;
         private int _running;
         private int _reservationDisposed;
 
@@ -617,17 +706,25 @@ public sealed class TileWorkCoordinator : IDisposable
             BackgroundTileCacheKey cacheKey,
             Func<CancellationToken, ValueTask<byte[]>> factory,
             ICacheReservation? reservation,
-            CancellationToken disposeToken)
+            CancellationToken disposeToken,
+            Func<BackgroundTileCacheKey, bool>? cancelWhenNoClaimants = null)
         {
             CacheKey = cacheKey;
             Factory = factory;
             _reservation = reservation;
             _workCts = CancellationTokenSource.CreateLinkedTokenSource(disposeToken);
+            _cancelWhenNoClaimants = cancelWhenNoClaimants;
         }
 
         public BackgroundTileCacheKey CacheKey { get; }
         public Func<CancellationToken, ValueTask<byte[]>> Factory { get; }
         public TileWorkItemState State { get; set; } = TileWorkItemState.Queued;
+
+        /// <summary>
+        /// Monotonic FIFO sequence assigned at admission. Used as the final
+        /// priority tie-break so equal-priority items drain in admission order.
+        /// </summary>
+        public long Sequence { get; set; }
 
         public void DisposeReservation()
         {
@@ -706,7 +803,12 @@ public sealed class TileWorkCoordinator : IDisposable
                 entry.Registration?.Dispose();
                 _claimants.RemoveAt(idx);
 
-                if (_claimants.Count == 0)
+                // No-flash rule (ICW-205): cancel the work token only when the
+                // key is not held by the published interest set. A visible
+                // tile's fill survives its frame-token fire; the next frame
+                // re-claims the same key through coalescing.
+                if (_claimants.Count == 0
+                    && (_cancelWhenNoClaimants is null || _cancelWhenNoClaimants(CacheKey)))
                 {
                     CancelWork();
                 }

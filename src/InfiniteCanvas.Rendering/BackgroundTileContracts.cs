@@ -181,7 +181,8 @@ public static class BackgroundTileMipPolicy
 /// <summary>
 /// Describes the set of tile cache keys that are currently of interest
 /// to the viewport. Used by ICW-143 to cull non-visible tile work and
-/// prioritize visible generation.
+/// prioritize visible generation, and by ICW-205 to order queued work by
+/// visibility class, center distance, and mip suitability.
 /// </summary>
 /// <param name="VisibleKeys">Tile cache keys that intersect the current viewport.
 /// These have highest priority for generation.</param>
@@ -190,22 +191,83 @@ public static class BackgroundTileMipPolicy
 public readonly record struct ViewportInterestSet
 {
     /// <summary>
-    /// Creates an interest set from the given visible and prefetch key sets.
-    /// Neither set may be null — if no tiles are of interest, use <see cref="Empty"/>.
+    /// Creates an interest set with no scheduling context.
+    /// The coordinator falls back to visible-first ordering.
     /// </summary>
     public ViewportInterestSet(
         IReadOnlySet<BackgroundTileCacheKey> visibleKeys,
         IReadOnlySet<BackgroundTileCacheKey> prefetchKeys)
+        : this(visibleKeys, prefetchKeys, null, null, null, null)
+    {
+    }
+
+    /// <summary>
+    /// Creates an interest set with optional scheduling context.
+    /// Neither set may be null — if no tiles are of interest, use <see cref="Empty"/>.
+    /// </summary>
+    /// <param name="visibleKeys">Keys that intersect the current viewport.</param>
+    /// <param name="prefetchKeys">Keys in a margin around the viewport.</param>
+    /// <param name="centerX">Camera center X in world coordinates, or null.</param>
+    /// <param name="centerY">Camera center Y in world coordinates, or null.</param>
+    /// <param name="selectedMipLevel">Target mip level for the mip-suitability tie-break, or null.</param>
+    /// <param name="squaredDistanceFromCenter">
+    /// Maps a cache key to its squared distance from the camera center.
+    /// The caller derives this from tile bounds and the camera center.
+    /// Null disables the distance tie-break.
+    /// </param>
+    public ViewportInterestSet(
+        IReadOnlySet<BackgroundTileCacheKey> visibleKeys,
+        IReadOnlySet<BackgroundTileCacheKey> prefetchKeys,
+        double? centerX,
+        double? centerY,
+        int? selectedMipLevel,
+        Func<BackgroundTileCacheKey, double>? squaredDistanceFromCenter)
     {
         ArgumentNullException.ThrowIfNull(visibleKeys);
         ArgumentNullException.ThrowIfNull(prefetchKeys);
+        if (selectedMipLevel is < 0 or > BackgroundTileMipPolicy.MaxMipLevel)
+        {
+            throw new ArgumentOutOfRangeException(nameof(selectedMipLevel));
+        }
+
         VisibleKeys = visibleKeys;
         PrefetchKeys = prefetchKeys;
+        CenterX = centerX;
+        CenterY = centerY;
+        SelectedMipLevel = selectedMipLevel;
+        SquaredDistanceFromCenter = squaredDistanceFromCenter;
     }
 
     public IReadOnlySet<BackgroundTileCacheKey> VisibleKeys { get; }
 
     public IReadOnlySet<BackgroundTileCacheKey> PrefetchKeys { get; }
+
+    /// <summary>
+    /// Camera center X in world coordinates, or null when no center is published.
+    /// </summary>
+    public double? CenterX { get; }
+
+    /// <summary>
+    /// Camera center Y in world coordinates, or null when no center is published.
+    /// </summary>
+    public double? CenterY { get; }
+
+    /// <summary>
+    /// Target mip level for the mip-suitability tie-break, or null.
+    /// </summary>
+    public int? SelectedMipLevel { get; }
+
+    /// <summary>
+    /// Maps a cache key to its squared distance from the camera center.
+    /// Null disables the distance tie-break.
+    /// </summary>
+    public Func<BackgroundTileCacheKey, double>? SquaredDistanceFromCenter { get; }
+
+    /// <summary>
+    /// True if this interest set carries enough context for deterministic
+    /// center-distance and mip-suitability ordering.
+    /// </summary>
+    public bool HasSchedulingContext => SquaredDistanceFromCenter is not null;
 
     /// <summary>
     /// True if the given key is in the visible or prefetch interest set.

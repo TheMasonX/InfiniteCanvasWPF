@@ -31,4 +31,20 @@ public sealed class CanvasViewModelTests
         Assert.That(viewModel.Camera.Capture().OffsetX, Is.EqualTo(-500).Within(0.0001));
         Assert.That(viewModel.Viewport.X, Is.EqualTo(500).Within(0.0001));
     }
+
+    [Test]
+    public void ApplyFrame_UpdatesViewportAndVisibleAndTotalCounts()
+    {
+        var viewModel = new CanvasViewModel();
+        viewModel.SetSceneBounds(new SpatialBounds(0, 0, 1000, 500));
+
+        viewModel.ApplyFrame(new SpatialBounds(100, 50, 400, 200), 7, 42);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(viewModel.Viewport, Is.EqualTo(new SpatialBounds(100, 50, 400, 200)));
+            Assert.That(viewModel.VisibleItemCount, Is.EqualTo(7));
+            Assert.That(viewModel.TotalItemCount, Is.EqualTo(42));
+        }
+    }
 }

@@ -11,7 +11,7 @@ public sealed class CameraTransform
     private readonly double _minimumScale;
     private readonly double _maximumScale;
     private TransformState _state = TransformState.Identity;
-
+    
     public CameraTransform(double minimumScale = MinimumScale, double maximumScale = MaximumScale)
     {
         if (!double.IsFinite(minimumScale) || minimumScale <= 0)
@@ -58,7 +58,7 @@ public sealed class CameraTransform
         Update(state => state with
         {
             OffsetX = state.OffsetX + deltaX,
-            OffsetY = state.OffsetY + deltaY
+            OffsetY = state.OffsetY + deltaY,
         });
     }
 

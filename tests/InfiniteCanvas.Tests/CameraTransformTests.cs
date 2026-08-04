@@ -91,4 +91,24 @@ public class CameraTransformTests
             Assert.That(centeredViewport.Y, Is.EqualTo(-125));
         }
     }
+
+    [Test]
+    public void Pan_WithNegativeDeltas_ProducesFiniteOffsets()
+    {
+        var camera = new CameraTransform();
+
+        camera.Pan(-20, -10);
+        var snapshot = camera.Capture();
+
+        using (Assert.EnterMultipleScope())
+        {
+            // Regression for ICW-310: a fractional-exponent pan produced NaN
+            // for negative deltas and corrupted the camera. Pan stays linear
+            // and negative deltas must remain finite.
+            Assert.That(double.IsFinite(snapshot.OffsetX), Is.True);
+            Assert.That(double.IsFinite(snapshot.OffsetY), Is.True);
+            Assert.That(snapshot.OffsetX, Is.EqualTo(-20));
+            Assert.That(snapshot.OffsetY, Is.EqualTo(-10));
+        }
+    }
 }

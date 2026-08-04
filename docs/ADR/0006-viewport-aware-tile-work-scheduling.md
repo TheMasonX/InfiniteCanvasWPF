@@ -16,6 +16,7 @@ Introduce a source-neutral, bounded tile-work coordinator/materializer with thes
 - Tile work is identified by the complete source-scoped cache key, including tile identity, content revision, and mip level.
 - A viewport update publishes a generation/interest snapshot containing the visible set, an optional small prefetch margin, camera center, and request epoch.
 - Queued requests whose key is no longer claimed by the current interest snapshot are removed or marked canceled before execution. In-flight work receives cancellation when its last current claimant leaves; shared fills remain alive while another claimant remains.
+- In-flight work for a key still in the current interest snapshot must survive a frame-boundary claimant-token fire. A per-frame token fire removes the old claimant, but the running fill continues and the next frame re-claims the same key. Canceling it would restart generation every frame, leaving visible tiles permanently blank. This is a hard no-flash constraint (ICW-205).
 - Work admission is bounded by a configurable concurrency limit. The queue prioritizes current visible requests by viewport relevance, with center distance and mip suitability as deterministic tie-breakers. Prefetch work is lower priority than visible work.
 - Equal cache-key requests coalesce into one underlying fill. Completion publishes only if the cache key/revision and request epoch are still valid; stale completion may populate a still-valid cache entry but must not trigger stale frame publication.
 - Cache reservations are acquired at admission and released on cancellation, failure, or rejected admission according to the actual payload variant cost. Cancellation and disposal must not leak reservations or fault the UI pipeline.
@@ -23,13 +24,13 @@ Introduce a source-neutral, bounded tile-work coordinator/materializer with thes
 
 ## Consequences
 
-This reduces queue bloat and stale CPU work during rapid navigation, while adding coordinator state, priority comparisons, cancellation ownership, and diagnostics. It preserves the existing resident-mip fallback and source-agnostic materializer boundaries. Exact prefetch distance, concurrency default, and cancellation grace period remain benchmark-driven configuration choices rather than hard-coded architecture rules.
+This reduces queue bloat and stale CPU work during rapid navigation, while adding coordinator state, priority comparisons, cancellation ownership, and diagnostics. It preserves the existing resident-mip fallback and source-agnostic materializer boundaries. The visible frame must never flash, flicker, or blank; stable presentation is a hard constraint, not a preference. Exact prefetch distance, concurrency default, and cancellation grace period remain benchmark-driven configuration choices rather than hard-coded architecture rules.
 
 ## Implementation Sequence
 
 1. Define request/interest ownership and coordinator diagnostics with deterministic unit tests.
 2. Replace fire-and-forget tile generation admission with bounded, deduplicated, cancellable work ownership.
-3. Add viewport culling and relevance ordering, preserving resident fallback and cache reservation correctness.
+3. Add viewport culling and relevance ordering, preserving resident fallback and cache reservation correctness. Implement the priority queue as a heap ordered by visibility class, center distance, and mip suitability, with stable FIFO within equal priority (ICW-205).
 4. Add fast-scroll stress benchmarks and runtime counters for queue depth, cancellation, stale completion, coalescing, and useful completion rate.
 
 ## Related Tasks

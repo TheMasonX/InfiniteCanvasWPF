@@ -16,8 +16,9 @@ namespace InfiniteCanvas.App;
 
 public partial class MainWindow : Window
 {
+    private const double _panExponent = 2.5;
+
     private LiveSpatialIndexService<SampleAnnotation> _spatialIndex = null!;
-    private CanvasViewportViewModel<SampleAnnotation> _viewModel = null!;
     private CameraTransform _camera = null!;
     private readonly CoalescingAsyncAction _renderAction;
     private readonly DispatcherTimer _resizeTimer;
@@ -31,6 +32,7 @@ public partial class MainWindow : Window
         "InfiniteCanvas",
         "settings.json");
     private IReadOnlyList<SampleImageTile> _tiles = [];
+    private IReadOnlyDictionary<string, SpatialBounds> _tileBoundsById = new Dictionary<string, SpatialBounds>();
     private IReadOnlyList<SampleAnnotation> _annotations = [];
     private SpatialBounds _sceneBounds;
     private ZeroCopyBitmapFactory? _frontBitmapFactory;
@@ -129,7 +131,6 @@ public partial class MainWindow : Window
     private void InitializeSpatialState()
     {
         _spatialIndex = new LiveSpatialIndexService<SampleAnnotation>(new StrTreeSpatialIndexBuilder<SampleAnnotation>());
-        _viewModel = new CanvasViewportViewModel<SampleAnnotation>(_spatialIndex);
     }
 
     private async void OnCanvasViewportChanged(object? sender, EventArgs e)
@@ -257,6 +258,16 @@ public partial class MainWindow : Window
                 _tiles[i].ClaimantTokenProvider = () => _frameTileCts?.Token ?? CancellationToken.None;
                 _tiles[i].ReleaseReservedCacheEntry = _tileCacheBudget.Release;
             }
+
+            // Cache tile bounds by id for center-distance scheduling (ICW-205).
+            // The map is rebuilt once per scene, not per frame.
+            var tileBoundsById = new Dictionary<string, SpatialBounds>(_tiles.Count, StringComparer.Ordinal);
+            for (var i = 0; i < _tiles.Count; i++)
+            {
+                tileBoundsById[_tiles[i].Id] = _tiles[i].Bounds;
+            }
+
+            _tileBoundsById = tileBoundsById;
 
             SubscribeTileGenerationEvents(_tiles);
             _sceneBounds = GetSceneBounds(_tiles);
@@ -404,10 +415,13 @@ public partial class MainWindow : Window
         }
         _previousFrameTileCts = previousCts;
 
-        // Compute the viewport interest set for tile work culling (ICW-143).
-        // Visible tiles are those intersecting the current viewport. Prefetch
-        // is empty for now — a configurable margin can be added later.
+        // Compute the viewport interest set for tile work culling (ICW-143)
+        // and center-distance scheduling (ICW-205). Visible tiles are those
+        // intersecting the current viewport. Prefetch is empty for now — a
+        // configurable margin can be added later.
         var mipLevel = BackgroundTileMipPolicy.SelectMipLevel(camera);
+        var centerX = viewport.X + (viewport.Width / 2.0);
+        var centerY = viewport.Y + (viewport.Height / 2.0);
         var visibleTileKeys = new HashSet<BackgroundTileCacheKey>();
         for (var i = 0; i < _tiles.Count; i++)
         {
@@ -418,9 +432,31 @@ public partial class MainWindow : Window
             }
         }
 
+        // Squared distance from the camera center to each tile center, so the
+        // coordinator drains closest visible tiles first. Returns 0 for keys
+        // with no known bounds (stale revisions) to keep ordering stable.
+        Func<BackgroundTileCacheKey, double>? squaredDistanceFromCenter = key =>
+        {
+            if (!_tileBoundsById.TryGetValue(key.TileId, out var bounds))
+            {
+                return 0d;
+            }
+
+            var dx = (bounds.X + (bounds.Width / 2.0)) - centerX;
+            var dy = (bounds.Y + (bounds.Height / 2.0)) - centerY;
+            return (dx * dx) + (dy * dy);
+        };
+
         // Publish the interest set to the coordinator. This cancels any
-        // queued or running generation for tiles outside the viewport.
-        _tileCoordinator.PublishInterestSet(new ViewportInterestSet(visibleTileKeys, new HashSet<BackgroundTileCacheKey>()));
+        // queued generation for tiles outside the viewport and orders the
+        // remaining queue by visibility, center distance, and mip suitability.
+        _tileCoordinator.PublishInterestSet(new ViewportInterestSet(
+            visibleTileKeys,
+            new HashSet<BackgroundTileCacheKey>(),
+            centerX,
+            centerY,
+            mipLevel,
+            squaredDistanceFromCenter));
 
         // Track this render request for stale-frame rejection.
         var requestVersion = _renderRequestTracker.BeginRequest();
@@ -449,8 +485,8 @@ public partial class MainWindow : Window
         var frameVisual = BuildFrameVisual(frame.Bitmap, frame.VisibleItems, camera, width, height);
         PublishFrame(factory, frameVisual);
         _renderRequestTracker.Advance();
-        _viewModel.ApplyFrame(viewport, frame.VisibleItems.Count);
-        _mainViewModel.ApplyViewportState(frame.VisibleItems.Count, _spatialIndex.Count);
+        // The canvas component owns all per-frame viewport state (ICW-309).
+        CanvasSurface.ViewModel.ApplyFrame(viewport, frame.VisibleItems.Count, _spatialIndex.Count);
 
         stopwatch.Stop();
         var generatedTileCount = _tiles.Count(tile => tile.IsBackgroundFetched);
@@ -901,7 +937,7 @@ public partial class MainWindow : Window
         {
             return;
         }
-
+        
         _camera.Pan(-(adjustedX * gain), -(adjustedY * gain));
         ClampCameraToScene();
         await RequestRenderAsync();
@@ -915,7 +951,7 @@ public partial class MainWindow : Window
             return 0;
         }
 
-        return Math.Sign(value) * (magnitude - deadZone);
+        return Math.Sign(value) * Math.Pow(magnitude - deadZone, _panExponent);
     }
 
     private void ShowPanAnchor(Point anchor)

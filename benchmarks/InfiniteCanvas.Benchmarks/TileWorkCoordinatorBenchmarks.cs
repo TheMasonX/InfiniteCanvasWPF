@@ -26,6 +26,10 @@ public class TileWorkCoordinatorBenchmarks
 
     private const int VisibleCount = 20;
     private const int NonVisibleCount = 30;
+
+    // Large visible set for center-distance ordering benchmarks (ICW-205).
+    private const int LargeVisibleCount = 1000;
+    private static readonly BackgroundTileCacheKey[] LargeVisibleKeys;
     private static readonly BackgroundTileCacheKey SingleKey;
 
     private static readonly object Claimant = new();
@@ -42,6 +46,10 @@ public class TileWorkCoordinatorBenchmarks
 
         NonVisibleKeys = Enumerable.Range(0, NonVisibleCount)
             .Select(i => new BackgroundTileCacheKey("bench", $"tile-off-{i}", 1, 0))
+            .ToArray();
+
+        LargeVisibleKeys = Enumerable.Range(0, LargeVisibleCount)
+            .Select(i => new BackgroundTileCacheKey("bench", $"tile-big-{i}", 1, 0))
             .ToArray();
 
         SingleKey = new BackgroundTileCacheKey("bench", "single", 1, 0);
@@ -168,6 +176,43 @@ public class TileWorkCoordinatorBenchmarks
         CompleteActiveWork();
     }
 
+    /// <summary>
+    /// Priority drain with 1000 visible keys ordered by center distance.
+    /// Keys are enqueued in reverse index order, so the heap must reorder
+    /// them into distance order. Measures true heap ordering cost, not
+    /// insertion order (ICW-205).
+    /// </summary>
+    [Benchmark]
+    public void DrainQueue_PriorityDistanceOrdered()
+    {
+        EnqueueAll(_coordinator!, LargeVisibleKeys.Reverse());
+        _coordinator!.PublishInterestSet(BuildDistanceInterestSet(LargeVisibleKeys, centerIndex: 0));
+        CompleteActiveWork();
+    }
+
+    /// <summary>
+    /// Combined stress: three publish cycles that move the camera center.
+    /// Each cycle re-orders the same 1000-key queue by a different center.
+    /// </summary>
+    [Benchmark]
+    public void FastScrollStress_PriorityCenterChange()
+    {
+        // Cycle 1: center near the low-index tiles.
+        EnqueueAll(_coordinator!, LargeVisibleKeys.Reverse());
+        _coordinator!.PublishInterestSet(BuildDistanceInterestSet(LargeVisibleKeys, centerIndex: 0));
+        CompleteActiveWork();
+
+        // Cycle 2: center far from every tile (same visibility, new order).
+        EnqueueAll(_coordinator!, LargeVisibleKeys.Reverse());
+        _coordinator!.PublishInterestSet(BuildDistanceInterestSet(LargeVisibleKeys, centerIndex: LargeVisibleCount * 10));
+        CompleteActiveWork();
+
+        // Cycle 3: center back near the middle of the tile strip.
+        EnqueueAll(_coordinator!, LargeVisibleKeys.Reverse());
+        _coordinator!.PublishInterestSet(BuildDistanceInterestSet(LargeVisibleKeys, centerIndex: LargeVisibleCount / 2));
+        CompleteActiveWork();
+    }
+
     // --- Helpers ---
 
     private static ViewportInterestSet BuildInterestSet(
@@ -178,6 +223,35 @@ public class TileWorkCoordinatorBenchmarks
             ? new HashSet<BackgroundTileCacheKey>(visible.Take(prefetchCount))
             : new HashSet<BackgroundTileCacheKey>();
         return new ViewportInterestSet(visibleSet, prefetchSet);
+    }
+
+    /// <summary>
+    /// Builds an interest set whose squared-distance provider ranks keys by
+    /// distance from the given center index (ICW-205).
+    /// </summary>
+    private static ViewportInterestSet BuildDistanceInterestSet(
+        BackgroundTileCacheKey[] visible, double centerIndex)
+    {
+        return new ViewportInterestSet(
+            new HashSet<BackgroundTileCacheKey>(visible),
+            new HashSet<BackgroundTileCacheKey>(),
+            centerX: centerIndex,
+            centerY: 0,
+            selectedMipLevel: 0,
+            squaredDistanceFromCenter: key =>
+            {
+                var dx = LargeKeyIndex(key.TileId) - centerIndex;
+                return dx * dx;
+            });
+    }
+
+    private static double LargeKeyIndex(string tileId)
+    {
+        const string prefix = "tile-big-";
+        return tileId.StartsWith(prefix, StringComparison.Ordinal)
+            && int.TryParse(tileId.AsSpan(prefix.Length), out var index)
+                ? index
+                : 0;
     }
 
     private static void EnqueueAll(

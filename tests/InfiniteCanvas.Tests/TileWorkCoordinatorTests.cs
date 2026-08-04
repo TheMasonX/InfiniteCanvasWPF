@@ -656,6 +656,311 @@ public class TileWorkCoordinatorTests
         Assert.That(counters.ActiveCount, Is.EqualTo(0));
     }
 
+    [Test]
+    public void PriorityQueue_DrainsVisibleBeforePrefetch()
+    {
+        // ICW-205: with a published interest set, a visible queued item must
+        // drain before a prefetch queued item, regardless of insertion order.
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 1);
+        var started1 = new ManualResetEventSlim(false);
+        var hold1 = new ManualResetEventSlim(false);
+        var started2 = new ManualResetEventSlim(false);
+        var hold2 = new ManualResetEventSlim(false);
+
+        var completedOrder = new List<BackgroundTileCacheKey>();
+        var orderLock = new object();
+        Action<BackgroundTileCacheKey, byte[]> record = (key, _) =>
+        {
+            lock (orderLock) completedOrder.Add(key);
+        };
+
+        // Key1: active filler that blocks.
+        coordinator.Request(Key1, BlockingFactory(started1, hold1), ClaimantA, CancellationToken.None,
+            onCompleted: record);
+        Assert.That(started1.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        // Key2: prefetch, blocks if promoted. Key3: visible, completes fast.
+        coordinator.Request(Key2, BlockingFactory(started2, hold2), ClaimantB, CancellationToken.None,
+            onCompleted: record);
+        coordinator.Request(Key3, Factory(66), ClaimantA, CancellationToken.None,
+            onCompleted: record);
+
+        coordinator.PublishInterestSet(new ViewportInterestSet(
+            new HashSet<BackgroundTileCacheKey> { Key1, Key3 },
+            new HashSet<BackgroundTileCacheKey> { Key2 }));
+
+        // Release Key1. Drain must promote visible Key3 before prefetch Key2.
+        hold1.Set();
+        Thread.Sleep(500);
+
+        // Release the prefetch filler so the test can finish.
+        hold2.Set();
+        Thread.Sleep(500);
+
+        lock (orderLock)
+        {
+            Assert.That(completedOrder, Is.EqualTo(new[] { Key1, Key3, Key2 }));
+        }
+    }
+
+    [Test]
+    public void PriorityQueue_OrdersVisibleByCenterDistance()
+    {
+        // ICW-205: two visible keys must drain closest-first using the
+        // squared-distance provider, not insertion order.
+        var nearKey = new BackgroundTileCacheKey("source-a", "tile-near", 1, 0);
+        var farKey = new BackgroundTileCacheKey("source-a", "tile-far", 1, 0);
+
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 1);
+        var started = new ManualResetEventSlim(false);
+        var hold = new ManualResetEventSlim(false);
+
+        var completedOrder = new List<BackgroundTileCacheKey>();
+        var orderLock = new object();
+        Action<BackgroundTileCacheKey, byte[]> record = (key, _) =>
+        {
+            lock (orderLock) completedOrder.Add(key);
+        };
+
+        // Fill the single slot with a blocking item.
+        coordinator.Request(Key1, BlockingFactory(started, hold), ClaimantA, CancellationToken.None,
+            onCompleted: record);
+        Assert.That(started.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        // Queue nearKey then farKey. Both visible. farKey is admitted second
+        // but is farther from the center, so it must drain last.
+        coordinator.Request(farKey, Factory(21), ClaimantB, CancellationToken.None, onCompleted: record);
+        coordinator.Request(nearKey, Factory(22), ClaimantB, CancellationToken.None, onCompleted: record);
+
+        coordinator.PublishInterestSet(new ViewportInterestSet(
+            new HashSet<BackgroundTileCacheKey> { nearKey, farKey },
+            new HashSet<BackgroundTileCacheKey>(),
+            centerX: 0,
+            centerY: 0,
+            selectedMipLevel: 0,
+            squaredDistanceFromCenter: key => key.TileId == "tile-near" ? 1d : 100d));
+
+        hold.Set();
+        Thread.Sleep(500);
+
+        lock (orderLock)
+        {
+            Assert.That(completedOrder, Is.EqualTo(new[] { Key1, nearKey, farKey }));
+        }
+    }
+
+    [Test]
+    public void PriorityQueue_MipSuitabilityBreaksDistanceTie()
+    {
+        // ICW-205: two visible keys at equal distance must drain the mip
+        // closest to the selected mip level first.
+        var keyMip0 = new BackgroundTileCacheKey("source-a", "tile-mip0", 1, 0);
+        var keyMip1 = new BackgroundTileCacheKey("source-a", "tile-mip1", 1, 1);
+
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 1);
+        var started = new ManualResetEventSlim(false);
+        var hold = new ManualResetEventSlim(false);
+
+        var completedOrder = new List<BackgroundTileCacheKey>();
+        var orderLock = new object();
+        Action<BackgroundTileCacheKey, byte[]> record = (key, _) =>
+        {
+            lock (orderLock) completedOrder.Add(key);
+        };
+
+        coordinator.Request(Key1, BlockingFactory(started, hold), ClaimantA, CancellationToken.None,
+            onCompleted: record);
+        Assert.That(started.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        // keyMip0 (mip 0) admitted before keyMip1 (mip 1). Equal distance.
+        coordinator.Request(keyMip0, Factory(10), ClaimantB, CancellationToken.None, onCompleted: record);
+        coordinator.Request(keyMip1, Factory(30), ClaimantB, CancellationToken.None, onCompleted: record);
+
+        coordinator.PublishInterestSet(new ViewportInterestSet(
+            new HashSet<BackgroundTileCacheKey> { keyMip0, keyMip1 },
+            new HashSet<BackgroundTileCacheKey>(),
+            centerX: 0,
+            centerY: 0,
+            selectedMipLevel: 1,
+            squaredDistanceFromCenter: _ => 0d));
+
+        hold.Set();
+        Thread.Sleep(500);
+
+        lock (orderLock)
+        {
+            Assert.That(completedOrder, Is.EqualTo(new[] { Key1, keyMip1, keyMip0 }));
+        }
+    }
+
+    [Test]
+    public void PriorityQueue_NullSchedulingContext_PreservesFifoWithinClass()
+    {
+        // ICW-205: with no distance provider or selected mip, equal-class
+        // items must drain in admission (FIFO) order.
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 1);
+        var started = new ManualResetEventSlim(false);
+        var hold = new ManualResetEventSlim(false);
+
+        var completedOrder = new List<BackgroundTileCacheKey>();
+        var orderLock = new object();
+        Action<BackgroundTileCacheKey, byte[]> record = (key, _) =>
+        {
+            lock (orderLock) completedOrder.Add(key);
+        };
+
+        coordinator.Request(Key1, BlockingFactory(started, hold), ClaimantA, CancellationToken.None,
+            onCompleted: record);
+        Assert.That(started.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        coordinator.Request(Key2, Factory(20), ClaimantB, CancellationToken.None, onCompleted: record);
+        coordinator.Request(Key3, Factory(30), ClaimantB, CancellationToken.None, onCompleted: record);
+
+        coordinator.PublishInterestSet(new ViewportInterestSet(
+            new HashSet<BackgroundTileCacheKey> { Key2, Key3 },
+            new HashSet<BackgroundTileCacheKey>()));
+
+        hold.Set();
+        Thread.Sleep(500);
+
+        lock (orderLock)
+        {
+            Assert.That(completedOrder, Is.EqualTo(new[] { Key1, Key2, Key3 }));
+        }
+    }
+
+    [Test]
+    public void VisibleInFlightWork_SurvivesClaimantTokenFire()
+    {
+        // No-flash rule (ICW-205): a running item whose key is in the published
+        // interest set must NOT be canceled when its claimant token fires. The
+        // next frame re-claims the same key and generation completes once.
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 4);
+        using var claimantCts = new CancellationTokenSource();
+        var started = new ManualResetEventSlim(false);
+        var hold = new ManualResetEventSlim(false);
+
+        coordinator.Request(Key1, BlockingFactory(started, hold), ClaimantA, claimantCts.Token);
+        Assert.That(started.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        // Key1 is still visible. Publish an interest set that includes it.
+        coordinator.PublishInterestSet(new ViewportInterestSet(
+            new HashSet<BackgroundTileCacheKey> { Key1 },
+            new HashSet<BackgroundTileCacheKey>()));
+
+        // Frame boundary: the previous frame's token fires.
+        claimantCts.Cancel();
+        Thread.Sleep(500);
+
+        // The work must still be running, not canceled.
+        var counters = coordinator.GetCounters();
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(counters.CanceledCount, Is.EqualTo(0));
+            Assert.That(counters.ActiveCount, Is.EqualTo(1));
+        }
+
+        // The next frame re-claims the same key (coalesce) and the fill
+        // completes exactly once.
+        coordinator.Request(Key1, BlockingFactory(started, hold), ClaimantB, CancellationToken.None);
+        hold.Set();
+        Assert.That(() => coordinator.GetCounters().CompletedCount,
+            Is.EqualTo(1).After(2, 100));
+        Assert.That(coordinator.GetCounters().CanceledCount, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void NonVisibleInFlightWork_CanceledOnClaimantTokenFire()
+    {
+        // No-flash rule (ICW-205): a running item whose key is NOT in the
+        // published interest set must be canceled when its claimant token fires.
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 4);
+        using var claimantCts = new CancellationTokenSource();
+        var started = new ManualResetEventSlim(false);
+        var hold = new ManualResetEventSlim(false);
+
+        coordinator.Request(Key1, BlockingFactory(started, hold), ClaimantA, claimantCts.Token);
+        Assert.That(started.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        // Key1 is NOT in the interest set (empty).
+        coordinator.PublishInterestSet(ViewportInterestSet.Empty);
+
+        claimantCts.Cancel();
+        hold.Set();
+        Thread.Sleep(500);
+
+        var counters = coordinator.GetCounters();
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(counters.CanceledCount, Is.EqualTo(1));
+            Assert.That(counters.ActiveCount, Is.EqualTo(0));
+        }
+    }
+
+    [Test]
+    public void RemoveClaimant_InterestHeld_DoesNotCancelWork()
+    {
+        // No-flash rule (ICW-205): removing the last claimant of a running
+        // item whose key is in the interest set must not cancel the fill.
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 4);
+        var started = new ManualResetEventSlim(false);
+        var hold = new ManualResetEventSlim(false);
+
+        coordinator.Request(Key1, BlockingFactory(started, hold), ClaimantA, CancellationToken.None);
+        Assert.That(started.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        coordinator.PublishInterestSet(new ViewportInterestSet(
+            new HashSet<BackgroundTileCacheKey> { Key1 },
+            new HashSet<BackgroundTileCacheKey>()));
+
+        coordinator.RemoveClaimant(Key1, ClaimantA);
+
+        var counters = coordinator.GetCounters();
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(counters.CanceledCount, Is.EqualTo(0));
+            Assert.That(counters.ActiveCount, Is.EqualTo(1));
+        }
+
+        hold.Set();
+        Assert.That(() => coordinator.GetCounters().CompletedCount,
+            Is.EqualTo(1).After(2, 100));
+        Assert.That(coordinator.GetCounters().CanceledCount, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void QueuedCancellation_ReAdmittedSameKey_IsNotSkipped()
+    {
+        // ICW-205: canceling a queued item and re-requesting the same cache
+        // key must admit a fresh item. The cancellation tombstone is scoped
+        // to the canceled item's sequence, so the new item is not skipped.
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 1);
+        var started1 = new ManualResetEventSlim(false);
+        var hold1 = new ManualResetEventSlim(false);
+
+        byte[]? requeuedResult = null;
+        coordinator.Request(Key1, BlockingFactory(started1, hold1), ClaimantA, CancellationToken.None);
+        Assert.That(started1.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        // Queue Key2, then cancel it before it runs.
+        coordinator.Request(Key2, Factory(20), ClaimantB, CancellationToken.None);
+        coordinator.RemoveClaimant(Key2, ClaimantB);
+
+        // Re-request the same key. It must be admitted as a fresh item.
+        var admitted = coordinator.Request(Key2, Factory(55), ClaimantA, CancellationToken.None,
+            onCompleted: (_, p) => requeuedResult = p);
+        Assert.That(admitted, Is.True);
+
+        // Release the slot. The fresh Key2 must be promoted and complete.
+        hold1.Set();
+        Assert.That(() => coordinator.GetCounters().CompletedCount,
+            Is.EqualTo(2).After(2, 100));
+
+        Assert.That(requeuedResult, Is.Not.Null);
+        Assert.That(requeuedResult![0], Is.EqualTo(55));
+        Assert.That(coordinator.GetCounters().QueuedCount, Is.EqualTo(0));
+    }
+
     private sealed class TestReservation : ICacheReservation
     {
         private int _disposeCount;

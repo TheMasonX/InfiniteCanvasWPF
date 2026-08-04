@@ -6,19 +6,7 @@ namespace InfiniteCanvas.ViewModels;
 public partial class MainViewModel : ObservableObject
 {
     [ObservableProperty]
-    private int visibleItemCount;
-
-    [ObservableProperty]
-    private int totalItemCount;
-
-    [ObservableProperty]
     private TileBackgroundNoiseSettingsViewModel tileBackgroundNoiseSettings = new();
-
-    public void ApplyViewportState(int visibleItemCount, int totalItemCount)
-    {
-        VisibleItemCount = visibleItemCount;
-        TotalItemCount = totalItemCount;
-    }
 
     public void ApplySettings(CanvasUserSettings settings)
     {
