@@ -19,6 +19,9 @@ public partial class CanvasViewModel : ObservableObject
     [ObservableProperty]
     public partial int TotalItemCount { get; set; }
 
+    [ObservableProperty]
+    public partial IReadOnlyList<ICanvasItem> VisibleItems { get; set; } = [];
+
     public bool HasScene => SceneBounds.Width > 0 && SceneBounds.Height > 0;
 
     public void ResetCamera()
@@ -30,12 +33,19 @@ public partial class CanvasViewModel : ObservableObject
     // The canvas component owns all per-frame viewport state. MainWindow
     // publishes the frame result through this method so the canvas view model
     // stays self-contained and independent of MainViewModel or any spatial
-    // index service (ICW-309).
-    public void ApplyFrame(SpatialBounds frameViewport, int frameVisibleItemCount, int frameTotalItemCount)
+    // index service (ICW-309). The visible item list is optional so hosts can
+    // drive the view model from any ICanvasSceneSource without app types
+    // (ICW-312 consumer-host gate; ICW-314 consumes VisibleItems).
+    public void ApplyFrame(
+        SpatialBounds frameViewport,
+        int frameVisibleItemCount,
+        int frameTotalItemCount,
+        IReadOnlyList<ICanvasItem>? frameVisibleItems = null)
     {
         Viewport = frameViewport;
         VisibleItemCount = frameVisibleItemCount;
         TotalItemCount = frameTotalItemCount;
+        VisibleItems = frameVisibleItems ?? [];
     }
 
     public void SetSceneBounds(SpatialBounds bounds)

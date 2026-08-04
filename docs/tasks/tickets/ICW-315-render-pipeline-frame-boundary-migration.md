@@ -3,7 +3,7 @@ id: ICW-315-render-pipeline-frame-boundary-migration
 author: Copilot
 key: ICW-315
 title: Migrate render pipeline to the CanvasFrame boundary
-status: Proposed
+status: Done
 type: Story
 priority: P1
 tags:
@@ -21,6 +21,8 @@ related:
 links:
   - src/InfiniteCanvas.App/MainWindow.xaml.cs
   - src/InfiniteCanvas.App/Controls/CanvasControl.xaml.cs
+  - src/InfiniteCanvas.App/Controls/CanvasFrame.cs
+  - tests/InfiniteCanvas.Tests/FrameShellWiringTests.cs
   - docs/audits/canvas-data-source-abstraction-council-review-26-08-04.md
 created: 2026-08-04
 updated: 2026-08-04
@@ -54,6 +56,23 @@ The render-pipeline migration is the largest canvas chunk and is currently untic
 - Command: `dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release`
 - Command: `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release`
 - Command: `dotnet test tests/InfiniteCanvas.Windows.Tests/InfiniteCanvas.Windows.Tests.csproj --configuration Release`
+
+## Implementation Evidence (2026-08-04)
+
+- `CanvasFrame` defined in `src/InfiniteCanvas.App/Controls/CanvasFrame.cs`: frozen raster `ImageSource` plus items, viewport, visible/total counts, and pixel dimensions. The control never touches the backing memory section.
+- `CanvasControl.PublishFrame(CanvasFrame)` replaces `PublishFrame(UIElement)`. The control owns the persistent frame shell (`EnsureFrameShell` / `DetachFrameShell`), swaps only `Image.Source` per frame, applies the frame to `CanvasViewModel`, and raises `FramePublished`.
+- `MainWindow` builds a `CanvasFrame` per frame and publishes through the control. It keeps the render pipeline: `RenderFrameAsync`, back-buffer lifecycle, tile coordinator, cache budget, epoch guard, interest-set computation, and the `FrameBufferPool` handoff.
+- Overlay composition stays host-composed (ICW-314 decision pending): `MainWindow.OnCanvasFramePublished` repopulates the control-owned tile-grid and annotation canvases with the published camera snapshot.
+- `RasterVisible` on the control is driven by the layer-visibility settings and toggles.
+- `FrameShellWiringTests` now guards the control-owned shell: shell attach/detach exactly twice, `PublishFrame(CanvasFrame)` (no UIElement), no raster memory-section references, and MainWindow publishing a `CanvasFrame` with no direct Viewbox child assignment.
+
+## Gate Results
+
+- Canvas receives a `CanvasFrame`; the `PublishFrame(UIElement)` overload is gone (scan test enforced).
+- Behavior unchanged: no-flash shell invariant (attach/detach exactly twice), stale-frame epoch guard stays in the host, Wave-D ordering untouched.
+- Core 170/170, Windows 18/18, Release App build 0 errors.
+- No allocation or copy of the raster memory section on the boundary; the frozen `ImageSource` is handed to the control by reference.
+- Flake repair: `SampleImageGeneratorTests.TryGetPixelValue_ReturnsTileSampleForWorldCoordinate` was a pre-existing async race (fails 15/15 on clean HEAD). It now uses a blocked factory so the placeholder assertion is deterministic.
 
 ## Notes
 

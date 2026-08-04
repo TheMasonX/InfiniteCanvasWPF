@@ -2,7 +2,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\InfiniteCanvas.Core\InfiniteCanvas.Core.csproj" />
-    <ProjectReference Include="..\InfiniteCanvas.Spatial\InfiniteCanvas.Spatial.csproj" />
   </ItemGroup>
 
   <ItemGroup>

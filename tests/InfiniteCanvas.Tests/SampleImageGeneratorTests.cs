@@ -149,16 +149,38 @@ public class SampleImageGeneratorTests
     [Test]
     public void TryGetPixelValue_ReturnsTileSampleForWorldCoordinate()
     {
-        var tile = SampleImageGenerator.GenerateSet(1, 64, 32, objectsPerTile: 0, seed: 42)[0];
+        // A blocked native factory keeps generation in flight during the
+        // assertions, so the placeholder value is returned deterministically.
+        // Without the block, generation can complete before the fallback check
+        // and return a real noise pixel, which races the expected value.
+        var releaseGeneration = new ManualResetEventSlim(false);
+        var tile = new SampleImageTile(
+            "tile-pixel-sample",
+            new SpatialBounds(0, 0, 64, 32),
+            64,
+            32,
+            () =>
+            {
+                releaseGeneration.Wait();
+                return Enumerable.Repeat((byte)200, 64 * 32).ToArray();
+            },
+            []);
 
-        var inside = tile.TryGetPixelValue(tile.Bounds.X + 10, tile.Bounds.Y + 5, out var insideValue);
-        var outside = tile.TryGetPixelValue(tile.Bounds.Right, tile.Bounds.Bottom, out _);
-
-        using (Assert.EnterMultipleScope())
+        try
         {
-            Assert.That(inside, Is.True);
-            Assert.That(insideValue, Is.EqualTo((byte)128));
-            Assert.That(outside, Is.False);
+            var inside = tile.TryGetPixelValue(tile.Bounds.X + 10, tile.Bounds.Y + 5, out var insideValue);
+            var outside = tile.TryGetPixelValue(tile.Bounds.Right, tile.Bounds.Bottom, out _);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(inside, Is.True);
+                Assert.That(insideValue, Is.EqualTo((byte)128));
+                Assert.That(outside, Is.False);
+            }
+        }
+        finally
+        {
+            releaseGeneration.Set();
         }
     }
 

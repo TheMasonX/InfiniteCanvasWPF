@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using InfiniteCanvas.App.Controls;
 using InfiniteCanvas.Core;
 using InfiniteCanvas.Rendering;
 using InfiniteCanvas.Spatial;
@@ -14,7 +15,7 @@ using Serilog;
 
 namespace InfiniteCanvas.App;
 
-public partial class MainWindow : Window
+public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuerySource
 {
     private LiveSpatialIndexService<SampleAnnotation> _spatialIndex = null!;
     private CameraTransform _camera = null!;
@@ -33,10 +34,7 @@ public partial class MainWindow : Window
     private IReadOnlyList<SampleAnnotation> _annotations = [];
     private SpatialBounds _sceneBounds;
     private readonly FrameBufferPool _frameBufferPool = new();
-    private Grid? _frameShell;
-    private Image? _frameImage;
-    private Canvas? _tileGridLayer;
-    private Canvas? _annotationLayer;
+    private CameraSnapshot _lastPublishedCamera;
     private Point? _hoverPointerPosition;
     private string? _selectedAnnotationId;
     private AnnotationDisplayOptions _annotationDisplayOptions = AnnotationDisplayOptions.Default;
@@ -61,7 +59,6 @@ public partial class MainWindow : Window
     private int _frameCount;
 
     private Border ViewportHost => CanvasSurface.SurfaceHost;
-    private Viewbox FramePresenter => CanvasSurface.FrameHost;
     private TextBlock LoadingOverlay => CanvasSurface.LoadingText;
     private TextBlock PixelometerWorldText => CanvasSurface.WorldReadout;
     private TextBlock PixelometerTileText => CanvasSurface.TileReadout;
@@ -79,6 +76,14 @@ public partial class MainWindow : Window
         CanvasSurface.PointerMoved += OnCanvasPointerMoved;
         CanvasSurface.PointerWheel += OnCanvasPointerWheel;
         CanvasSurface.SizeChanged += OnViewportSizeChanged;
+        // The canvas owns the frame shell and raster display (ICW-315). The
+        // host keeps overlay composition and populates it per published frame.
+        CanvasSurface.FramePublished += OnCanvasFramePublished;
+        // The window is the concrete data-source implementation behind the
+        // canvas boundary (ICW-312, ADR-0007). The control consumes content
+        // only through these contracts, never through app types.
+        CanvasSurface.SceneSource = this;
+        CanvasSurface.SpatialQuerySource = this;
 
         // The MainViewModel is stable for the window lifetime. Regeneration
         // reuses it so user-edited settings never reset to defaults.
@@ -113,6 +118,80 @@ public partial class MainWindow : Window
     private void InitializeSpatialState()
     {
         _spatialIndex = new LiveSpatialIndexService<SampleAnnotation>(new StrTreeSpatialIndexBuilder<SampleAnnotation>());
+    }
+
+    // --- ICanvasSceneSource / ICanvasSpatialQuerySource (ICW-312, ADR-0007) ---
+    // The window implements the canvas data-source contracts. The canvas
+    // consumes content only through these members, never through concrete
+    // application types.
+
+    public SpatialBounds SceneBounds => _sceneBounds;
+
+    public int TotalItemCount => _spatialIndex.Count;
+
+    public event EventHandler? SceneChanged;
+
+    // One public method satisfies both contracts. ICanvasSceneSource and
+    // ICanvasSpatialQuerySource expose the same QueryVisible signature.
+    public IReadOnlyList<ICanvasItem> QueryVisible(SpatialBounds viewport)
+    {
+        // IReadOnlyList<out T> is covariant, so the SampleAnnotation result
+        // converts directly to IReadOnlyList<ICanvasItem>.
+        return _spatialIndex.Query(viewport);
+    }
+
+    public bool TryReadResidentPixel(double worldX, double worldY, int mipLevel, out CanvasPixelSample sample)
+    {
+        // Non-blocking resident read: never initiates tile generation
+        // (ICW-P0-PIXELOMETER-READOUT, closed by ICW-312).
+        if (_tiles.Count == 0
+            || !TileGridIndexLookup.TryGetTileIndex(
+                worldX,
+                worldY,
+                _sceneBounds,
+                _tiles[0].Bounds.Width,
+                _tiles[0].Bounds.Height,
+                _tileColumns,
+                _tiles.Count,
+                out var tileIndex))
+        {
+            sample = default;
+            return false;
+        }
+
+        var tile = _tiles[tileIndex];
+
+        byte background;
+        if (tile.TryGetResidentPixels(mipLevel, out var sourcePixels, out var residentMipLevel))
+        {
+            var sourceDimensions = BackgroundTileMipPolicy.GetDimensions(tile.PixelWidth, tile.PixelHeight, residentMipLevel);
+            var sourceX = Math.Clamp((int)((worldX - tile.Bounds.X) * sourceDimensions.Width / tile.Bounds.Width), 0, Math.Max(0, sourceDimensions.Width - 1));
+            var sourceY = Math.Clamp((int)((worldY - tile.Bounds.Y) * sourceDimensions.Height / tile.Bounds.Height), 0, Math.Max(0, sourceDimensions.Height - 1));
+            background = sourcePixels[(sourceY * sourceDimensions.Width) + sourceX];
+        }
+        else
+        {
+            background = tile.PlaceholderValue;
+        }
+
+        byte defect = 0;
+        var sampleArea = new SpatialBounds(worldX, worldY, 0.01, 0.01);
+        var hitAnnotations = _spatialIndex.Query(sampleArea);
+        for (var index = 0; index < hitAnnotations.Count; index++)
+        {
+            if (hitAnnotations[index].TryGetDefectValue(worldX, worldY, out var value))
+            {
+                defect = Math.Max(defect, value);
+            }
+        }
+
+        var dimensions = BackgroundTileMipPolicy.GetDimensions(tile.PixelWidth, tile.PixelHeight, mipLevel);
+        sample = new CanvasPixelSample(
+            background,
+            defect,
+            tile.Id,
+            new BackgroundTileReadoutInfo(tile.Id, mipLevel, dimensions.Width, dimensions.Height).Format());
+        return true;
     }
 
     private async void OnCanvasViewportChanged(object? sender, EventArgs e)
@@ -181,6 +260,9 @@ public partial class MainWindow : Window
         ShowBackgroundImagesCheckBox.IsChecked = settings.ShowBackgroundImages;
         _showBackgroundImages = settings.ShowBackgroundImages;
         _mainViewModel.ApplySettings(settings);
+        // The canvas owns the raster Image element; the host drives its
+        // visibility from the layer-visibility settings (ICW-315).
+        CanvasSurface.RasterVisible = _showBackgroundImages || _showImageTiles;
     }
 
     private async Task RegenerateSceneAsync(bool fitToWidth)
@@ -272,6 +354,10 @@ public partial class MainWindow : Window
 
             LoadingOverlay.Visibility = Visibility.Collapsed;
             await RequestRenderAsync();
+            // Notify scene-source consumers that the scene content changed
+            // (ICW-312). The canvas and any external host re-query through
+            // the source contract.
+            SceneChanged?.Invoke(this, EventArgs.Empty);
         }
         finally
         {
@@ -466,8 +552,6 @@ public partial class MainWindow : Window
 
         PublishFrame(factory, frame.Bitmap, frame.VisibleItems, camera, width, height);
         _renderRequestTracker.Advance();
-        // The canvas component owns all per-frame viewport state (ICW-309).
-        CanvasSurface.ViewModel.ApplyFrame(viewport, frame.VisibleItems.Count, _spatialIndex.Count);
 
         stopwatch.Stop();
         var generatedTileCount = _tiles.Count(tile => tile.IsBackgroundFetched);
@@ -559,22 +643,21 @@ public partial class MainWindow : Window
         int frameWidth,
         int frameHeight)
     {
-        EnsureFrameShell();
-        _frameShell!.Width = frameWidth;
-        _frameShell.Height = frameHeight;
-        if (_frameImage is not null)
-        {
-            // Keep the Image element stable and swap only its source. The
-            // Viewbox child tree is built once and never replaced per frame,
-            // so the visible frame has no teardown gap to flash black.
-            _frameImage.Visibility = (_showBackgroundImages || _showImageTiles)
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-            _frameImage.Source = bitmap;
-        }
-
-        UpdateTileGridLayer(camera, frameWidth, frameHeight);
-        UpdateAnnotationLayer(annotations, camera);
+        _lastPublishedCamera = camera;
+        // The canvas consumes a CanvasFrame value, never a host-built UIElement
+        // tree (ICW-315, ADR-0007). The raster handoff is zero-copy: the canvas
+        // displays the frozen ImageSource and never touches its backing memory
+        // section. IReadOnlyList<out T> covariance carries the SampleAnnotation
+        // list through the ICanvasItem contract without a mapping.
+        var frame = new CanvasFrame(
+            raster: bitmap,
+            items: annotations,
+            viewport: camera.GetViewportBounds(frameWidth, frameHeight),
+            visibleItemCount: annotations.Count,
+            totalItemCount: _spatialIndex.Count,
+            width: frameWidth,
+            height: frameHeight);
+        CanvasSurface.PublishFrame(frame);
         // Triple-buffer rotation (ICW-P0-BUFFER-REUSE-SYNC). The buffer that
         // was displayed until now moves to the retired slot instead of being
         // recycled as the back buffer immediately, so WPF's compositor has a
@@ -582,51 +665,17 @@ public partial class MainWindow : Window
         _frameBufferPool.Publish(renderedBuffer);
     }
 
-    private void EnsureFrameShell()
+    private void OnCanvasFramePublished(object? sender, CanvasFrame frame)
     {
-        if (_frameShell is not null)
-        {
-            return;
-        }
-
-        // The frame shell is attached to the Viewbox once and reused for the
-        // window lifetime. Replacing the whole Viewbox child on every publish
-        // tore down and rebuilt the visual tree per frame, which caused
-        // occasional black flashes while scrolling. Only the Image source and
-        // the overlay contents change per frame now.
-        var shell = new Grid
-        {
-            HorizontalAlignment = HorizontalAlignment.Left,
-            VerticalAlignment = VerticalAlignment.Top
-        };
-        var image = new Image
-        {
-            Stretch = Stretch.Fill,
-            SnapsToDevicePixels = true
-        };
-        var tileGridLayer = new Canvas
-        {
-            ClipToBounds = true,
-            IsHitTestVisible = false
-        };
-        var annotationLayer = new Canvas
-        {
-            ClipToBounds = true
-        };
-        shell.Children.Add(image);
-        shell.Children.Add(tileGridLayer);
-        shell.Children.Add(annotationLayer);
-        FramePresenter.Child = shell;
-
-        _frameShell = shell;
-        _frameImage = image;
-        _tileGridLayer = tileGridLayer;
-        _annotationLayer = annotationLayer;
+        // Host-composed overlays stay camera-synchronized with the raster that
+        // was published for this frame (ICW-315; overlay layering invariant).
+        UpdateTileGridLayer(_lastPublishedCamera, frame.Width, frame.Height);
+        UpdateAnnotationLayer(frame.Items, _lastPublishedCamera);
     }
 
     private void UpdateTileGridLayer(CameraSnapshot camera, int frameWidth, int frameHeight)
     {
-        var gridLayer = _tileGridLayer!;
+        var gridLayer = CanvasSurface.TileGridLayer!;
         gridLayer.Children.Clear();
         var gridBrush = new SolidColorBrush(Color.FromArgb(180, 40, 210, 190));
         gridBrush.Freeze();
@@ -662,13 +711,20 @@ public partial class MainWindow : Window
         }
     }
 
-    private void UpdateAnnotationLayer(IReadOnlyList<SampleAnnotation> annotations, CameraSnapshot camera)
+    private void UpdateAnnotationLayer(IReadOnlyList<ICanvasItem> items, CameraSnapshot camera)
     {
-        var annotationLayer = _annotationLayer!;
+        var annotationLayer = CanvasSurface.AnnotationLayer!;
         annotationLayer.Children.Clear();
 
-        foreach (var annotation in annotations)
+        foreach (var item in items)
         {
+            // The host composes app-specific visuals. ICW-314 moves selection
+            // and tooltip ownership into the canvas against the item contract.
+            if (item is not SampleAnnotation annotation)
+            {
+                continue;
+            }
+
             var topLeft = camera.WorldToScreen(annotation.Bounds.X, annotation.Bounds.Y);
             var width = annotation.Bounds.Width * camera.ScaleX;
             var height = annotation.Bounds.Height * camera.ScaleY;
@@ -816,6 +872,7 @@ public partial class MainWindow : Window
         }
 
         _showBackgroundImages = ShowBackgroundImagesCheckBox.IsChecked ?? true;
+        CanvasSurface.RasterVisible = _showBackgroundImages || _showImageTiles;
         await RequestRenderAsync();
     }
 
@@ -827,6 +884,7 @@ public partial class MainWindow : Window
         }
 
         _showImageTiles = ShowImageTilesCheckBox.IsChecked ?? true;
+        CanvasSurface.RasterVisible = _showBackgroundImages || _showImageTiles;
         await RequestRenderAsync();
     }
 
@@ -1181,11 +1239,7 @@ public partial class MainWindow : Window
 
         await _renderAction.DisposeAsync();
         CompositionTarget.Rendering -= OnCompositionTargetRendering;
-        FramePresenter.Child = null;
-        _frameShell = null;
-        _frameImage = null;
-        _tileGridLayer = null;
-        _annotationLayer = null;
+        CanvasSurface.DetachFrameShell();
         _frameBufferPool.Dispose();
         _tileCoordinator.CancelAll();
         _tileCoordinator.Dispose();
@@ -1256,88 +1310,22 @@ public partial class MainWindow : Window
         PixelometerWorldText.Text = $"WORLD X {worldX:F1}  Y {worldY:F1}";
 
         var mipLevel = BackgroundTileMipPolicy.SelectMipLevel(camera);
-        if (TryReadPixelValue(worldX, worldY, camera, mipLevel, out var backgroundValue, out var defectValue, out var tileId, out var tileInfo))
+        // Read through the scene source contract so the read never initiates
+        // tile generation (ICW-312 closes ICW-P0-PIXELOMETER-READOUT). When
+        // another host supplies a different source, the pixelometer works
+        // against the same non-blocking contract.
+        var sceneSource = CanvasSurface.SceneSource;
+        if (sceneSource is not null
+            && sceneSource.TryReadResidentPixel(worldX, worldY, mipLevel, out var sample))
         {
-            var finalValue = ResolveDisplayPixelValue(backgroundValue, worldX, worldY);
-            PixelometerTileText.Text = tileInfo.Format();
-            PixelometerValueText.Text = $"PIXEL {finalValue}  ({tileId}) bg {backgroundValue} + defect {defectValue}";
+            var finalValue = ResolveDisplayPixelValue(sample.Background, worldX, worldY);
+            PixelometerTileText.Text = sample.TileInfo;
+            PixelometerValueText.Text = $"PIXEL {finalValue}  ({sample.TileId}) bg {sample.Background} + defect {sample.Defect}";
             return;
         }
 
         PixelometerTileText.Text = "TILE --";
         PixelometerValueText.Text = "PIXEL --";
-    }
-
-    private bool TryReadPixelValue(
-        double worldX,
-        double worldY,
-        CameraSnapshot camera,
-        int mipLevel,
-        out byte background,
-        out byte defect,
-        out string tileId,
-        out BackgroundTileReadoutInfo tileInfo)
-    {
-        if (_tiles.Count > 0
-            && TileGridIndexLookup.TryGetTileIndex(
-                worldX,
-                worldY,
-                _sceneBounds,
-                _tiles[0].Bounds.Width,
-                _tiles[0].Bounds.Height,
-                _tileColumns,
-                _tiles.Count,
-                out var tileIndex))
-        {
-            var tile = _tiles[tileIndex];
-
-            // Sample the pixel from the visible/resident mip level rather than
-            // forcing native-resolution generation. Convert world -> tile ->
-            // mip coordinates using the resident mip dimensions so indexing is
-            // safe when a lower-resolution mip is used as a fallback.
-            byte[] sourcePixels;
-            // Pass the cache budget reservation so that hover-triggered
-            // tile generation participates in budget accounting instead of
-            // bypassing it (which would create untracked, unevictable tiles).
-            var hasSourcePixels = tile.TryGetPixelsNonBlocking(
-                mipLevel, out sourcePixels, out var residentMipLevel,
-                tryReserveCacheEntry: (cacheKey, byteCost) => _tileCacheBudget.TryReserve(tile, cacheKey, byteCost));
-
-            var sourceDimensions = BackgroundTileMipPolicy.GetDimensions(tile.PixelWidth, tile.PixelHeight, residentMipLevel);
-            var sourceX = Math.Clamp((int)((worldX - tile.Bounds.X) * sourceDimensions.Width / tile.Bounds.Width), 0, Math.Max(0, sourceDimensions.Width - 1));
-            var sourceY = Math.Clamp((int)((worldY - tile.Bounds.Y) * sourceDimensions.Height / tile.Bounds.Height), 0, Math.Max(0, sourceDimensions.Height - 1));
-
-            if (hasSourcePixels)
-            {
-                background = sourcePixels[(sourceY * sourceDimensions.Width) + sourceX];
-            }
-            else
-            {
-                background = tile.PlaceholderValue;
-            }
-
-            defect = 0;
-            var sampleArea = new SpatialBounds(worldX, worldY, 0.01, 0.01);
-            var hitAnnotations = _spatialIndex.Query(sampleArea);
-            for (var index = 0; index < hitAnnotations.Count; index++)
-            {
-                if (hitAnnotations[index].TryGetDefectValue(worldX, worldY, out var value))
-                {
-                    defect = Math.Max(defect, value);
-                }
-            }
-
-            var dimensions = BackgroundTileMipPolicy.GetDimensions(tile.PixelWidth, tile.PixelHeight, mipLevel);
-            tileInfo = new BackgroundTileReadoutInfo(tile.Id, mipLevel, dimensions.Width, dimensions.Height);
-            tileId = tile.Id;
-            return true;
-        }
-
-        background = default;
-        defect = default;
-        tileId = string.Empty;
-        tileInfo = new BackgroundTileReadoutInfo(string.Empty, mipLevel, 0, 0);
-        return false;
     }
 
     private byte ResolveDisplayPixelValue(byte backgroundValue, double worldX, double worldY)

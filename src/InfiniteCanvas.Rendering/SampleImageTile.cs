@@ -217,30 +217,35 @@ public sealed class SampleImageTile
             return false;
         }
 
+        return TryGetBestResidentMip(0, out pixels, out _);
+    }
+
+    /// <summary>
+    /// Reads resident pixels for the requested mip level without starting any
+    /// tile generation. This is the pixelometer-safe read path (ICW-312): it
+    /// returns the best already-resident payload, or false. It must never
+    /// initiate tile acquisition as a side effect (ICW-P0-PIXELOMETER-READOUT).
+    /// </summary>
+    public bool TryGetResidentPixels(int mipLevel, out byte[] pixels, out int residentMipLevel)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(mipLevel);
+
+        if (mipLevel == 0 && TryGetNativePixels(out pixels!))
+        {
+            residentMipLevel = 0;
+            return true;
+        }
+
         lock (_cacheGate)
         {
-            var fallbackCandidates = new List<(int MipLevel, byte[] Pixels)>();
-            if (_pixels is not null)
+            if (_mipPixels.TryGetValue(mipLevel, out pixels!))
             {
-                fallbackCandidates.Add((0, _pixels));
-            }
-
-            fallbackCandidates.AddRange(_mipPixels.Select(pair => (pair.Key, pair.Value)));
-
-            var fallback = fallbackCandidates
-                .OrderBy(candidate => Math.Abs(candidate.MipLevel - 0))
-                .ThenBy(candidate => candidate.MipLevel)
-                .FirstOrDefault(candidate => candidate.Pixels is not null);
-
-            if (fallback.Pixels is not null)
-            {
-                pixels = fallback.Pixels;
+                residentMipLevel = mipLevel;
                 return true;
             }
         }
 
-        pixels = [];
-        return false;
+        return TryGetBestResidentMip(mipLevel, out pixels, out residentMipLevel);
     }
 
     public bool TryGetPixelsNonBlocking(
@@ -294,15 +299,28 @@ public sealed class SampleImageTile
             EnsureMipPixelsGenerationStarted(mipLevel, tryReserveCacheEntry);
         }
 
+        return TryGetBestResidentMip(mipLevel, out pixels, out residentMipLevel);
+    }
+
+    /// <summary>
+    /// Returns the resident payload closest to the requested mip level,
+    /// preferring a higher-resolution mip over a lower one at equal distance.
+    /// Never starts generation.
+    /// </summary>
+    private bool TryGetBestResidentMip(int mipLevel, out byte[] pixels, out int residentMipLevel)
+    {
         lock (_cacheGate)
         {
-            var fallbackCandidates = new List<(int MipLevel, byte[] Pixels)>();
+            var fallbackCandidates = new List<(int MipLevel, byte[] Pixels)>(_mipPixels.Count + 1);
             if (_pixels is not null)
             {
                 fallbackCandidates.Add((0, _pixels));
             }
 
-            fallbackCandidates.AddRange(_mipPixels.Select(pair => (pair.Key, pair.Value)));
+            foreach (var pair in _mipPixels)
+            {
+                fallbackCandidates.Add((pair.Key, pair.Value));
+            }
 
             var fallback = fallbackCandidates
                 .OrderBy(candidate => Math.Abs(candidate.MipLevel - mipLevel))
@@ -852,7 +870,7 @@ public sealed class SampleImageTile
 #endif
 }
 
-public class SampleAnnotation : ISpatialEntity
+public class SampleAnnotation : ISpatialEntity, ICanvasItem
 {
     public string Id { get; }
     public string TileId { get; }

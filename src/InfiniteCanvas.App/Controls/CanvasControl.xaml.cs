@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using InfiniteCanvas.Core;
 using InfiniteCanvas.ViewModels;
@@ -36,6 +37,40 @@ public partial class CanvasControl : UserControl
 
     public CanvasViewModel ViewModel { get; }
 
+    /// <summary>
+    /// Injected scene content source (ICW-312, ADR-0007). The host supplies
+    /// this dependency property so the control never touches a generic
+    /// spatial index or an application data type. The parameterless
+    /// constructor stays for XAML and designer support.
+    /// </summary>
+    public static readonly DependencyProperty SceneSourceProperty = DependencyProperty.Register(
+        nameof(SceneSource),
+        typeof(ICanvasSceneSource),
+        typeof(CanvasControl),
+        new PropertyMetadata(null));
+
+    /// <summary>
+    /// Injected non-generic spatial query source (ICW-312). The control
+    /// consumes visible items through this contract only.
+    /// </summary>
+    public static readonly DependencyProperty SpatialQuerySourceProperty = DependencyProperty.Register(
+        nameof(SpatialQuerySource),
+        typeof(ICanvasSpatialQuerySource),
+        typeof(CanvasControl),
+        new PropertyMetadata(null));
+
+    public ICanvasSceneSource? SceneSource
+    {
+        get => (ICanvasSceneSource?)GetValue(SceneSourceProperty);
+        set => SetValue(SceneSourceProperty, value);
+    }
+
+    public ICanvasSpatialQuerySource? SpatialQuerySource
+    {
+        get => (ICanvasSpatialQuerySource?)GetValue(SpatialQuerySourceProperty);
+        set => SetValue(SpatialQuerySourceProperty, value);
+    }
+
     public Border SurfaceHost => ViewportHost;
     public Viewbox FrameHost => FramePresenter;
     public TextBlock LoadingText => LoadingOverlay;
@@ -44,13 +79,116 @@ public partial class CanvasControl : UserControl
     public TextBlock ValueReadout => PixelometerValueText;
     public ProgressBar BusyBar => RenderBusyBar;
 
+    // Persistent frame shell (ICW-317 pattern, owned by the control since
+    // ICW-315). The shell attaches to the Viewbox once; each frame only swaps
+    // Image.Source, so the visible frame has no teardown gap to flash black.
+    private Grid? _frameShell;
+    private Image? _frameImage;
+    private Canvas? _tileGridLayer;
+    private Canvas? _annotationLayer;
+    private bool _rasterVisible = true;
+
+    /// <summary>Host-composed tile-grid overlay canvas.</summary>
+    public Canvas? TileGridLayer => _tileGridLayer;
+
+    /// <summary>Host-composed annotation overlay canvas.</summary>
+    public Canvas? AnnotationLayer => _annotationLayer;
+
+    /// <summary>
+    /// Show or hide the raster Image element without rebuilding the shell.
+    /// The host drives this from its layer-visibility settings.
+    /// </summary>
+    public bool RasterVisible
+    {
+        get => _rasterVisible;
+        set
+        {
+            _rasterVisible = value;
+            if (_frameImage is not null)
+            {
+                _frameImage.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+    }
+
     public event EventHandler? ViewportChanged;
     public event MouseEventHandler? PointerMoved;
     public event MouseWheelEventHandler? PointerWheel;
+    public event EventHandler<CanvasFrame>? FramePublished;
 
-    public void PublishFrame(UIElement frame)
+    /// <summary>
+    /// Publishes a rendered frame across the canvas boundary (ICW-315,
+    /// ADR-0007). The canvas displays the frozen raster and applies the frame
+    /// state to its view model. It never touches the raster's backing memory
+    /// section, so the zero-copy handoff stays intact. The host keeps overlay
+    /// composition and subscribes to <see cref="FramePublished"/>.
+    /// </summary>
+    public void PublishFrame(CanvasFrame frame)
     {
-        FramePresenter.Child = frame;
+        ArgumentNullException.ThrowIfNull(frame);
+        EnsureFrameShell();
+        _frameShell!.Width = frame.Width;
+        _frameShell.Height = frame.Height;
+        if (_frameImage is not null)
+        {
+            _frameImage.Visibility = _rasterVisible ? Visibility.Visible : Visibility.Collapsed;
+            _frameImage.Source = frame.Raster;
+        }
+
+        ViewModel.ApplyFrame(frame.Viewport, frame.VisibleItemCount, frame.TotalItemCount, frame.Items);
+        FramePublished?.Invoke(this, frame);
+    }
+
+    /// <summary>
+    /// Attaches the persistent frame shell to the Viewbox exactly once. The
+    /// shell holds the raster Image plus host-composed overlay canvases. It
+    /// is never replaced per frame (ICW-317 no-flash invariant).
+    /// </summary>
+    private void EnsureFrameShell()
+    {
+        if (_frameShell is not null)
+        {
+            return;
+        }
+
+        var shell = new Grid
+        {
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top
+        };
+        var image = new Image
+        {
+            Stretch = Stretch.Fill,
+            SnapsToDevicePixels = true
+        };
+        var tileGridLayer = new Canvas
+        {
+            ClipToBounds = true,
+            IsHitTestVisible = false
+        };
+        var annotationLayer = new Canvas
+        {
+            ClipToBounds = true
+        };
+        shell.Children.Add(image);
+        shell.Children.Add(tileGridLayer);
+        shell.Children.Add(annotationLayer);
+        FramePresenter.Child = shell;
+
+        _frameShell = shell;
+        _frameImage = image;
+        _tileGridLayer = tileGridLayer;
+        _annotationLayer = annotationLayer;
+    }
+
+    /// <summary>Detaches the frame shell, for example on host shutdown.</summary>
+    public void DetachFrameShell()
+    {
+        FramePresenter.Child = null;
+        _frameShell = null;
+        _frameImage = null;
+        _tileGridLayer = null;
+        _annotationLayer = null;
     }
 
     public void ResetCamera()

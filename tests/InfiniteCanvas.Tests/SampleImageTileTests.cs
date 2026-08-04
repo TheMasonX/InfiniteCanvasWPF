@@ -311,4 +311,107 @@ public class SampleImageTileTests
         Assert.That(tile.IsMipGenerated(2), Is.True);
         Assert.That(Volatile.Read(ref attempts), Is.GreaterThanOrEqualTo(2));
     }
+
+    [Test]
+    public void ResidentRead_DoesNotStartGenerationWhenNothingIsResident()
+    {
+        // ICW-312: the pixelometer-safe read must never initiate tile
+        // generation (ICW-P0-PIXELOMETER-READOUT). A tile with no resident
+        // payload returns false and leaves generation untouched.
+        var nativeGenerationStarted = new ManualResetEventSlim(false);
+        var mipGenerationStarted = new ManualResetEventSlim(false);
+        var tile = new SampleImageTile(
+            "tile-resident-read-empty",
+            new SpatialBounds(0, 0, 8, 8),
+            8,
+            8,
+            () =>
+            {
+                nativeGenerationStarted.Set();
+                return Enumerable.Repeat((byte)11, 64).ToArray();
+            },
+            [],
+            mipPixelFactory: mipLevel =>
+            {
+                mipGenerationStarted.Set();
+                var dims = BackgroundTileMipPolicy.GetDimensions(8, 8, mipLevel);
+                return Enumerable.Repeat((byte)(20 + mipLevel), dims.Width * dims.Height).ToArray();
+            });
+
+        Assert.That(tile.TryGetResidentPixels(2, out _, out _), Is.False);
+        Assert.That(tile.IsGenerationQueued, Is.False);
+        Assert.That(nativeGenerationStarted.Wait(TimeSpan.FromMilliseconds(50)), Is.False);
+        Assert.That(mipGenerationStarted.Wait(TimeSpan.FromMilliseconds(50)), Is.False);
+    }
+
+    [Test]
+    public void ResidentRead_ReturnsResidentNativePixels_WithoutStartingMipWork()
+    {
+        var mipGenerationStarted = new ManualResetEventSlim(false);
+        var tile = new SampleImageTile(
+            "tile-resident-read-native",
+            new SpatialBounds(0, 0, 8, 8),
+            8,
+            8,
+            () => Enumerable.Repeat((byte)11, 64).ToArray(),
+            [],
+            mipPixelFactory: mipLevel =>
+            {
+                mipGenerationStarted.Set();
+                var dims = BackgroundTileMipPolicy.GetDimensions(8, 8, mipLevel);
+                return Enumerable.Repeat((byte)(20 + mipLevel), dims.Width * dims.Height).ToArray();
+            });
+
+        // Native pixels become resident through the render path, not the read.
+        _ = tile.Pixels;
+        Assert.That(tile.IsImageGenerated, Is.True);
+
+        Assert.That(tile.TryGetResidentPixels(2, out var pixels, out var residentMipLevel), Is.True);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(residentMipLevel, Is.EqualTo(0));
+            Assert.That(pixels[0], Is.EqualTo((byte)11));
+        }
+
+        Assert.That(mipGenerationStarted.Wait(TimeSpan.FromMilliseconds(50)), Is.False);
+    }
+
+    [Test]
+    public void ResidentRead_PrefersClosestResidentMip_WithoutStartingGeneration()
+    {
+        // Mip 1 is resident, mip 2 is requested and absent. The read returns
+        // mip 1 without starting mip-2 generation.
+        var mipTwoGenerationStarted = new ManualResetEventSlim(false);
+        var tile = new SampleImageTile(
+            "tile-resident-read-fallback",
+            new SpatialBounds(0, 0, 8, 8),
+            8,
+            8,
+            () => Enumerable.Repeat((byte)11, 64).ToArray(),
+            [],
+            mipPixelFactory: mipLevel =>
+            {
+                if (mipLevel == 2)
+                {
+                    mipTwoGenerationStarted.Set();
+                }
+
+                var dims = BackgroundTileMipPolicy.GetDimensions(8, 8, mipLevel);
+                return Enumerable.Repeat((byte)(20 + mipLevel), dims.Width * dims.Height).ToArray();
+            });
+
+        // Make mip 1 resident through the generating path.
+        Assert.That(tile.TryGetPixelsNonBlocking(1, out _, out _), Is.False);
+        SpinWait.SpinUntil(() => tile.IsMipGenerated(1), TimeSpan.FromSeconds(2));
+        Assert.That(tile.IsMipGenerated(1), Is.True);
+
+        Assert.That(tile.TryGetResidentPixels(2, out var fallbackPixels, out var residentMipLevel), Is.True);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(residentMipLevel, Is.EqualTo(1));
+            Assert.That(fallbackPixels[0], Is.EqualTo((byte)21));
+        }
+
+        Assert.That(mipTwoGenerationStarted.Wait(TimeSpan.FromMilliseconds(50)), Is.False);
+    }
 }
