@@ -13,13 +13,15 @@ tags:
   - library-extraction
 dependsOn:
   - ICW-312
+  - ICW-031
 related:
   - ADR-0007
-  - ICW-031
   - ICW-101
+  - ICW-315
 links:
   - src/InfiniteCanvas.App/MainWindow.xaml.cs
   - docs/ADR/0007-canvas-reusable-component-boundary.md
+  - docs/audits/canvas-data-source-abstraction-council-review-26-08-04.md
 created: 2026-08-04
 updated: 2026-08-04
 ---
@@ -53,7 +55,10 @@ Today `MainWindow.BuildFrameVisual` builds the annotation layer against the conc
 ## Notes
 
 - Depends on the data source abstraction (ICW-312), which defines how the canvas receives items.
-- Coordinate with the council on the item contract.
+- Council decision (2026-08-04): depends on ICW-031 (typed annotation metrics) for the tooltip payload. The tooltip half of this task waits for ICW-031.
+- The item contract starts as `ICanvasItem` (Id + Bounds) in ICW-312 and is extended here with hit-test, tooltip payload, and visual template.
+- The view model stores the visible item list as `IReadOnlyList<ICanvasItem>` so the control can hit-test.
+- Full council report: docs/audits/canvas-data-source-abstraction-council-review-26-08-04.md.
 
 ## Related Tasks
 

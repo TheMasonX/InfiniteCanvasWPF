@@ -30,12 +30,25 @@ Define the canvas as a component with a stable, app-agnostic boundary. The canva
 
 The existing interaction ownership from ICW-311 stays: the control owns pan, zoom, and scrollbars.
 
+## Council Refinement (2026-08-04)
+
+A four-seat council reviewed this boundary. No implementation yet. Decisions:
+
+1. Contracts live in `InfiniteCanvas.Core`: `ICanvasItem` (Id + Bounds), `ICanvasSceneSource`, and `ICanvasSpatialQuerySource`. Revisit the location before the assembly move.
+2. Sources are dependency properties on `CanvasControl`. The parameterless constructor stays for XAML and designer support.
+3. The frame boundary becomes `CanvasFrame` (frozen raster + items + viewport + counts). The canvas never touches the backing memory section.
+4. The render pipeline, tile coordinator, cache budget, epoch guard, and interest-set computation stay in the host.
+5. Tile-material reuse of `IBackgroundTileSource` waits for ICW-076.
+6. ICW-313 (IInputHandler) is a scheduling guard, not a hard dependency on ICW-312.
+
+Full report: docs/audits/canvas-data-source-abstraction-council-review-26-08-04.md.
+
 ## Consequences
 
 - `MainWindow` shrinks to orchestration: generate a scene, wrap it in the injected sources, and let the canvas consume it.
 - Another application can host the canvas and supply its own item, tile, and spatial sources.
 - Selection and tooltip behavior become deterministic and testable inside the control.
-- The change is large. It must be sequenced so the app keeps working at each step. ICW-312, ICW-313, and ICW-314 define the sequence.
+- The change is large. It must be sequenced so the app keeps working at each step. ICW-312, ICW-315, ICW-314, and ICW-316 define the sequence.
 
 ## Related
 
@@ -43,4 +56,6 @@ The existing interaction ownership from ICW-311 stays: the control owns pan, zoo
 - ICW-312 (data source abstraction)
 - ICW-313 (input handler abstraction)
 - ICW-314 (selection and tooltip ownership)
+- ICW-315 (frame boundary migration)
+- ICW-316 (assembly extraction)
 - ADR-0005 (source-agnostic tile boundary)
