@@ -33,6 +33,10 @@ public partial class MainWindow : Window
     private IReadOnlyList<SampleAnnotation> _annotations = [];
     private SpatialBounds _sceneBounds;
     private readonly FrameBufferPool _frameBufferPool = new();
+    private Grid? _frameShell;
+    private Image? _frameImage;
+    private Canvas? _tileGridLayer;
+    private Canvas? _annotationLayer;
     private Point? _hoverPointerPosition;
     private string? _selectedAnnotationId;
     private AnnotationDisplayOptions _annotationDisplayOptions = AnnotationDisplayOptions.Default;
@@ -452,8 +456,7 @@ public partial class MainWindow : Window
         if (!_renderRequestTracker.IsCurrent(requestVersion))
             return;
 
-        var frameVisual = BuildFrameVisual(frame.Bitmap, frame.VisibleItems, camera, width, height);
-        PublishFrame(factory, frameVisual);
+        PublishFrame(factory, frame.Bitmap, frame.VisibleItems, camera, width, height);
         _renderRequestTracker.Advance();
         // The canvas component owns all per-frame viewport state (ICW-309).
         CanvasSurface.ViewModel.ApplyFrame(viewport, frame.VisibleItems.Count, _spatialIndex.Count);
@@ -540,9 +543,30 @@ public partial class MainWindow : Window
         return _frameBufferPool.AcquireBackBuffer(width, height);
     }
 
-    private void PublishFrame(ZeroCopyBitmapFactory renderedBuffer, Grid frameVisual)
+    private void PublishFrame(
+        ZeroCopyBitmapFactory renderedBuffer,
+        ImageSource bitmap,
+        IReadOnlyList<SampleAnnotation> annotations,
+        CameraSnapshot camera,
+        int frameWidth,
+        int frameHeight)
     {
-        FramePresenter.Child = frameVisual;
+        EnsureFrameShell();
+        _frameShell!.Width = frameWidth;
+        _frameShell.Height = frameHeight;
+        if (_frameImage is not null)
+        {
+            // Keep the Image element stable and swap only its source. The
+            // Viewbox child tree is built once and never replaced per frame,
+            // so the visible frame has no teardown gap to flash black.
+            _frameImage.Visibility = (_showBackgroundImages || _showImageTiles)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+            _frameImage.Source = bitmap;
+        }
+
+        UpdateTileGridLayer(camera, frameWidth, frameHeight);
+        UpdateAnnotationLayer(annotations, camera);
         // Triple-buffer rotation (ICW-P0-BUFFER-REUSE-SYNC). The buffer that
         // was displayed until now moves to the retired slot instead of being
         // recycled as the back buffer immediately, so WPF's compositor has a
@@ -550,40 +574,90 @@ public partial class MainWindow : Window
         _frameBufferPool.Publish(renderedBuffer);
     }
 
-    private void FitSceneToWidth()
+    private void EnsureFrameShell()
     {
-        ApplyFitToWidthZoom();
-        ClampCameraToScene();
-    }
-
-    private Grid BuildFrameVisual(
-        ImageSource bitmap,
-        IReadOnlyList<SampleAnnotation> annotations,
-        CameraSnapshot camera,
-        int frameWidth,
-        int frameHeight)
-    {
-        var frame = new Grid
+        if (_frameShell is not null)
         {
-            Width = frameWidth,
-            Height = frameHeight,
+            return;
+        }
+
+        // The frame shell is attached to the Viewbox once and reused for the
+        // window lifetime. Replacing the whole Viewbox child on every publish
+        // tore down and rebuilt the visual tree per frame, which caused
+        // occasional black flashes while scrolling. Only the Image source and
+        // the overlay contents change per frame now.
+        var shell = new Grid
+        {
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Top
         };
-        if (_showBackgroundImages || _showImageTiles)
+        var image = new Image
         {
-            frame.Children.Add(new Image
+            Stretch = Stretch.Fill,
+            SnapsToDevicePixels = true
+        };
+        var tileGridLayer = new Canvas
+        {
+            ClipToBounds = true,
+            IsHitTestVisible = false
+        };
+        var annotationLayer = new Canvas
+        {
+            ClipToBounds = true
+        };
+        shell.Children.Add(image);
+        shell.Children.Add(tileGridLayer);
+        shell.Children.Add(annotationLayer);
+        FramePresenter.Child = shell;
+
+        _frameShell = shell;
+        _frameImage = image;
+        _tileGridLayer = tileGridLayer;
+        _annotationLayer = annotationLayer;
+    }
+
+    private void UpdateTileGridLayer(CameraSnapshot camera, int frameWidth, int frameHeight)
+    {
+        var gridLayer = _tileGridLayer!;
+        gridLayer.Children.Clear();
+        var gridBrush = new SolidColorBrush(Color.FromArgb(180, 40, 210, 190));
+        gridBrush.Freeze();
+
+        foreach (var worldX in _tiles.SelectMany(tile => new[] { tile.Bounds.X, tile.Bounds.Right }).Distinct())
+        {
+            var screenX = camera.WorldToScreen(worldX, _sceneBounds.Y).X;
+            gridLayer.Children.Add(new Line
             {
-                Source = bitmap,
-                Stretch = Stretch.Fill,
+                X1 = screenX,
+                X2 = screenX,
+                Y1 = 0,
+                Y2 = frameHeight,
+                Stroke = gridBrush,
+                StrokeThickness = 1,
                 SnapsToDevicePixels = true
             });
         }
 
-        frame.Children.Add(BuildTileGridLayer(camera, frameWidth, frameHeight));
+        foreach (var worldY in _tiles.SelectMany(tile => new[] { tile.Bounds.Y, tile.Bounds.Bottom }).Distinct())
+        {
+            var screenY = camera.WorldToScreen(_sceneBounds.X, worldY).Y;
+            gridLayer.Children.Add(new Line
+            {
+                X1 = 0,
+                X2 = frameWidth,
+                Y1 = screenY,
+                Y2 = screenY,
+                Stroke = gridBrush,
+                StrokeThickness = 1,
+                SnapsToDevicePixels = true
+            });
+        }
+    }
 
-        var annotationLayer = new Canvas { ClipToBounds = true };
-        frame.Children.Add(annotationLayer);
+    private void UpdateAnnotationLayer(IReadOnlyList<SampleAnnotation> annotations, CameraSnapshot camera)
+    {
+        var annotationLayer = _annotationLayer!;
+        annotationLayer.Children.Clear();
 
         foreach (var annotation in annotations)
         {
@@ -640,51 +714,12 @@ public partial class MainWindow : Window
                 _selectionOutlineAnimator.Apply(outline);
             }
         }
-
-        return frame;
     }
 
-    private Canvas BuildTileGridLayer(CameraSnapshot camera, int frameWidth, int frameHeight)
+    private void FitSceneToWidth()
     {
-        var gridLayer = new Canvas
-        {
-            ClipToBounds = true,
-            IsHitTestVisible = false
-        };
-        var gridBrush = new SolidColorBrush(Color.FromArgb(180, 40, 210, 190));
-        gridBrush.Freeze();
-
-        foreach (var worldX in _tiles.SelectMany(tile => new[] { tile.Bounds.X, tile.Bounds.Right }).Distinct())
-        {
-            var screenX = camera.WorldToScreen(worldX, _sceneBounds.Y).X;
-            gridLayer.Children.Add(new Line
-            {
-                X1 = screenX,
-                X2 = screenX,
-                Y1 = 0,
-                Y2 = frameHeight,
-                Stroke = gridBrush,
-                StrokeThickness = 1,
-                SnapsToDevicePixels = true
-            });
-        }
-
-        foreach (var worldY in _tiles.SelectMany(tile => new[] { tile.Bounds.Y, tile.Bounds.Bottom }).Distinct())
-        {
-            var screenY = camera.WorldToScreen(_sceneBounds.X, worldY).Y;
-            gridLayer.Children.Add(new Line
-            {
-                X1 = 0,
-                X2 = frameWidth,
-                Y1 = screenY,
-                Y2 = screenY,
-                Stroke = gridBrush,
-                StrokeThickness = 1,
-                SnapsToDevicePixels = true
-            });
-        }
-
-        return gridLayer;
+        ApplyFitToWidthZoom();
+        ClampCameraToScene();
     }
 
     private static Border BuildAnnotationLabel(
@@ -1138,6 +1173,10 @@ public partial class MainWindow : Window
 
         await _renderAction.DisposeAsync();
         FramePresenter.Child = null;
+        _frameShell = null;
+        _frameImage = null;
+        _tileGridLayer = null;
+        _annotationLayer = null;
         _frameBufferPool.Dispose();
         _tileCoordinator.CancelAll();
         _tileCoordinator.Dispose();
