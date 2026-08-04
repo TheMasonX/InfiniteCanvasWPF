@@ -212,4 +212,103 @@ public class SampleImageTileTests
             Assert.That(noMatch, Is.EqualTo(128));
         }
     }
+
+    [Test]
+    public void ClaimantTokenFire_AllowsTileToRegenerateInLaterFrame()
+    {
+        // Regression test for ICW-204: per-frame claimant token cancellation
+        // orphaned coordinator work without resetting the tile's generation-
+        // queued flag. The tile never regenerated after scrolling and only
+        // recovered on zoom (which changed the mip cache key).
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 4);
+        var generationStarted = new ManualResetEventSlim(false);
+        var releaseGeneration = new ManualResetEventSlim(false);
+        var tile = new SampleImageTile(
+            "tile-frame-token",
+            new SpatialBounds(0, 0, 8, 8),
+            8,
+            8,
+            () => Enumerable.Repeat((byte)7, 64).ToArray(),
+            [],
+            mipPixelFactory: mipLevel =>
+            {
+                generationStarted.Set();
+                releaseGeneration.Wait();
+                var dims = BackgroundTileMipPolicy.GetDimensions(8, 8, mipLevel);
+                return Enumerable.Repeat((byte)(40 + mipLevel), dims.Width * dims.Height).ToArray();
+            });
+
+        tile.Coordinator = coordinator;
+
+        // Simulate the per-frame CTS design used by MainWindow.RenderFrameAsync:
+        // each frame provides a fresh claimant token.
+        using var frame1 = new CancellationTokenSource();
+        var currentToken = frame1.Token;
+        tile.ClaimantTokenProvider = () => currentToken;
+
+        // Frame 1: tile requests mip 2. Generation starts and blocks.
+        Assert.That(tile.TryGetPixelsNonBlocking(2, out _, out _), Is.False);
+        Assert.That(generationStarted.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        // Frame 2: the previous frame's token is cancelled, which is how the
+        // coordinator removes the previous frame's claimants.
+        using var frame2 = new CancellationTokenSource();
+        currentToken = frame2.Token;
+        frame1.Cancel();
+
+        // Frame 2 renders the tile again. It must re-request generation even
+        // though the previous request was dropped by the token cancellation.
+        Assert.That(tile.TryGetPixelsNonBlocking(2, out _, out _), Is.False);
+
+        // Let the re-claimed generation complete.
+        releaseGeneration.Set();
+        SpinWait.SpinUntil(() => tile.IsMipGenerated(2), TimeSpan.FromSeconds(2));
+
+        Assert.That(tile.IsMipGenerated(2), Is.True);
+    }
+
+    [Test]
+    public void MipFactoryFailure_ClearsQueuedFlagAndAllowsRetry()
+    {
+        // Regression test for ICW-204: OnCoordinatorPixelsGenerationFailed only
+        // reset the mip-0 flag. A failed mip left _mipGenerationQueued set, so
+        // the mip never retried.
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 4);
+        var attempts = 0;
+        var failed = new ManualResetEventSlim(false);
+        var tile = new SampleImageTile(
+            "tile-mip-fail-retry",
+            new SpatialBounds(0, 0, 8, 8),
+            8,
+            8,
+            () => Enumerable.Repeat((byte)7, 64).ToArray(),
+            [],
+            mipPixelFactory: mipLevel =>
+            {
+                var count = Interlocked.Increment(ref attempts);
+                if (count == 1)
+                {
+                    throw new InvalidOperationException("first attempt fails");
+                }
+
+                var dims = BackgroundTileMipPolicy.GetDimensions(8, 8, mipLevel);
+                return Enumerable.Repeat((byte)(40 + mipLevel), dims.Width * dims.Height).ToArray();
+            });
+
+        tile.Coordinator = coordinator;
+        tile.ClaimantTokenProvider = () => CancellationToken.None;
+        tile.PixelsGenerationFailed += (_, _) => failed.Set();
+
+        // First request fails in the factory. The failure callback resets the
+        // mip queued flag before the event fires.
+        Assert.That(tile.TryGetPixelsNonBlocking(2, out _, out _), Is.False);
+        Assert.That(failed.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        // The failure must have cleared the mip queued flag so a retry is possible.
+        Assert.That(tile.TryGetPixelsNonBlocking(2, out _, out _), Is.False);
+        SpinWait.SpinUntil(() => tile.IsMipGenerated(2), TimeSpan.FromSeconds(2));
+
+        Assert.That(tile.IsMipGenerated(2), Is.True);
+        Assert.That(Volatile.Read(ref attempts), Is.GreaterThanOrEqualTo(2));
+    }
 }

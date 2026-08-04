@@ -505,6 +505,7 @@ public sealed class SampleImageTile
 
         if (_coordinator is not null)
         {
+            var claimantToken = GetClaimantToken();
             var admitted = _coordinator.Request(
                 key,
                 async token =>
@@ -515,7 +516,7 @@ public sealed class SampleImageTile
                     return result;
                 },
                 GetClaimantId(),
-                GetClaimantToken(),
+                claimantToken,
                 onCompleted: OnCoordinatorPixelsGenerated,
                 onFailed: OnCoordinatorPixelsGenerationFailed,
                 tryReserve: tryReserveCacheEntry is null
@@ -525,6 +526,13 @@ public sealed class SampleImageTile
             if (!admitted)
             {
                 Interlocked.Exchange(ref _generationQueued, 0);
+            }
+            else
+            {
+                // The coordinator removes a claimant without a callback when the
+                // frame token fires. Without this reset, the dedup flag would
+                // survive the claim and the tile would never re-request (ICW-204).
+                RegisterClaimantReset(claimantToken);
             }
 
             return;
@@ -628,10 +636,58 @@ public sealed class SampleImageTile
 
     private void OnCoordinatorPixelsGenerationFailed(BackgroundTileCacheKey key, Exception ex)
     {
-        Interlocked.Exchange(ref _generationQueued, 0);
+        if (key.MipLevel == 0)
+        {
+            Interlocked.Exchange(ref _generationQueued, 0);
+        }
+        else
+        {
+            // Clear the per-mip dedup flag so a failed mip can retry (ICW-204).
+            lock (_cacheGate)
+            {
+                _mipGenerationQueued.Remove(key.MipLevel);
+            }
+        }
+
         Log.Warning(ex, "TileGen FAIL {TileId} mip{MipLevel} rev{Rev}: {Reason}",
             Id, key.MipLevel, key.ContentRevision, ex.Message);
         PixelsGenerationFailed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Resets the native generation-queued flag when the claimant token fires.
+    /// The coordinator removes a claimant without a callback when a frame token
+    /// is cancelled (ICW-204). Without this reset the dedup flag survives the
+    /// claim, so the tile never re-requests generation after a frame boundary.
+    /// </summary>
+    private void RegisterClaimantReset(CancellationToken claimantToken)
+    {
+        if (!claimantToken.CanBeCanceled)
+        {
+            return;
+        }
+
+        claimantToken.Register(() => Interlocked.Exchange(ref _generationQueued, 0));
+    }
+
+    /// <summary>
+    /// Clears the per-mip generation-queued flag when the claimant token fires.
+    /// See <see cref="RegisterClaimantReset(CancellationToken)"/>.
+    /// </summary>
+    private void RegisterClaimantReset(int mipLevel, CancellationToken claimantToken)
+    {
+        if (!claimantToken.CanBeCanceled)
+        {
+            return;
+        }
+
+        claimantToken.Register(() =>
+        {
+            lock (_cacheGate)
+            {
+                _mipGenerationQueued.Remove(mipLevel);
+            }
+        });
     }
 
     private void EnsureMipPixelsGenerationStarted(int mipLevel, Func<BackgroundTileCacheKey, long, ICacheReservation?>? tryReserveCacheEntry)
@@ -650,6 +706,7 @@ public sealed class SampleImageTile
         if (_coordinator is not null)
         {
             var capturedMipLevel = mipLevel;
+            var claimantToken = GetClaimantToken();
             var admitted = _coordinator.Request(
                 key,
                 async token =>
@@ -658,7 +715,7 @@ public sealed class SampleImageTile
                     return result;
                 },
                 GetClaimantId(),
-                GetClaimantToken(),
+                claimantToken,
                 onCompleted: OnCoordinatorMipGenerated,
                 onFailed: OnCoordinatorPixelsGenerationFailed,
                 tryReserve: tryReserveCacheEntry is null
@@ -671,6 +728,11 @@ public sealed class SampleImageTile
                 {
                     _mipGenerationQueued.Remove(mipLevel);
                 }
+            }
+            else
+            {
+                // See RegisterClaimantReset(CancellationToken).
+                RegisterClaimantReset(capturedMipLevel, claimantToken);
             }
 
             return;
