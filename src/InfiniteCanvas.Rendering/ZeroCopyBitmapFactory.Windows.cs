@@ -1,5 +1,6 @@
 #if WINDOWS
 using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
@@ -226,11 +227,31 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
             var sourceRowOffset = sourceY * sourceWidth;
 
             var x = left;
+            if (!hasSourcePixels)
+            {
+                if (Sse2.IsSupported)
+                {
+                    for (; x + 3 < right; x += 4)
+                    {
+                        WriteGrayPixels4(destination, destinationOffset, placeholder, placeholder, placeholder, placeholder);
+                        destinationOffset += 16;
+                    }
+                }
+
+                for (; x < right; x++)
+                {
+                    WritePackedGrayPixel(destination, destinationOffset, placeholder);
+                    destinationOffset += 4;
+                }
+
+                continue;
+            }
+
             if (Sse2.IsSupported)
             {
                 for (; x + 3 < right; x += 4)
                 {
-                    var value0 = GetTilePixelValue(
+                    var value0 = GetResidentTilePixelValue(
                         x,
                         cameraOffsetX,
                         cameraScaleX,
@@ -239,10 +260,8 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
                         sourceWidth,
                         maxSourceX,
                         sourcePixels,
-                        sourceRowOffset,
-                        hasSourcePixels,
-                        placeholder);
-                    var value1 = GetTilePixelValue(
+                        sourceRowOffset);
+                    var value1 = GetResidentTilePixelValue(
                         x + 1,
                         cameraOffsetX,
                         cameraScaleX,
@@ -251,10 +270,8 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
                         sourceWidth,
                         maxSourceX,
                         sourcePixels,
-                        sourceRowOffset,
-                        hasSourcePixels,
-                        placeholder);
-                    var value2 = GetTilePixelValue(
+                        sourceRowOffset);
+                    var value2 = GetResidentTilePixelValue(
                         x + 2,
                         cameraOffsetX,
                         cameraScaleX,
@@ -263,10 +280,8 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
                         sourceWidth,
                         maxSourceX,
                         sourcePixels,
-                        sourceRowOffset,
-                        hasSourcePixels,
-                        placeholder);
-                    var value3 = GetTilePixelValue(
+                        sourceRowOffset);
+                    var value3 = GetResidentTilePixelValue(
                         x + 3,
                         cameraOffsetX,
                         cameraScaleX,
@@ -275,9 +290,7 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
                         sourceWidth,
                         maxSourceX,
                         sourcePixels,
-                        sourceRowOffset,
-                        hasSourcePixels,
-                        placeholder);
+                        sourceRowOffset);
                     WriteGrayPixels4(destination, destinationOffset, value0, value1, value2, value3);
                     destinationOffset += 16;
                 }
@@ -285,7 +298,7 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
 
             for (; x < right; x++)
             {
-                var value = GetTilePixelValue(
+                var value = GetResidentTilePixelValue(
                     x,
                     cameraOffsetX,
                     cameraScaleX,
@@ -294,16 +307,15 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
                     sourceWidth,
                     maxSourceX,
                     sourcePixels,
-                    sourceRowOffset,
-                    hasSourcePixels,
-                    placeholder);
+                    sourceRowOffset);
                 WritePackedGrayPixel(destination, destinationOffset, value);
                 destinationOffset += 4;
             }
         }
     }
 
-    private static byte GetTilePixelValue(
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static byte GetResidentTilePixelValue(
         int screenX,
         double cameraOffsetX,
         double cameraScaleX,
@@ -312,18 +324,14 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
         int sourceWidth,
         int maxSourceX,
         byte[]? sourcePixels,
-        int sourceRowOffset,
-        bool hasSourcePixels,
-        byte placeholder)
+        int sourceRowOffset)
     {
         var worldX = (screenX - cameraOffsetX) / cameraScaleX;
         var sourceX = Math.Clamp(
             (int)((worldX - tileX) * sourceWidth / tileWidth),
             0,
             maxSourceX);
-        return hasSourcePixels
-            ? sourcePixels![sourceRowOffset + sourceX]
-            : placeholder;
+        return sourcePixels![sourceRowOffset + sourceX];
     }
 
     private unsafe void DrawDefectPatch(byte* destination, SampleAnnotation annotation, CameraSnapshot camera)

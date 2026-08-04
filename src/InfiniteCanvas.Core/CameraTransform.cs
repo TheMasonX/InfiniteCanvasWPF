@@ -32,6 +32,11 @@ public sealed class CameraTransform
 
     public double ScaleY => Volatile.Read(ref _state).ScaleY;
 
+    public void Reset()
+    {
+        Interlocked.Exchange(ref _state, TransformState.Identity);
+    }
+
     public CameraSnapshot Capture()
     {
         var state = Volatile.Read(ref _state);

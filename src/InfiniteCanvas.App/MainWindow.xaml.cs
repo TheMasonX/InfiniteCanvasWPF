@@ -18,7 +18,7 @@ public partial class MainWindow : Window
 {
     private LiveSpatialIndexService<SampleAnnotation> _spatialIndex = null!;
     private CanvasViewportViewModel<SampleAnnotation> _viewModel = null!;
-    private CameraTransform _camera = new();
+    private CameraTransform _camera = null!;
     private readonly CoalescingAsyncAction _renderAction;
     private readonly DispatcherTimer _resizeTimer;
     private readonly DispatcherTimer _anchorPanTimer;
@@ -68,17 +68,37 @@ public partial class MainWindow : Window
     private long _totalFrameTicks;
     private int _frameCount;
 
+    private Border ViewportHost => CanvasSurface.SurfaceHost;
+    private Viewbox FramePresenter => CanvasSurface.FrameHost;
+    private Canvas ViewportScrollbarOverlay => CanvasSurface.ScrollbarHost;
+    private Border HorizontalScrollbarTrack => CanvasSurface.HorizontalTrack;
+    private Border HorizontalScrollbarThumb => CanvasSurface.HorizontalThumb;
+    private Border VerticalScrollbarTrack => CanvasSurface.VerticalTrack;
+    private Border VerticalScrollbarThumb => CanvasSurface.VerticalThumb;
+    private Ellipse PanAnchorVisual => CanvasSurface.AnchorVisual;
+    private TextBlock LoadingOverlay => CanvasSurface.LoadingText;
+    private TextBlock PixelometerWorldText => CanvasSurface.WorldReadout;
+    private TextBlock PixelometerTileText => CanvasSurface.TileReadout;
+    private TextBlock PixelometerValueText => CanvasSurface.ValueReadout;
+    private ProgressBar RenderBusyBar => CanvasSurface.BusyBar;
+
     public IReadOnlyList<FeatureDisplayItem> SelectedAnnotationFeatures => _selectedAnnotationFeatures;
 
     public MainWindow()
     {
         InitializeComponent();
 
-        _viewportScrollbarOverlay = (Canvas?)FindName("ViewportScrollbarOverlay");
-        _horizontalScrollbarTrack = (Border?)FindName("HorizontalScrollbarTrack");
-        _horizontalScrollbarThumb = (Border?)FindName("HorizontalScrollbarThumb");
-        _verticalScrollbarTrack = (Border?)FindName("VerticalScrollbarTrack");
-        _verticalScrollbarThumb = (Border?)FindName("VerticalScrollbarThumb");
+        _camera = CanvasSurface.ViewModel.Camera;
+        CanvasSurface.ViewportChanged += OnCanvasViewportChanged;
+        CanvasSurface.PointerMoved += OnCanvasPointerMoved;
+        CanvasSurface.PointerWheel += OnViewportMouseWheel;
+        CanvasSurface.SizeChanged += OnViewportSizeChanged;
+
+        _viewportScrollbarOverlay = CanvasSurface.ViewportScrollbarOverlay;
+        _horizontalScrollbarTrack = CanvasSurface.HorizontalScrollbarTrack;
+        _horizontalScrollbarThumb = CanvasSurface.HorizontalScrollbarThumb;
+        _verticalScrollbarTrack = CanvasSurface.VerticalScrollbarTrack;
+        _verticalScrollbarThumb = CanvasSurface.VerticalScrollbarThumb;
 
         // The MainViewModel is stable for the window lifetime. Regeneration
         // reuses it so user-edited settings never reset to defaults.
@@ -110,6 +130,22 @@ public partial class MainWindow : Window
     {
         _spatialIndex = new LiveSpatialIndexService<SampleAnnotation>(new StrTreeSpatialIndexBuilder<SampleAnnotation>());
         _viewModel = new CanvasViewportViewModel<SampleAnnotation>(_spatialIndex);
+    }
+
+    private async void OnCanvasViewportChanged(object? sender, EventArgs e)
+    {
+        if (!IsLoaded || _lifetime.IsCancellationRequested)
+        {
+            return;
+        }
+
+        await RequestRenderAsync();
+    }
+
+    private void OnCanvasPointerMoved(object? sender, MouseEventArgs e)
+    {
+        _hoverPointerPosition = e.GetPosition(ViewportHost);
+        UpdatePixelometer(_hoverPointerPosition.Value);
     }
 
     private void OnAboutButtonClicked(object sender, RoutedEventArgs e)
@@ -176,7 +212,7 @@ public partial class MainWindow : Window
 
             InitializeSpatialState();
             _selectedAnnotationId = null;
-            _camera = new CameraTransform();
+            CanvasSurface.ResetCamera();
             _tileCacheBudget = new TileCacheBudget(_tileCacheBudget.MaxBytes);
             UnsubscribeTileGenerationEvents(_tiles);
 
@@ -224,6 +260,7 @@ public partial class MainWindow : Window
 
             SubscribeTileGenerationEvents(_tiles);
             _sceneBounds = GetSceneBounds(_tiles);
+            CanvasSurface.SetSceneBounds(_sceneBounds);
 
             _annotations = _tiles.SelectMany(tile => tile.Annotations).ToArray();
             _spatialIndex.AddRange(_annotations);
@@ -452,8 +489,6 @@ public partial class MainWindow : Window
             $"C{coordinatorCounters.CompletedCount} X{coordinatorCounters.CanceledCount} " +
             $"F{coordinatorCounters.FailedCount}}}";
         UpdateZoomDisplay(camera, width, height);
-        UpdateViewportScrollbars(camera, width, height);
-
         // Accumulate frame timing for periodic diagnostics logging.
         var frameElapsed = stopwatch.Elapsed;
         _lastFrameTicks = frameElapsed.Ticks;
@@ -729,6 +764,7 @@ public partial class MainWindow : Window
         var height = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualHeight), 1, 4096);
         EnforceZoomFloor(width, height);
         _camera.ClampToBounds(_sceneBounds, width, height);
+        CanvasSurface.RefreshScrollbars();
     }
 
     private void EnforceZoomFloor(double viewportWidth, double viewportHeight)

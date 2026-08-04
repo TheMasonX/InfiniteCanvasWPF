@@ -15,6 +15,12 @@ public partial class CanvasViewModel : ObservableObject
 
     public bool HasScene => SceneBounds.Width > 0 && SceneBounds.Height > 0;
 
+    public void ResetCamera()
+    {
+        Camera.Reset();
+        Viewport = default;
+    }
+
     public void SetSceneBounds(SpatialBounds bounds)
     {
         SceneBounds = bounds;

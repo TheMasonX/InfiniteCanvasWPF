@@ -44,6 +44,7 @@ Implementation began with the benchmark harness. The harness measures the shippe
 - Move invariant camera and tile calculations outside the inner loops. Prefer incremental source-coordinate or fixed-point stepping over repeated division when the result matches the current truncation and clamp semantics.
 - Use a packed scalar BGRA store as the validated baseline for any later SIMD destination writer.
 - Use an SSE2 four-pixel destination writer for contiguous grayscale output. Keep scalar source-coordinate lookup and scalar tail handling.
+- Split placeholder rows from resident rows so placeholder output does not perform source-coordinate lookup.
 - Evaluate `System.Numerics` or hardware intrinsics for contiguous pixel work. Use a scalar fallback when the row width, source stride, overlap rule, or platform does not support the vector path.
 - Keep `DefectOverlaySampler.ResolveDisplayValue` semantics and annotation overlap ordering unchanged. Do not replace the compositor with a managed duplicate buffer.
 - Add stage counters through ICW-132 so vector benchmarks distinguish projection setup, source lookup, overlay composition, and destination writes.
@@ -67,7 +68,7 @@ Implementation began with the benchmark harness. The harness measures the shippe
   - `dotnet test tests/InfiniteCanvas.Windows.Tests/InfiniteCanvas.Windows.Tests.csproj --configuration Release`
   - `dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release`
   - `dotnet run --project benchmarks/InfiniteCanvas.Benchmarks/InfiniteCanvas.Benchmarks.csproj --configuration Release --framework net10.0-windows --no-build -- --filter "*TileMaterializationBenchmarks*"`
-- Result: Benchmark harness and rendering builds passed. `ZeroCopyBitmapFactoryTests` passed 12/12 after adding clamped-edge and resident-mip assertions. The repeated post-hoist Release run measured 7.467 to 9.933 ms. The packed-store run measured 6.536 to 9.514 ms. The SSE2 run measured 6.361 to 8.472 ms across the same eight cases. These runs provide matched evidence for the destination-write slices, but stage diagnostics and a separate archived report remain open.
+- Result: Benchmark harness and rendering builds passed. `ZeroCopyBitmapFactoryTests` passed 12/12 after adding clamped-edge and resident-mip assertions. The repeated post-hoist Release run measured 7.467 to 9.933 ms. The packed-store run measured 6.536 to 9.514 ms. The SSE2 run measured 6.361 to 8.472 ms. The placeholder-path split now measures 1.442 to 1.818 ms for nonresident cases and 8.118 to 8.467 ms for resident cases. These runs provide matched evidence for the destination-write and placeholder slices, but stage diagnostics and a separate archived report remain open.
 
 ## Notes
 
@@ -78,6 +79,8 @@ The implementation sequence starts with a direct compositor benchmark. Safe inva
 The scalar packed-store comparison uses the same benchmark matrix on the same Intel Core i5-6600K host. Placeholder cases moved from 7.467 to 7.717 ms down to 6.536 to 6.705 ms. Resident cases moved from 9.593 to 9.933 ms down to 9.241 to 9.514 ms. Treat these ranges as run observations, not a single aggregate percentage.
 
 The SSE2 writer expands four grayscale values into sixteen BGRA bytes with one unaligned vector store. Source-coordinate calculation remains scalar to preserve truncation and clamp behavior. The SSE2 run measured 6.361 to 6.660 ms for placeholder cases and 8.124 to 8.472 ms for resident cases.
+
+The profile showed four `GetTilePixelValue` calls at about 2.86 to 3.42 percent each. The placeholder split removes those calls when no source payload is resident. `CommunityToolkit.HighPerformance` is not required for this path because no managed collection crosses the rendering boundary. The remaining resident cost is scalar source-coordinate division and lookup. Evaluate exact source-run processing or SIMD coordinate math only after stage diagnostics identify the dominant portion.
 
 The managed CPU capture reports `presentationframework.dll` at about 40.43 percent inclusive CPU and `MainWindow.RenderFrameAsync` at about 17.75 percent. The application hot path is therefore broader than `DrawTile`; use ICW-132 stage attribution before widening the vectorization scope.
 

@@ -38,11 +38,11 @@ updated: 2026-08-04
 
 ## Scope
 
-### Current slice — temporary Canvas control duplication
+### Current slice — live Canvas control extraction
 
-1. Add `Controls/CanvasControl.xaml` and `Controls/CanvasControl.xaml.cs` with a duplicated viewport surface, overlays, scrollbar chrome, pixelometer, and pointer interaction hooks.
-2. Add `CanvasViewModel` for camera and viewport state owned by the new control.
-3. Keep MainWindow unchanged. Do not replace the live viewport until the duplicate builds and receives focused tests.
+1. Add `Controls/CanvasControl.xaml` and `Controls/CanvasControl.xaml.cs` with the viewport surface, overlays, scrollbar chrome, pixelometer, and pointer interaction hooks. **DONE**
+2. Add `CanvasViewModel` for camera and viewport state owned by the new control. **DONE**
+3. Replace the embedded MainWindow viewport with `CanvasControl` and connect the existing renderer to its surface and VM camera. **DONE**
 
 ### Phase 1 — Compatibility & Settings Hardening (acceptance criteria from external audit)
 
@@ -74,7 +74,7 @@ These items must be completed before structural decomposition begins:
 ### Acceptance Criteria
 
 - MainWindow becomes a thin shell composing focused subcontrols.
-- The duplicate Canvas control builds independently while MainWindow still owns the live viewport.
+- CanvasControl is the live viewport hosted by MainWindow.
 - Canvas camera and viewport state lives on its dedicated view model.
 - Viewport and settings interactions backed by presenter/controller classes rather than code-behind.
 - Repeated XAML patterns use shared styles/templates.
@@ -104,6 +104,7 @@ Current slice evidence:
 - `dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release` passes. The existing `_frameClaimantId` warning remains.
 - `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~CanvasViewModelTests` passes 2 tests.
 - A normal test restore is blocked by the pre-existing Rendering project target mismatch. The focused test passes with existing restore assets.
+- Scrollbar jitter was caused by CanvasControl and MainWindow writing thumb geometry with different track-length formulas. CanvasControl is now the single active scrollbar owner.
 
 ## Related Tasks
 

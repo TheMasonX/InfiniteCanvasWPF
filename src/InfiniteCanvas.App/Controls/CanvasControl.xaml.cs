@@ -30,17 +30,44 @@ public partial class CanvasControl : UserControl
 
     public CanvasViewModel ViewModel { get; }
 
+    public Border SurfaceHost => ViewportHost;
+    public Viewbox FrameHost => FramePresenter;
+    public Canvas ScrollbarHost => ViewportScrollbarOverlay;
+    public Border HorizontalTrack => HorizontalScrollbarTrack;
+    public Border HorizontalThumb => HorizontalScrollbarThumb;
+    public Border VerticalTrack => VerticalScrollbarTrack;
+    public Border VerticalThumb => VerticalScrollbarThumb;
+    public Ellipse AnchorVisual => PanAnchorVisual;
+    public TextBlock LoadingText => LoadingOverlay;
+    public TextBlock WorldReadout => PixelometerWorldText;
+    public TextBlock TileReadout => PixelometerTileText;
+    public TextBlock ValueReadout => PixelometerValueText;
+    public ProgressBar BusyBar => RenderBusyBar;
+
     public event EventHandler? ViewportChanged;
+    public event MouseEventHandler? PointerMoved;
+    public event MouseWheelEventHandler? PointerWheel;
 
     public void PublishFrame(UIElement frame)
     {
         FramePresenter.Child = frame;
     }
 
+    public void ResetCamera()
+    {
+        ViewModel.ResetCamera();
+        ApplyViewportState();
+    }
+
     public void SetSceneBounds(SpatialBounds bounds)
     {
         ViewModel.SetSceneBounds(bounds);
         ApplyViewportState();
+    }
+
+    public void RefreshScrollbars()
+    {
+        UpdateViewportScrollbars();
     }
 
     private void OnViewportMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -70,6 +97,7 @@ public partial class CanvasControl : UserControl
     private void OnViewportMouseMove(object sender, MouseEventArgs e)
     {
         var current = e.GetPosition(ViewportHost);
+        PointerMoved?.Invoke(this, e);
         if (_anchorPanOrigin is not null)
         {
             _anchorPanPointer = current;
@@ -283,14 +311,7 @@ public partial class CanvasControl : UserControl
     private void OnViewportMouseWheel(object sender, MouseWheelEventArgs e)
     {
         var origin = e.GetPosition(ViewportHost);
-        var requestedScaleDelta = e.Delta > 0 ? 1.15 : 1 / 1.15;
-        if (!ViewModel.Zoom(requestedScaleDelta, new ScreenPoint(origin.X, origin.Y), ViewportHost.ActualWidth, ViewportHost.ActualHeight))
-        {
-            return;
-        }
-
-        UpdateViewportScrollbars();
-        ViewportChanged?.Invoke(this, EventArgs.Empty);
+        PointerWheel?.Invoke(this, e);
         e.Handled = true;
     }
 
