@@ -7,7 +7,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Windows.Threading;
-using InfiniteCanvas.App.Controls;
+using InfiniteCanvas.Controls;
 using InfiniteCanvas.Core;
 using InfiniteCanvas.Rendering;
 using InfiniteCanvas.Spatial;

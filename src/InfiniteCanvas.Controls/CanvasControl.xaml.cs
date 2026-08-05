@@ -6,7 +6,7 @@ using System.Windows.Threading;
 using InfiniteCanvas.Core;
 using InfiniteCanvas.ViewModels;
 
-namespace InfiniteCanvas.App.Controls;
+namespace InfiniteCanvas.Controls;
 
 public partial class CanvasControl : UserControl
 {

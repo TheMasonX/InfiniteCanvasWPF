@@ -4,6 +4,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/InfiniteCanvas.App/InfiniteCanvas.App.csproj" />
+    <Project Path="src/InfiniteCanvas.Controls/InfiniteCanvas.Controls.csproj" />
     <Project Path="src/InfiniteCanvas.Core/InfiniteCanvas.Core.csproj" />
     <Project Path="src/InfiniteCanvas.Rendering/InfiniteCanvas.Rendering.csproj" />
     <Project Path="src/InfiniteCanvas.Spatial/InfiniteCanvas.Spatial.csproj" />

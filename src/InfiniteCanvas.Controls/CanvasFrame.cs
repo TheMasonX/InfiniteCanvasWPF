@@ -2,7 +2,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using InfiniteCanvas.Core;
 
-namespace InfiniteCanvas.App.Controls;
+namespace InfiniteCanvas.Controls;
 
 /// <summary>
 /// The frame boundary between the host render pipeline and the canvas

@@ -10,8 +10,8 @@ public class CanvasScrollbarWiringTests
     {
         var mainWindowXaml = File.ReadAllText(Path.Combine(RepositoryRoot, "src", "InfiniteCanvas.App", "MainWindow.xaml"));
         var mainWindowCodeBehind = File.ReadAllText(Path.Combine(RepositoryRoot, "src", "InfiniteCanvas.App", "MainWindow.xaml.cs"));
-        var canvasControlXaml = File.ReadAllText(Path.Combine(RepositoryRoot, "src", "InfiniteCanvas.App", "Controls", "CanvasControl.xaml"));
-        var canvasControlCodeBehind = File.ReadAllText(Path.Combine(RepositoryRoot, "src", "InfiniteCanvas.App", "Controls", "CanvasControl.xaml.cs"));
+        var canvasControlXaml = File.ReadAllText(Path.Combine(RepositoryRoot, "src", "InfiniteCanvas.Controls", "CanvasControl.xaml"));
+        var canvasControlCodeBehind = File.ReadAllText(Path.Combine(RepositoryRoot, "src", "InfiniteCanvas.Controls", "CanvasControl.xaml.cs"));
 
         using (Assert.EnterMultipleScope())
         {

@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\InfiniteCanvas.Controls\InfiniteCanvas.Controls.csproj" />
     <ProjectReference Include="..\..\src\InfiniteCanvas.Core\InfiniteCanvas.Core.csproj" />
     <ProjectReference Include="..\..\src\InfiniteCanvas.Rendering\InfiniteCanvas.Rendering.csproj" />
   </ItemGroup>

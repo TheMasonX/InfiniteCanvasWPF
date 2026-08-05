@@ -9,6 +9,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\InfiniteCanvas.Controls\InfiniteCanvas.Controls.csproj" />
     <ProjectReference Include="..\InfiniteCanvas.Core\InfiniteCanvas.Core.csproj" />
     <ProjectReference Include="..\InfiniteCanvas.Rendering\InfiniteCanvas.Rendering.csproj" />
     <ProjectReference Include="..\InfiniteCanvas.Spatial\InfiniteCanvas.Spatial.csproj" />

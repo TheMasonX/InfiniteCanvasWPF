@@ -22,7 +22,8 @@ public sealed class CanvasBoundaryZeroReferenceTests
 
     private static readonly (string RelativePath, string Label)[] BoundaryFiles =
     [
-        (Path.Combine("src", "InfiniteCanvas.App", "Controls", "CanvasControl.xaml.cs"), "CanvasControl.xaml.cs"),
+        (Path.Combine("src", "InfiniteCanvas.Controls", "CanvasControl.xaml.cs"), "CanvasControl.xaml.cs"),
+        (Path.Combine("src", "InfiniteCanvas.Controls", "CanvasFrame.cs"), "CanvasFrame.cs"),
         (Path.Combine("src", "InfiniteCanvas.ViewModels", "CanvasViewModel.cs"), "CanvasViewModel.cs")
     ];
 
@@ -40,7 +41,7 @@ public sealed class CanvasBoundaryZeroReferenceTests
     public void CanvasControl_ExposesSingleItemQueryAuthority()
     {
         var source = File.ReadAllText(
-            Path.Combine(RepositoryRoot, "src", "InfiniteCanvas.App", "Controls", "CanvasControl.xaml.cs"));
+            Path.Combine(RepositoryRoot, "src", "InfiniteCanvas.Controls", "CanvasControl.xaml.cs"));
 
         using (Assert.EnterMultipleScope())
         {
@@ -61,6 +62,29 @@ public sealed class CanvasBoundaryZeroReferenceTests
 
         Assert.That(project, Does.Not.Contain("InfiniteCanvas.Spatial"),
             "The view model project must not reference the spatial assembly (council cleanup).");
+    }
+
+    [Test]
+    public void ControlsProject_ReferencesOnlyCoreAndViewModels()
+    {
+        // ICW-316 acceptance: the canvas library must build with no references
+        // to the app, rendering, or spatial projects.
+        var project = File.ReadAllText(
+            Path.Combine(RepositoryRoot, "src", "InfiniteCanvas.Controls", "InfiniteCanvas.Controls.csproj"));
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(project, Does.Contain("InfiniteCanvas.Core"),
+                "The canvas library must reference Core for the shared contracts.");
+            Assert.That(project, Does.Contain("InfiniteCanvas.ViewModels"),
+                "The canvas library must reference the view-model project.");
+            Assert.That(project, Does.Not.Contain("InfiniteCanvas.App"),
+                "The canvas library must not reference the app project.");
+            Assert.That(project, Does.Not.Contain("InfiniteCanvas.Rendering"),
+                "The canvas library must not reference the rendering project.");
+            Assert.That(project, Does.Not.Contain("InfiniteCanvas.Spatial"),
+                "The canvas library must not reference the spatial project.");
+        }
     }
 
     private static string FindRepositoryRoot()

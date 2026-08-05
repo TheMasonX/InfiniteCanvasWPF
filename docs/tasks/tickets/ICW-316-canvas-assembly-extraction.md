@@ -3,7 +3,7 @@ id: ICW-316-canvas-assembly-extraction
 author: Copilot
 key: ICW-316
 title: Extract the canvas component into its own assembly (physical move)
-status: Proposed
+status: Done
 type: Story
 priority: P3
 tags:
@@ -19,13 +19,15 @@ related:
   - ICW-314
   - ADR-0007
 links:
-  - src/InfiniteCanvas.App/Controls/CanvasControl.xaml.cs
-  - src/InfiniteCanvas.App/Controls/CanvasFrame.cs
+  - src/InfiniteCanvas.Controls/CanvasControl.xaml
+  - src/InfiniteCanvas.Controls/CanvasControl.xaml.cs
+  - src/InfiniteCanvas.Controls/CanvasFrame.cs
   - src/InfiniteCanvas.ViewModels/CanvasViewModel.cs
   - docs/ADR/0007-canvas-reusable-component-boundary.md
   - docs/audits/audit-synthesis-reconciliation-26-08-04-22-15-00.md
+  - tests/InfiniteCanvas.Windows.Tests/CanvasControlConsumerHostTests.cs
 created: 2026-08-04
-updated: 2026-08-04
+updated: 2026-08-05
 ---
 
 # ICW-316-canvas-assembly-extraction
@@ -38,26 +40,35 @@ Audit synthesis (2026-08-04) rescoped this ticket to the physical-move phase. Th
 
 ## Scope
 
-- Create the canvas control library (WPF) and move `CanvasControl`, `CanvasViewModel`, and `CanvasFrame`.
-- Keep `CanvasViewModel` in a non-WPF net10.0 project so existing tests are not retargeted.
-- Decide the contracts location (Core vs a new contracts assembly) before the move; default is Core per ADR-0007 refinement 1.
-- Update `CanvasScrollbarWiringTests` and `FrameShellWiringTests` path assertions atomically with the move.
+- Create the canvas control library (WPF) and move `CanvasControl` and `CanvasFrame`. `CanvasViewModel` stays in the non-WPF `InfiniteCanvas.ViewModels` project so existing tests are not retargeted.
+- Contracts stay in Core (ADR-0007 refinement 1); no new contracts assembly.
+- Update `CanvasScrollbarWiringTests`, `FrameShellWiringTests`, and `CanvasBoundaryZeroReferenceTests` path assertions atomically with the move.
 - Update the app project reference and the solution file.
-- The library must expose no raw WPF element surface (see ICW-319).
+- The library must expose no raw WPF element surface (see ICW-319); `CanvasOverlayHost` stays internal behind `InternalsVisibleTo("InfiniteCanvas.App")`.
+- Add a consumer-host test that references only the library.
 
 ## Acceptance Criteria
 
 - The canvas library builds with no references to app, rendering, or spatial projects.
-- `CanvasFrame` and its dependencies move with `CanvasControl` and `CanvasViewModel`; no App dependency remains.
+- `CanvasFrame` and its dependencies move with `CanvasControl`; no App dependency remains.
 - Another host can reference the library and implement the source interfaces; a consumer-host test references only the library.
 - Release build and full test suites pass.
 - No behavior change.
 
 ## Validation
 
-- Command: `dotnet build InfiniteCanvasWPF.slnx --configuration Release`
-- Command: `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release`
-- Command: `dotnet test tests/InfiniteCanvas.Windows.Tests/InfiniteCanvas.Windows.Tests.csproj --configuration Release`
+- Command: `dotnet build InfiniteCanvasWPF.slnx --configuration Release` — passed, 0 errors.
+- Command: `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release` — 181/181 passed (was 179; +2 boundary-gate tests).
+- Command: `dotnet test tests/InfiniteCanvas.Windows.Tests/InfiniteCanvas.Windows.Tests.csproj --configuration Release` — 21/21 passed (was 18; +3 consumer-host tests).
+- Consumer-host gate: `CanvasControlConsumerHostTests` constructs the control outside the app, sets `SceneSource`, and publishes a `CanvasFrame`.
+- `pwsh -NoProfile -File scripts/Validate-TaskTracker.ps1 -Path docs/tasks` — clean.
+
+## Notes
+
+- Delivered as Wave H (2026-08-05). `CanvasControl.xaml` now owns its default brushes so the library loads without host-defined resources; values match the app baseline, so there is no visual change.
+- `CanvasOverlayHost` stays internal (ICW-319); the app reaches it through `InternalsVisibleTo`. Overlay composition moves into the library with ICW-314.
+- ADR-0007 is now Accepted.
+- Remaining canvas work is ICW-313 (IInputHandler) and ICW-314 (selection/tooltip ownership), both deferred by the user.
 - Command: consumer-host reference test against the library only
 
 ## Notes

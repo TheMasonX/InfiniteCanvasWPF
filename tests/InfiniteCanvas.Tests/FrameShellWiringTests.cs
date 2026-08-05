@@ -11,7 +11,7 @@ public class FrameShellWiringTests
 {
     private static readonly string RepositoryRoot = FindRepositoryRoot();
     private static readonly string ControlCodeBehind =
-        File.ReadAllText(Path.Combine(RepositoryRoot, "src", "InfiniteCanvas.App", "Controls", "CanvasControl.xaml.cs"));
+        File.ReadAllText(Path.Combine(RepositoryRoot, "src", "InfiniteCanvas.Controls", "CanvasControl.xaml.cs"));
     private static readonly string MainWindowCodeBehind =
         File.ReadAllText(Path.Combine(RepositoryRoot, "src", "InfiniteCanvas.App", "MainWindow.xaml.cs"));
 

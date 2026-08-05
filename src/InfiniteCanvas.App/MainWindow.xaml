@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:controls="clr-namespace:InfiniteCanvas.App.Controls"
+        xmlns:controls="clr-namespace:InfiniteCanvas.Controls;assembly=InfiniteCanvas.Controls"
+        xmlns:appcontrols="clr-namespace:InfiniteCanvas.App.Controls"
         mc:Ignorable="d"
         Title="Infinite Canvas" Width="1600" Height="1024"
         MinWidth="760" MinHeight="520"
@@ -141,7 +142,7 @@
                         <CheckBox x:Name="ShowBackgroundImagesCheckBox" Content="Show background images" IsChecked="True"
                                   Margin="0,8,0,0" Checked="OnShowBackgroundImagesChanged" Unchecked="OnShowBackgroundImagesChanged" />
 
-                        <controls:TileBackgroundNoiseSettingsView Margin="0,12,0,0"
+                        <appcontrols:TileBackgroundNoiseSettingsView Margin="0,12,0,0"
                                                                   ViewModel="{Binding DataContext.TileBackgroundNoiseSettings, RelativeSource={RelativeSource AncestorType=Window}}" />
 
                         <Border Height="1" Margin="0,14,0,12" Background="{StaticResource BorderBrush}" />
@@ -153,16 +154,16 @@
                                            FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" />
                             </Expander.Header>
                             <StackPanel>
-                                <controls:SliderTextBox x:Name="TilesXSliderTextBox" Label="Tiles X"
+                                <appcontrols:SliderTextBox x:Name="TilesXSliderTextBox" Label="Tiles X"
                                                         Minimum="1" Maximum="2000" TickFrequency="1"
                                                         NumericType="Integer" Value="2" />
-                                <controls:SliderTextBox x:Name="TilesYSliderTextBox" Label="Tiles Y"
+                                <appcontrols:SliderTextBox x:Name="TilesYSliderTextBox" Label="Tiles Y"
                                                         Minimum="1" Maximum="2000" TickFrequency="1"
                                                         NumericType="Integer" Value="32" />
-                                <controls:SliderTextBox x:Name="ObjectsPerTileSliderTextBox" Label="Objects per tile"
+                                <appcontrols:SliderTextBox x:Name="ObjectsPerTileSliderTextBox" Label="Objects per tile"
                                                         Minimum="0" Maximum="256" TickFrequency="1"
                                                         NumericType="Integer" Value="16" />
-                                <controls:SliderTextBox x:Name="GenerationSeedSliderTextBox" Label="Generation seed"
+                                <appcontrols:SliderTextBox x:Name="GenerationSeedSliderTextBox" Label="Generation seed"
                                                         Minimum="0" Maximum="2147483647" TickFrequency="1"
                                                         NumericType="Integer" ShowSlider="False" Value="1729" />
                             </StackPanel>

@@ -2,7 +2,18 @@
 
 ## Status
 
-Proposed
+Accepted
+
+## Status History
+
+- 2026-08-05: Accepted. ICW-316 delivered the physical assembly extraction
+  (Wave H). `CanvasControl` and `CanvasFrame` moved into the new
+  `InfiniteCanvas.Controls` WPF library. `CanvasViewModel` stays in the
+  non-WPF `InfiniteCanvas.ViewModels` project. Contracts stay in
+  `InfiniteCanvas.Core`. The app keeps overlay composition through
+  `InternalsVisibleTo`, and a consumer-host test proves a second host can
+  construct the control and publish a frame.
+- 2026-08-04: Council refinement recorded. No implementation yet.
 
 ## Context
 
