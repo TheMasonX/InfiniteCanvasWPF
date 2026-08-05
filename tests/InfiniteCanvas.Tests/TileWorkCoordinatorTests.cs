@@ -34,6 +34,40 @@ public class TileWorkCoordinatorTests
             return [result];
         };
 
+    /// <summary>
+    /// A factory that ignores the work token while waiting, then returns.
+    /// It simulates a non-cooperative worker that keeps running after the
+    /// coordinator requests cancellation (ICW-320 cancel-and-re-request
+    /// window).
+    /// </summary>
+    private static Func<CancellationToken, ValueTask<byte[]>> NonCooperativeFactory(
+        ManualResetEventSlim startSignal,
+        ManualResetEventSlim releaseSignal,
+        byte result = 42) =>
+        async _ =>
+        {
+            startSignal.Set();
+            releaseSignal.Wait();
+            return [result];
+        };
+
+    /// <summary>
+    /// A factory that runs until released, then observes the work token.
+    /// It simulates a worker that stops (and faults) after a late release,
+    /// exercising the HandleWorkStopped path after a re-request.
+    /// </summary>
+    private static Func<CancellationToken, ValueTask<byte[]>> ReleaseThenThrowIfCanceledFactory(
+        ManualResetEventSlim startSignal,
+        ManualResetEventSlim releaseSignal,
+        byte result = 42) =>
+        async token =>
+        {
+            startSignal.Set();
+            releaseSignal.Wait();
+            token.ThrowIfCancellationRequested();
+            return [result];
+        };
+
     [Test]
     public void Request_AdmitsNewWorkAndAdvancesCounters()
     {
@@ -372,6 +406,112 @@ public class TileWorkCoordinatorTests
 
         var counters = coordinator.GetCounters();
         Assert.That(counters.CanceledCount, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void RunningWorkCanceled_ReRequest_AdmitsFreshItem()
+    {
+        // ICW-320 F-006: a scroll-away-and-back re-request during the cancel
+        // window must admit fresh work instead of coalescing onto the canceled
+        // running item. Fails on HEAD, where the re-request coalesces and the
+        // fresh factory never runs.
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 4);
+        var started1 = new ManualResetEventSlim(false);
+        var release1 = new ManualResetEventSlim(false);
+        var freshStarted = new ManualResetEventSlim(false);
+
+        // First request: a non-cooperative worker that ignores cancellation.
+        coordinator.Request(Key1, NonCooperativeFactory(started1, release1), ClaimantA, CancellationToken.None);
+        Assert.That(started1.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        // Cancel it mid-flight. The item stays in _items as Canceled until the
+        // worker physically stops.
+        coordinator.RemoveClaimant(Key1, ClaimantA);
+
+        // Re-request while the old worker is still running. This must admit a
+        // fresh item whose factory actually executes.
+        coordinator.Request(Key1, NonCooperativeFactory(freshStarted, release1, result: 7), ClaimantB, CancellationToken.None);
+
+        Assert.That(freshStarted.Wait(TimeSpan.FromSeconds(2)), Is.True);
+        Assert.That(coordinator.GetCounters().AdmittedCount, Is.EqualTo(2));
+
+        release1.Set();
+    }
+
+    [Test]
+    public void LateWorkerStop_DoesNotRemoveNewerItem()
+    {
+        // ICW-320 F-007: a late old-worker stop must never remove or invalidate
+        // the newer item for the same key. On HEAD, HandleWorkStopped removes by
+        // key and clobbers the fresh running item, so a third request admits a
+        // duplicate worker instead of coalescing.
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 4);
+        var started1 = new ManualResetEventSlim(false);
+        var release1 = new ManualResetEventSlim(false);
+        var started2 = new ManualResetEventSlim(false);
+        var release2 = new ManualResetEventSlim(false);
+        var started3 = new ManualResetEventSlim(false);
+
+        // First request: a worker that faults (cancellation) after a late release.
+        coordinator.Request(Key1, ReleaseThenThrowIfCanceledFactory(started1, release1), ClaimantA, CancellationToken.None);
+        Assert.That(started1.Wait(TimeSpan.FromSeconds(2)), Is.True);
+        coordinator.RemoveClaimant(Key1, ClaimantA);
+
+        // Re-request: a fresh running item for the same key.
+        coordinator.Request(Key1, NonCooperativeFactory(started2, release2), ClaimantB, CancellationToken.None);
+        Assert.That(started2.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        // Let the old worker stop. Its HandleWorkStopped must not remove the
+        // fresh item from coordinator tracking.
+        release1.Set();
+        Thread.Sleep(300);
+
+        // A third request must coalesce onto the still-running fresh item, not
+        // admit a duplicate worker.
+        coordinator.Request(Key1, NonCooperativeFactory(started3, release2, result: 9), ClaimantA, CancellationToken.None);
+        Assert.That(started3.Wait(TimeSpan.FromMilliseconds(400)), Is.False);
+        var counters = coordinator.GetCounters();
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(counters.CoalescedCount, Is.EqualTo(1));
+            Assert.That(counters.AdmittedCount, Is.EqualTo(2));
+        }
+
+        release2.Set();
+    }
+
+    [Test]
+    public void PreCanceledToken_DoesNotLeaveGhostClaimant()
+    {
+        // ICW-320 F-014: a pre-canceled token must never leave a claimant
+        // behind. On HEAD, AddClaimant registers the token callback before
+        // adding the claimant, so the already-fired callback removes nothing
+        // and the claimant sticks. The ghost keeps queued work alive; it is
+        // promoted instead of canceled.
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 1);
+        var started1 = new ManualResetEventSlim(false);
+        var hold1 = new ManualResetEventSlim(false);
+        using var preCanceled = new CancellationTokenSource();
+        preCanceled.Cancel();
+
+        // Fill the single slot so the second request is queued.
+        coordinator.Request(Key1, BlockingFactory(started1, hold1), ClaimantA, CancellationToken.None);
+        Assert.That(started1.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        coordinator.Request(Key2, Factory(20), ClaimantB, preCanceled.Token);
+
+        // When the slot opens, unclaimed queued work is canceled instead of
+        // promoted and run. The queued item has no claimant callbacks, so the
+        // observable is the coordinator counter, not an onFailed signal.
+        hold1.Set();
+        Thread.Sleep(500);
+
+        var counters = coordinator.GetCounters();
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(counters.CanceledCount, Is.EqualTo(1));
+            Assert.That(counters.CompletedCount, Is.EqualTo(1));
+        }
     }
 
     [Test]

@@ -49,9 +49,9 @@
                          Visibility="Collapsed" />
             </Canvas>
             <TextBlock x:Name="LoadingOverlay" Text="BUILDING INITIAL SNAPSHOT"
-                       HorizontalAlignment="Center" VerticalAlignment="Top"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
                        FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold"
-                       Foreground="{StaticResource AccentBrush}" Margin="0,446,0,0" Grid.Row="1" />
+                       Foreground="{StaticResource AccentBrush}" Grid.Row="1" />
             <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="14,0,0,14"
                     Padding="10,7" Background="#DD1A2026"
                     BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Grid.Row="1">

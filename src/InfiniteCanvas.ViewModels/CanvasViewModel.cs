@@ -7,20 +7,64 @@ public partial class CanvasViewModel : ObservableObject
 {
     public CameraTransform Camera { get; } = new();
 
-    [ObservableProperty]
-    public partial SpatialBounds SceneBounds { get; set; }
+    private SpatialBounds _sceneBounds;
+    private SpatialBounds _viewport;
+    private int _visibleItemCount;
+    private int _totalItemCount;
+    private IReadOnlyList<ICanvasItem> _visibleItems = [];
 
-    [ObservableProperty]
-    public partial SpatialBounds Viewport { get; set; }
+    // Frame state setters are private (ICW-316A). ApplyFrame is the only
+    // mutation path, so the invariants hold by construction and no public
+    // setter can produce VisibleItemCount > TotalItemCount or bypass HasScene.
+    public SpatialBounds SceneBounds
+    {
+        get => _sceneBounds;
+        private set
+        {
+            _sceneBounds = value;
+            OnPropertyChanged();
+        }
+    }
 
-    [ObservableProperty]
-    public partial int VisibleItemCount { get; set; }
+    public SpatialBounds Viewport
+    {
+        get => _viewport;
+        private set
+        {
+            _viewport = value;
+            OnPropertyChanged();
+        }
+    }
 
-    [ObservableProperty]
-    public partial int TotalItemCount { get; set; }
+    public int VisibleItemCount
+    {
+        get => _visibleItemCount;
+        private set
+        {
+            _visibleItemCount = value;
+            OnPropertyChanged();
+        }
+    }
 
-    [ObservableProperty]
-    public partial IReadOnlyList<ICanvasItem> VisibleItems { get; set; } = [];
+    public int TotalItemCount
+    {
+        get => _totalItemCount;
+        private set
+        {
+            _totalItemCount = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public IReadOnlyList<ICanvasItem> VisibleItems
+    {
+        get => _visibleItems;
+        private set
+        {
+            _visibleItems = value;
+            OnPropertyChanged();
+        }
+    }
 
     public bool HasScene => SceneBounds.Width > 0 && SceneBounds.Height > 0;
 
@@ -33,19 +77,51 @@ public partial class CanvasViewModel : ObservableObject
     // The canvas component owns all per-frame viewport state. MainWindow
     // publishes the frame result through this method so the canvas view model
     // stays self-contained and independent of MainViewModel or any spatial
-    // index service (ICW-309). The visible item list is optional so hosts can
-    // drive the view model from any ICanvasSceneSource without app types
-    // (ICW-312 consumer-host gate; ICW-314 consumes VisibleItems).
+    // index service (ICW-309). The visible-items list is required (ICW-316A);
+    // a host passes the query result from its ICanvasSceneSource (ICW-312
+    // consumer-host gate; ICW-314 consumes VisibleItems).
     public void ApplyFrame(
         SpatialBounds frameViewport,
         int frameVisibleItemCount,
         int frameTotalItemCount,
-        IReadOnlyList<ICanvasItem>? frameVisibleItems = null)
+        IReadOnlyList<ICanvasItem> frameVisibleItems)
     {
-        Viewport = frameViewport;
-        VisibleItemCount = frameVisibleItemCount;
-        TotalItemCount = frameTotalItemCount;
-        VisibleItems = frameVisibleItems ?? [];
+        ArgumentNullException.ThrowIfNull(frameVisibleItems);
+        if (frameVisibleItemCount < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(frameVisibleItemCount));
+        }
+
+        if (frameTotalItemCount < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(frameTotalItemCount));
+        }
+
+        if (frameVisibleItemCount > frameTotalItemCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(frameVisibleItemCount),
+                "VisibleItemCount cannot exceed TotalItemCount.");
+        }
+
+        if (frameVisibleItems.Count != frameVisibleItemCount)
+        {
+            throw new ArgumentException(
+                "The visible-items list count must equal frameVisibleItemCount.",
+                nameof(frameVisibleItems));
+        }
+
+        // Frame state publishes as one notification batch (ICW-316A): set all
+        // backing fields first, then raise one notification per property so a
+        // consumer never observes a half-applied frame.
+        _viewport = frameViewport;
+        _visibleItemCount = frameVisibleItemCount;
+        _totalItemCount = frameTotalItemCount;
+        _visibleItems = frameVisibleItems;
+        OnPropertyChanged(nameof(Viewport));
+        OnPropertyChanged(nameof(VisibleItemCount));
+        OnPropertyChanged(nameof(TotalItemCount));
+        OnPropertyChanged(nameof(VisibleItems));
     }
 
     public void SetSceneBounds(SpatialBounds bounds)

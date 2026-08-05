@@ -3,7 +3,7 @@ id: ICW-321-defectbitmap-dead-sampling-removal
 author: InfiniteCanvas Agent
 key: ICW-321
 title: Remove dead DefectBitmap and LockBits sampling
-status: Proposed
+status: Done
 type: Bug
 priority: P2
 tags:

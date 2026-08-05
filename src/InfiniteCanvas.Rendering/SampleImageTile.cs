@@ -484,6 +484,11 @@ public sealed class SampleImageTile
 
         if (_coordinator is not null)
         {
+            // REENTRANT-LOCK CHAIN (ICW-322 F-009): this call runs from
+            // TileCacheBudget.TryReserve's eviction loop while
+            // TileWorkCoordinator.Request still holds the coordinator _lock.
+            // Safe only through same-thread Lock reentrancy. Do not introduce
+            // an await or a thread hop in this path.
             _coordinator.RemoveClaimant(key, GetClaimantId());
         }
 
@@ -900,10 +905,6 @@ public class SampleAnnotation : ISpatialEntity, ICanvasItem
     public int DefectPixelHeight {get; }
     public byte[] DefectPixels {get; }
 
-#if WINDOWS
-    public Bitmap? DefectBitmap { get; init; }
-#endif
-
     public bool TryGetDefectValue(double worldX, double worldY, out byte value)
     {
         value = default;
@@ -1062,6 +1063,11 @@ public sealed class TileCacheBudget
                     _evictionCount + 1);
                 evicted.Add(evictedEntry);
                 Interlocked.Increment(ref _evictionCount);
+            // REENTRANT-LOCK CHAIN (ICW-322 F-009): EvictCacheEntry calls back
+            // into TileWorkCoordinator.RemoveClaimant while Request still holds
+            // the coordinator _lock (Request -> TryReserve -> EvictCacheEntry
+            // -> RemoveClaimant). The chain is safe only through same-thread
+            // Lock reentrancy. Never add an await or a thread hop in this path.
             }
         }
 

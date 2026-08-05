@@ -50,15 +50,7 @@ internal static class AnnotationGenerator
                 },
                 defectTemplate.Width,
                 defectTemplate.Height,
-                defectTemplate.Pixels
-#if WINDOWS
-            )
-            {
-                DefectBitmap = defectTemplate.Bitmap
-            };
-#else
-            );
-#endif
+                defectTemplate.Pixels);
         }
 
         return annotations;

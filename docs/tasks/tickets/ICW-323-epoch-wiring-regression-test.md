@@ -3,7 +3,7 @@ id: ICW-323-epoch-wiring-regression-test
 author: InfiniteCanvas Agent
 key: ICW-323
 title: Add an epoch-wiring behavioral regression test
-status: Proposed
+status: Done
 type: Task
 priority: P3
 tags:

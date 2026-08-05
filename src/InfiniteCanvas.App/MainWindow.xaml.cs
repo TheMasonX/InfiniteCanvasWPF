@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using InfiniteCanvas.App.Controls;
@@ -15,7 +16,7 @@ using Serilog;
 
 namespace InfiniteCanvas.App;
 
-public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuerySource
+public partial class MainWindow : Window, ICanvasSceneSource
 {
     private LiveSpatialIndexService<SampleAnnotation> _spatialIndex = null!;
     private CameraTransform _camera = null!;
@@ -35,6 +36,9 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
     private SpatialBounds _sceneBounds;
     private readonly FrameBufferPool _frameBufferPool = new();
     private CameraSnapshot _lastPublishedCamera;
+    private IReadOnlyList<SampleImageTile> _lastPublishedVisibleTiles = [];
+    private CameraSnapshot? _lastGridCamera;
+    private string[]? _lastGridTileIds;
     private Point? _hoverPointerPosition;
     private string? _selectedAnnotationId;
     private AnnotationDisplayOptions _annotationDisplayOptions = AnnotationDisplayOptions.Default;
@@ -58,13 +62,6 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
     private long _totalFrameTicks;
     private int _frameCount;
 
-    private Border ViewportHost => CanvasSurface.SurfaceHost;
-    private TextBlock LoadingOverlay => CanvasSurface.LoadingText;
-    private TextBlock PixelometerWorldText => CanvasSurface.WorldReadout;
-    private TextBlock PixelometerTileText => CanvasSurface.TileReadout;
-    private TextBlock PixelometerValueText => CanvasSurface.ValueReadout;
-    private ProgressBar RenderBusyBar => CanvasSurface.BusyBar;
-
     public IReadOnlyList<FeatureDisplayItem> SelectedAnnotationFeatures => _selectedAnnotationFeatures;
 
     public MainWindow()
@@ -81,9 +78,9 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
         CanvasSurface.FramePublished += OnCanvasFramePublished;
         // The window is the concrete data-source implementation behind the
         // canvas boundary (ICW-312, ADR-0007). The control consumes content
-        // only through these contracts, never through app types.
+        // only through this contract, never through app types. The scene
+        // source is the single item-query authority (ICW-316A F-001).
         CanvasSurface.SceneSource = this;
-        CanvasSurface.SpatialQuerySource = this;
 
         // The MainViewModel is stable for the window lifetime. Regeneration
         // reuses it so user-edited settings never reset to defaults.
@@ -98,9 +95,7 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
             IsEnabled = false
         };
 
-        PixelometerWorldText.Text = "WORLD X --  Y --";
-        PixelometerTileText.Text = "TILE --";
-        PixelometerValueText.Text = "PIXEL --";
+        CanvasSurface.SetPixelometerReadout("WORLD X --  Y --", "TILE --", "PIXEL --");
         ApplySettingsToUi(CanvasUserSettingsStore.Load(_settingsPath));
 
         Loaded += OnLoaded;
@@ -120,10 +115,11 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
         _spatialIndex = new LiveSpatialIndexService<SampleAnnotation>(new StrTreeSpatialIndexBuilder<SampleAnnotation>());
     }
 
-    // --- ICanvasSceneSource / ICanvasSpatialQuerySource (ICW-312, ADR-0007) ---
-    // The window implements the canvas data-source contracts. The canvas
+    // --- ICanvasSceneSource (ICW-312, ICW-316A, ADR-0007) ---
+    // The window implements the canvas data-source contract. The canvas
     // consumes content only through these members, never through concrete
-    // application types.
+    // application types. The scene source is the single item-query authority
+    // (F-001); the duplicate ICanvasSpatialQuerySource is removed.
 
     public SpatialBounds SceneBounds => _sceneBounds;
 
@@ -131,8 +127,6 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
 
     public event EventHandler? SceneChanged;
 
-    // One public method satisfies both contracts. ICanvasSceneSource and
-    // ICanvasSpatialQuerySource expose the same QueryVisible signature.
     public IReadOnlyList<ICanvasItem> QueryVisible(SpatialBounds viewport)
     {
         // IReadOnlyList<out T> is covariant, so the SampleAnnotation result
@@ -140,17 +134,35 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
         return _spatialIndex.Query(viewport);
     }
 
+    // Named point-query contract (ICW-316A F-001). Consumers never construct
+    // a magic probe box; the epsilon probe is contained in this one method.
+    public IReadOnlyList<ICanvasItem> QueryPoint(double worldX, double worldY)
+    {
+        const double probeSize = 0.01;
+        return _spatialIndex.Query(new SpatialBounds(worldX, worldY, probeSize, probeSize));
+    }
+
     public bool TryReadResidentPixel(double worldX, double worldY, int mipLevel, out CanvasPixelSample sample)
     {
         // Non-blocking resident read: never initiates tile generation
-        // (ICW-P0-PIXELOMETER-READOUT, closed by ICW-312).
-        if (_tiles.Count == 0
-            || !TileGridIndexLookup.TryGetTileIndex(
+        // (ICW-P0-PIXELOMETER-READOUT, closed by ICW-312). Tile geometry is
+        // derived from the scene bounds and grid counts, never from a
+        // representative first tile (ICW-316A F-001).
+        if (_tiles.Count == 0 || _tileColumns <= 0)
+        {
+            sample = default;
+            return false;
+        }
+
+        var tileRows = Math.Max(1, _tiles.Count / _tileColumns);
+        var tileWidth = _sceneBounds.Width / _tileColumns;
+        var tileHeight = _sceneBounds.Height / tileRows;
+        if (!TileGridIndexLookup.TryGetTileIndex(
                 worldX,
                 worldY,
                 _sceneBounds,
-                _tiles[0].Bounds.Width,
-                _tiles[0].Bounds.Height,
+                tileWidth,
+                tileHeight,
                 _tileColumns,
                 _tiles.Count,
                 out var tileIndex))
@@ -174,12 +186,14 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
             background = tile.PlaceholderValue;
         }
 
+        // Named point-query contract (ICW-316A F-001): no magic probe box at
+        // the read site.
         byte defect = 0;
-        var sampleArea = new SpatialBounds(worldX, worldY, 0.01, 0.01);
-        var hitAnnotations = _spatialIndex.Query(sampleArea);
+        var hitAnnotations = QueryPoint(worldX, worldY);
         for (var index = 0; index < hitAnnotations.Count; index++)
         {
-            if (hitAnnotations[index].TryGetDefectValue(worldX, worldY, out var value))
+            if (hitAnnotations[index] is SampleAnnotation annotation
+                && annotation.TryGetDefectValue(worldX, worldY, out var value))
             {
                 defect = Math.Max(defect, value);
             }
@@ -206,7 +220,7 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
 
     private void OnCanvasPointerMoved(object? sender, MouseEventArgs e)
     {
-        _hoverPointerPosition = e.GetPosition(ViewportHost);
+        _hoverPointerPosition = CanvasSurface.GetViewportPointer(e);
         UpdatePixelometer(_hoverPointerPosition.Value);
     }
 
@@ -230,7 +244,7 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
         }
         catch (Exception exception)
         {
-            LoadingOverlay.Text = "INITIALIZATION FAILED";
+            CanvasSurface.SetLoadingState("INITIALIZATION FAILED", visible: true);
             StatusText.Text = exception.Message;
         }
     }
@@ -271,8 +285,8 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
         BeginBusyOperation();
         try
         {
-            LoadingOverlay.Text = "GENERATING TILE MATERIAL";
-            LoadingOverlay.Visibility = Visibility.Visible;
+            CanvasSurface.ClearFrame();
+            CanvasSurface.SetLoadingState("GENERATING TILE MATERIAL", visible: true);
             RegenerateButton.IsEnabled = false;
 
             InitializeSpatialState();
@@ -352,7 +366,7 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
                 ClampCameraToScene();
             }
 
-            LoadingOverlay.Visibility = Visibility.Collapsed;
+            CanvasSurface.SetLoadingState(null, visible: false);
             await RequestRenderAsync();
             // Notify scene-source consumers that the scene content changed
             // (ICW-312). The canvas and any external host re-query through
@@ -454,13 +468,14 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
 
     private async Task RenderFrameAsync(CancellationToken cancellationToken)
     {
-        if (!IsLoaded || ViewportHost.ActualWidth < 1 || ViewportHost.ActualHeight < 1)
+        var viewportSize = CanvasSurface.GetViewportSize();
+        if (!IsLoaded || viewportSize.Width < 1 || viewportSize.Height < 1)
         {
             return;
         }
 
-        var width = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualWidth), 1, 4096);
-        var height = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualHeight), 1, 4096);
+        var width = Math.Clamp((int)Math.Ceiling(viewportSize.Width), 1, 4096);
+        var height = Math.Clamp((int)Math.Ceiling(viewportSize.Height), 1, 4096);
         CanvasSurface.ViewModel.ApplyZoomFloor(width, height);
         _camera.ClampToBounds(_sceneBounds, width, height);
         var camera = _camera.Capture();
@@ -550,7 +565,7 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
         if (!_renderRequestTracker.IsCurrent(requestVersion))
             return;
 
-        PublishFrame(factory, frame.Bitmap, frame.VisibleItems, camera, width, height);
+        PublishFrame(factory, frame.Bitmap, frame.VisibleItems, frame.VisibleTiles, camera, width, height);
         _renderRequestTracker.Advance();
 
         stopwatch.Stop();
@@ -570,17 +585,10 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
             : completedConversionTiles.Average(tile => tile.BitmapConversionDuration!.Value.TotalMilliseconds);
         var coordinatorCounters = _tileCoordinator.GetCounters();
 
-        // Update loading indicator: show RenderBusyBar when tile generation
-        // is actively running or queued.
+        // Update loading indicator: show the busy bar when tile generation
+        // is actively running or queued (ICW-319 method surface).
         var hasPendingTileWork = coordinatorCounters.PendingCount > 0;
-        if (hasPendingTileWork && RenderBusyBar.Visibility != Visibility.Visible)
-        {
-            RenderBusyBar.Visibility = Visibility.Visible;
-        }
-        else if (!hasPendingTileWork && RenderBusyBar.Visibility == Visibility.Visible)
-        {
-            RenderBusyBar.Visibility = Visibility.Collapsed;
-        }
+        CanvasSurface.SetBusyIndicatorVisible(hasPendingTileWork);
 
         StatusText.Text = $"Frame {width}x{height}  |  {stopwatch.Elapsed.TotalMilliseconds:F1} ms  |  " +
             $"Zoom {camera.ScaleX:F3}x  |  " +
@@ -637,13 +645,15 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
 
     private void PublishFrame(
         ZeroCopyBitmapFactory renderedBuffer,
-        ImageSource bitmap,
+        BitmapSource bitmap,
         IReadOnlyList<SampleAnnotation> annotations,
+        IReadOnlyList<SampleImageTile> visibleTiles,
         CameraSnapshot camera,
         int frameWidth,
         int frameHeight)
     {
         _lastPublishedCamera = camera;
+        _lastPublishedVisibleTiles = visibleTiles;
         // The canvas consumes a CanvasFrame value, never a host-built UIElement
         // tree (ICW-315, ADR-0007). The raster handoff is zero-copy: the canvas
         // displays the frozen ImageSource and never touches its backing memory
@@ -669,20 +679,45 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
     {
         // Host-composed overlays stay camera-synchronized with the raster that
         // was published for this frame (ICW-315; overlay layering invariant).
-        UpdateTileGridLayer(_lastPublishedCamera, frame.Width, frame.Height);
+        // The grid scales to the camera-visible tile set (ICW-326).
+        UpdateTileGridLayer(_lastPublishedCamera, _lastPublishedVisibleTiles, frame.Width, frame.Height);
         UpdateAnnotationLayer(frame.Items, _lastPublishedCamera);
     }
 
-    private void UpdateTileGridLayer(CameraSnapshot camera, int frameWidth, int frameHeight)
+    private void UpdateTileGridLayer(CameraSnapshot camera, IReadOnlyList<SampleImageTile> visibleTiles, int frameWidth, int frameHeight)
     {
-        var gridLayer = CanvasSurface.TileGridLayer!;
+        // ICW-326: the grid is built from the camera-visible tile set, not the
+        // whole scene. Per-frame cost now scales with the visible tiles in the
+        // publish hot path instead of the total scene size.
+        var tileIds = new string[visibleTiles.Count];
+        for (var i = 0; i < visibleTiles.Count; i++)
+        {
+            tileIds[i] = visibleTiles[i].Id;
+        }
+
+        // Skip the rebuild when neither the camera nor the visible tile set
+        // changed since the last publish (for example a tile-completion
+        // re-render at an unchanged camera).
+        if (_lastGridCamera == camera
+            && _lastGridTileIds is not null
+            && _lastGridTileIds.AsSpan().SequenceEqual(tileIds))
+        {
+            return;
+        }
+
+        _lastGridCamera = camera;
+        _lastGridTileIds = tileIds;
+
+        var gridLayer = CanvasSurface.GetOverlayHost().TileGridLayer!;
         gridLayer.Children.Clear();
         var gridBrush = new SolidColorBrush(Color.FromArgb(180, 40, 210, 190));
         gridBrush.Freeze();
 
-        foreach (var worldX in _tiles.SelectMany(tile => new[] { tile.Bounds.X, tile.Bounds.Right }).Distinct())
+        var sceneY = _sceneBounds.Y;
+        var sceneX = _sceneBounds.X;
+        foreach (var worldX in visibleTiles.SelectMany(tile => new[] { tile.Bounds.X, tile.Bounds.Right }).Distinct())
         {
-            var screenX = camera.WorldToScreen(worldX, _sceneBounds.Y).X;
+            var screenX = camera.WorldToScreen(worldX, sceneY).X;
             gridLayer.Children.Add(new Line
             {
                 X1 = screenX,
@@ -695,9 +730,9 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
             });
         }
 
-        foreach (var worldY in _tiles.SelectMany(tile => new[] { tile.Bounds.Y, tile.Bounds.Bottom }).Distinct())
+        foreach (var worldY in visibleTiles.SelectMany(tile => new[] { tile.Bounds.Y, tile.Bounds.Bottom }).Distinct())
         {
-            var screenY = camera.WorldToScreen(_sceneBounds.X, worldY).Y;
+            var screenY = camera.WorldToScreen(sceneX, worldY).Y;
             gridLayer.Children.Add(new Line
             {
                 X1 = 0,
@@ -713,7 +748,7 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
 
     private void UpdateAnnotationLayer(IReadOnlyList<ICanvasItem> items, CameraSnapshot camera)
     {
-        var annotationLayer = CanvasSurface.AnnotationLayer!;
+        var annotationLayer = CanvasSurface.GetOverlayHost().AnnotationLayer!;
         annotationLayer.Children.Clear();
 
         foreach (var item in items)
@@ -846,8 +881,9 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
 
     private void ClampCameraToScene()
     {
-        var width = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualWidth), 1, 4096);
-        var height = Math.Clamp((int)Math.Ceiling(ViewportHost.ActualHeight), 1, 4096);
+        var viewportSize = CanvasSurface.GetViewportSize();
+        var width = Math.Clamp((int)Math.Ceiling(viewportSize.Width), 1, 4096);
+        var height = Math.Clamp((int)Math.Ceiling(viewportSize.Height), 1, 4096);
         CanvasSurface.ViewModel.ApplyZoomFloor(width, height);
         _camera.ClampToBounds(_sceneBounds, width, height);
         CanvasSurface.RefreshScrollbars();
@@ -892,7 +928,7 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
     {
         // Wheel zoom is handled by the canvas control (ICW-311). The window
         // only observes the pointer for its pixelometer readout.
-        var origin = e.GetPosition(ViewportHost);
+        var origin = CanvasSurface.GetViewportPointer(e);
         _hoverPointerPosition = origin;
         UpdatePixelometer(origin);
     }
@@ -1007,8 +1043,9 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
 
     private void ApplyPercentZoom(double percent)
     {
-        var width = Math.Max(1, ViewportHost.ActualWidth);
-        var height = Math.Max(1, ViewportHost.ActualHeight);
+        var viewportSize = CanvasSurface.GetViewportSize();
+        var width = Math.Max(1, viewportSize.Width);
+        var height = Math.Max(1, viewportSize.Height);
         var (minimumScaleX, minimumScaleY) = CanvasSurface.ViewModel.ComputeMinimumZoom(width, height);
         var baseUniformScale = Math.Max(minimumScaleX, minimumScaleY);
         var targetScale = baseUniformScale * (percent / 100.0);
@@ -1019,16 +1056,18 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
 
     private void ApplyFitToWidthZoom()
     {
-        var width = Math.Max(1, ViewportHost.ActualWidth);
-        var height = Math.Max(1, ViewportHost.ActualHeight);
+        var viewportSize = CanvasSurface.GetViewportSize();
+        var width = Math.Max(1, viewportSize.Width);
+        var height = Math.Max(1, viewportSize.Height);
         var (minimumScaleX, minimumScaleY) = CanvasSurface.ViewModel.ComputeMinimumZoom(width, height);
         ApplyScaleWithUniformFirst(minimumScaleX, minimumScaleY, width, height);
     }
 
     private void ApplyFitToHeightZoom()
     {
-        var width = Math.Max(1, ViewportHost.ActualWidth);
-        var height = Math.Max(1, ViewportHost.ActualHeight);
+        var viewportSize = CanvasSurface.GetViewportSize();
+        var width = Math.Max(1, viewportSize.Width);
+        var height = Math.Max(1, viewportSize.Height);
         var (minimumScaleX, minimumScaleY) = CanvasSurface.ViewModel.ComputeMinimumZoom(width, height);
         ApplyScaleWithUniformFirst(minimumScaleY, minimumScaleY, width, height);
     }
@@ -1054,7 +1093,7 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
 
     private void OnViewportSizeChanged(object sender, SizeChangedEventArgs e)
     {
-        if (!IsLoaded || LoadingOverlay.Visibility == Visibility.Visible)
+        if (!IsLoaded || CanvasSurface.IsLoadingVisible)
         {
             return;
         }
@@ -1306,8 +1345,7 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
         var camera = _camera.Capture();
         var worldX = (screenPoint.X - camera.OffsetX) / camera.ScaleX;
         var worldY = (screenPoint.Y - camera.OffsetY) / camera.ScaleY;
-
-        PixelometerWorldText.Text = $"WORLD X {worldX:F1}  Y {worldY:F1}";
+        var worldLine = $"WORLD X {worldX:F1}  Y {worldY:F1}";
 
         var mipLevel = BackgroundTileMipPolicy.SelectMipLevel(camera);
         // Read through the scene source contract so the read never initiates
@@ -1319,27 +1357,29 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
             && sceneSource.TryReadResidentPixel(worldX, worldY, mipLevel, out var sample))
         {
             var finalValue = ResolveDisplayPixelValue(sample.Background, worldX, worldY);
-            PixelometerTileText.Text = sample.TileInfo;
-            PixelometerValueText.Text = $"PIXEL {finalValue}  ({sample.TileId}) bg {sample.Background} + defect {sample.Defect}";
+            CanvasSurface.SetPixelometerReadout(
+                worldLine,
+                sample.TileInfo,
+                $"PIXEL {finalValue}  ({sample.TileId}) bg {sample.Background} + defect {sample.Defect}");
             return;
         }
 
-        PixelometerTileText.Text = "TILE --";
-        PixelometerValueText.Text = "PIXEL --";
+        CanvasSurface.SetPixelometerReadout(worldLine, "TILE --", "PIXEL --");
     }
 
     private byte ResolveDisplayPixelValue(byte backgroundValue, double worldX, double worldY)
     {
-        var sampleArea = new SpatialBounds(worldX, worldY, 0.01, 0.01);
-        var hitAnnotations = _spatialIndex.Query(sampleArea);
-        return DefectOverlaySampler.ResolveDisplayValue(backgroundValue, hitAnnotations, worldX, worldY);
+        // Named point-query contract (ICW-316A F-001): the epsilon probe is
+        // contained in QueryPoint, not at the read site.
+        var hitAnnotations = QueryPoint(worldX, worldY);
+        return DefectOverlaySampler.ResolveDisplayValue(backgroundValue, hitAnnotations.OfType<SampleAnnotation>(), worldX, worldY);
     }
 
     private void BeginBusyOperation()
     {
         if (Interlocked.Increment(ref _busyOperationCount) == 1)
         {
-            Dispatcher.Invoke(() => RenderBusyBar.Visibility = Visibility.Visible);
+            Dispatcher.Invoke(() => CanvasSurface.SetBusyIndicatorVisible(true));
         }
     }
 
@@ -1348,7 +1388,7 @@ public partial class MainWindow : Window, ICanvasSceneSource, ICanvasSpatialQuer
         if (Interlocked.Decrement(ref _busyOperationCount) <= 0)
         {
             Interlocked.Exchange(ref _busyOperationCount, 0);
-            Dispatcher.Invoke(() => RenderBusyBar.Visibility = Visibility.Collapsed);
+            Dispatcher.Invoke(() => CanvasSurface.SetBusyIndicatorVisible(false));
         }
     }
 

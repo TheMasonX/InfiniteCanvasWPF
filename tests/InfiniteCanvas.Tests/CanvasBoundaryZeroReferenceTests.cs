@@ -37,7 +37,7 @@ public sealed class CanvasBoundaryZeroReferenceTests
     }
 
     [Test]
-    public void CanvasControl_ExposesSceneSourceAndSpatialQuerySourceDependencyProperties()
+    public void CanvasControl_ExposesSingleItemQueryAuthority()
     {
         var source = File.ReadAllText(
             Path.Combine(RepositoryRoot, "src", "InfiniteCanvas.App", "Controls", "CanvasControl.xaml.cs"));
@@ -46,12 +46,10 @@ public sealed class CanvasBoundaryZeroReferenceTests
         {
             Assert.That(source, Does.Contain("SceneSourceProperty"),
                 "CanvasControl must expose the SceneSource dependency property.");
-            Assert.That(source, Does.Contain("SpatialQuerySourceProperty"),
-                "CanvasControl must expose the SpatialQuerySource dependency property.");
             Assert.That(source, Does.Contain("public ICanvasSceneSource? SceneSource"),
                 "CanvasControl must expose the typed SceneSource accessor.");
-            Assert.That(source, Does.Contain("public ICanvasSpatialQuerySource? SpatialQuerySource"),
-                "CanvasControl must expose the typed SpatialQuerySource accessor.");
+            Assert.That(source, Does.Not.Contain("SpatialQuerySourceProperty"),
+                "The duplicate spatial-query source dependency property must be gone (ICW-316A F-001).");
         }
     }
 

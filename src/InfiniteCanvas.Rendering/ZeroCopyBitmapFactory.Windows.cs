@@ -336,16 +336,18 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
 
     private unsafe void DrawDefectPatch(byte* destination, SampleAnnotation annotation, CameraSnapshot camera)
     {
-        var bitmap = annotation.DefectBitmap;
-        if (bitmap is null)
-        {
-            return;
-        }
+        // Patch geometry uses the pixel-payload dimensions. The GDI+ LockBits
+        // source read was dead: its value was discarded because the display
+        // value comes from DefectPixels via DefectOverlaySampler (ICW-321
+        // F-008). Removing it also dissolves the dispose-vs-render race on the
+        // pooled DefectBitmap and precedes the ICW-102 rescope.
+        var imageWidth = annotation.DefectPixelWidth;
+        var imageHeight = annotation.DefectPixelHeight;
 
-        var imageLeftWorld = annotation.Bounds.X + ((annotation.Bounds.Width - bitmap.Width) / 2.0);
-        var imageTopWorld = annotation.Bounds.Y + ((annotation.Bounds.Height - bitmap.Height) / 2.0);
-        var imageRightWorld = imageLeftWorld + bitmap.Width;
-        var imageBottomWorld = imageTopWorld + bitmap.Height;
+        var imageLeftWorld = annotation.Bounds.X + ((annotation.Bounds.Width - imageWidth) / 2.0);
+        var imageTopWorld = annotation.Bounds.Y + ((annotation.Bounds.Height - imageHeight) / 2.0);
+        var imageRightWorld = imageLeftWorld + imageWidth;
+        var imageBottomWorld = imageTopWorld + imageHeight;
         var topLeft = camera.WorldToScreen(imageLeftWorld, imageTopWorld);
         var bottomRight = camera.WorldToScreen(imageRightWorld, imageBottomWorld);
         var left = Math.Clamp((int)Math.Floor(topLeft.X), 0, _layout.Width);
@@ -357,34 +359,20 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
             return;
         }
 
-        var bitmapBounds = new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height);
-        var bitmapData = bitmap.LockBits(bitmapBounds, System.Drawing.Imaging.ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
-        try
+        for (var y = top; y < bottom; y++)
         {
-            var source = (byte*)bitmapData.Scan0;
-            for (var y = top; y < bottom; y++)
-            {
-                var rowOffset = y * _layout.Stride;
-                var destinationOffset = rowOffset + (left * 4);
-                var worldY = (y - camera.OffsetY) / camera.ScaleY;
-                var sourceY = Math.Clamp((int)(worldY - imageTopWorld), 0, bitmap.Height - 1);
-                var sourceRow = source + (sourceY * bitmapData.Stride);
+            var rowOffset = y * _layout.Stride;
+            var destinationOffset = rowOffset + (left * 4);
+            var worldY = (y - camera.OffsetY) / camera.ScaleY;
 
-                for (var x = left; x < right; x++)
-                {
-                    var worldX = (x - camera.OffsetX) / camera.ScaleX;
-                    var sourceX = Math.Clamp((int)(worldX - imageLeftWorld), 0, bitmap.Width - 1);
-                    var value = sourceRow[sourceX * 3];
-                    var currentValue = destination[destinationOffset];
-                    var displayValue = DefectOverlaySampler.ResolveDisplayValue(currentValue, annotation, worldX, worldY);
-                    WritePackedGrayPixel(destination, destinationOffset, displayValue);
-                    destinationOffset += 4;
-                }
+            for (var x = left; x < right; x++)
+            {
+                var worldX = (x - camera.OffsetX) / camera.ScaleX;
+                var currentValue = destination[destinationOffset];
+                var displayValue = DefectOverlaySampler.ResolveDisplayValue(currentValue, annotation, worldX, worldY);
+                WritePackedGrayPixel(destination, destinationOffset, displayValue);
+                destinationOffset += 4;
             }
-        }
-        finally
-        {
-            bitmap.UnlockBits(bitmapData);
         }
     }
 

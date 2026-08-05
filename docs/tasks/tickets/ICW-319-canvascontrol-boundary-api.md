@@ -3,7 +3,7 @@ id: ICW-319-canvascontrol-boundary-api
 author: InfiniteCanvas Agent
 key: ICW-319
 title: Replace the CanvasControl raw-element surface with a method-based API
-status: Proposed
+status: Done
 type: Improvement
 priority: P2
 tags:

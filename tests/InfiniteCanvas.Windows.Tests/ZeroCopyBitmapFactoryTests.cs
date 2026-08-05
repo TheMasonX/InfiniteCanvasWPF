@@ -221,14 +221,11 @@ public class ZeroCopyBitmapFactoryTests
     }
 
     [Test]
-    public void GenerateFrozenBitmap_RendersDefectBitmapUnalteredOutsideLogicalBounds()
+    public void GenerateFrozenBitmap_RendersDefectPayloadUnalteredOutsideLogicalBounds()
     {
-        using var defectBitmap = new Bitmap(4, 4, PixelFormat.Format24bppRgb);
-        using (var graphics = Graphics.FromImage(defectBitmap))
-        {
-            graphics.Clear(Color.FromArgb(150, 150, 150));
-        }
-
+        // ICW-321: the display value comes from DefectPixels via the sampler.
+        // The GDI+ DefectBitmap source read was dead and is removed; the pixel
+        // payload is the single defect-content source.
         var annotation = new SampleAnnotation(
             "annotation",
             "tile",
@@ -239,10 +236,7 @@ public class ZeroCopyBitmapFactoryTests
             () => new Dictionary<string, object>(),
             4,
             4,
-            Enumerable.Repeat((byte)150, 16).ToArray())
-        {
-            DefectBitmap = defectBitmap
-        };
+            Enumerable.Repeat((byte)150, 16).ToArray());
         using var factory = new ZeroCopyBitmapFactory(24, 24);
 
         var bitmap = factory.GenerateFrozenBitmap([], [annotation], new CameraTransform().Capture());

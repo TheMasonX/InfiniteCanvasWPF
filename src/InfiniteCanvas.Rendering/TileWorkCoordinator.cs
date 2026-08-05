@@ -172,8 +172,19 @@ public sealed class TileWorkCoordinator : IDisposable
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
 
-            // If the key already has a work item, coalesce — add claimant, don't start a new fill.
-            if (_items.TryGetValue(key, out var existing))
+            // If the key already has a work item, coalesce — add claimant, don't
+            // start a new fill. A running item canceled mid-flight stays in
+            // _items until its worker physically stops (ICW-P0-ACTIVECOUNT
+            // residual B). Coalescing onto that terminal item would swallow a
+            // scroll-away-and-back re-request: its factory token is already
+            // canceled, so the fresh regeneration never starts (ICW-320 F-006).
+            // Treat a canceled item as not present and admit fresh work. The
+            // duplicate-CPU cost of the overlapping worker is accepted; epoch
+            // guards discard the stale result.
+            if (_items.TryGetValue(key, out var existing)
+                && existing.State is not (TileWorkItemState.Canceled
+                    or TileWorkItemState.Completed
+                    or TileWorkItemState.Failed))
             {
                 existing.AddClaimant(claimantId, claimantToken, onCompleted, onFailed);
                 Interlocked.Increment(ref _coalescedCount);
@@ -183,6 +194,14 @@ public sealed class TileWorkCoordinator : IDisposable
             }
 
             // Attempt reservation before admission.
+            //
+            // REENTRANT-LOCK CHAIN (ICW-322 F-009): tryReserve can call back
+            // into this coordinator's _lock on the same thread through
+            // TileCacheBudget.TryReserve -> SampleImageTile.EvictCacheEntry ->
+            // RemoveClaimant. This is safe ONLY through same-thread Lock
+            // reentrancy (System.Threading.Lock.Enter re-enters for the current
+            // thread). Never add an await or a thread hop anywhere inside this
+            // chain; it would become a hard deadlock.
             var reservation = tryReserve?.Invoke(key);
             if (tryReserve is not null && reservation is null)
             {
@@ -507,7 +526,18 @@ public sealed class TileWorkCoordinator : IDisposable
             }
 
             _activeCount = Math.Max(0, _activeCount - 1);
-            _items.Remove(item.CacheKey);
+
+            // Remove only when this worker's item is still the current item for
+            // the key (ICW-320 F-007). A cancel-and-re-request may have admitted
+            // a fresh item for the same key while this worker was still stopping.
+            // Removing by key alone would clobber the newer item and orphan its
+            // running work from coordinator tracking.
+            if (_items.TryGetValue(item.CacheKey, out var current)
+                && ReferenceEquals(current, item))
+            {
+                _items.Remove(item.CacheKey);
+            }
+
             ReleaseReservation(item.CacheKey);
             item.DisposeReservation();
         }
@@ -776,14 +806,28 @@ public sealed class TileWorkCoordinator : IDisposable
                     return;
                 }
 
-                // Register a callback that removes this claimant if its token fires.
-                CancellationTokenRegistration? registration = null;
+                // Add the claimant before registering the token callback
+                // (ICW-320 F-014). Registering first lets a pre-canceled token
+                // fire its callback synchronously before the claimant is in the
+                // list; the removal is a no-op and a ghost claimant is left
+                // behind that nothing ever removes.
+                _claimants.Add(new ClaimantEntry(claimantId, onCompleted, onFailed, null));
                 if (claimantToken.CanBeCanceled)
                 {
-                    registration = claimantToken.Register(() => RemoveClaimant(claimantId));
+                    var registration = claimantToken.Register(() => RemoveClaimant(claimantId));
+                    var index = _claimants.FindIndex(c => c.Id.Equals(claimantId));
+                    if (index >= 0)
+                    {
+                        _claimants[index] = _claimants[index] with { Registration = registration };
+                    }
+                    else
+                    {
+                        // The callback already ran synchronously (the token was
+                        // already canceled) and removed the claimant. Nothing to
+                        // keep tracking; dispose the fired registration.
+                        registration.Dispose();
+                    }
                 }
-
-                _claimants.Add(new ClaimantEntry(claimantId, onCompleted, onFailed, registration));
             }
         }
 

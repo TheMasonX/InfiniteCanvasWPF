@@ -45,6 +45,13 @@ public sealed class CanvasSceneSourceContractsTests
             return _items.Where(item => item.Bounds.Intersects(viewport)).ToArray();
         }
 
+        public IReadOnlyList<ICanvasItem> QueryPoint(double worldX, double worldY)
+        {
+            return _items.Where(item =>
+                item.Bounds.X <= worldX && worldX < item.Bounds.Right
+                && item.Bounds.Y <= worldY && worldY < item.Bounds.Bottom).ToArray();
+        }
+
         public bool TryReadResidentPixel(double worldX, double worldY, int mipLevel, out CanvasPixelSample sample)
         {
             sample = default;
@@ -105,14 +112,34 @@ public sealed class CanvasSceneSourceContractsTests
     }
 
     [Test]
-    public void ApplyFrame_WithNoVisibleItems_FallsBackToEmptyList()
+    public void ApplyFrame_WithNoVisibleItems_RequiresExplicitEmptyList()
     {
         var viewModel = new CanvasViewModel();
         viewModel.SetSceneBounds(new SpatialBounds(0, 0, 100, 100));
 
-        viewModel.ApplyFrame(new SpatialBounds(0, 0, 50, 50), 0, 0);
+        viewModel.ApplyFrame(new SpatialBounds(0, 0, 50, 50), 0, 0, []);
 
         Assert.That(viewModel.VisibleItems, Is.Empty);
+    }
+
+    [Test]
+    public void QueryPoint_ReturnsOnlyItemsContainingThePoint()
+    {
+        ICanvasItem[] items =
+        [
+            new FakeCanvasItem("a", new SpatialBounds(0, 0, 100, 100)),
+            new FakeCanvasItem("b", new SpatialBounds(200, 0, 100, 100))
+        ];
+        var source = new FakeSceneSource(new SpatialBounds(0, 0, 300, 100), items);
+
+        var hits = source.QueryPoint(50, 50);
+        var miss = source.QueryPoint(150, 50);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(hits.Select(item => item.Id), Is.EquivalentTo(new[] { "a" }));
+            Assert.That(miss, Is.Empty);
+        }
     }
 
     [Test]

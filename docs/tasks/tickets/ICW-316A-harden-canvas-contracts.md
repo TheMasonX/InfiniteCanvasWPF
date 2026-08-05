@@ -3,7 +3,7 @@ id: ICW-316A-harden-canvas-contracts
 author: InfiniteCanvas Agent
 key: ICW-316A
 title: Harden reusable canvas contracts and lifecycle before extraction
-status: Proposed
+status: Done
 type: Story
 priority: P1
 tags:

@@ -3,7 +3,7 @@ id: ICW-322-reentrant-lock-chain-eviction
 author: InfiniteCanvas Agent
 key: ICW-322
 title: Document or restructure the reentrant lock chain in cache eviction
-status: Proposed
+status: Done
 type: Bug
 priority: P2
 tags:

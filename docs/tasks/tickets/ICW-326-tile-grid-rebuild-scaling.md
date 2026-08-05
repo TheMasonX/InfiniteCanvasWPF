@@ -3,7 +3,7 @@ id: ICW-326-tile-grid-rebuild-scaling
 author: InfiniteCanvas Agent
 key: ICW-326
 title: Scale the tile-grid overlay to the visible tile set
-status: Proposed
+status: Done
 type: Improvement
 priority: P2
 tags:

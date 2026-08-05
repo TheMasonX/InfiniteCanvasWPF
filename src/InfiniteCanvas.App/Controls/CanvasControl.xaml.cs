@@ -33,6 +33,7 @@ public partial class CanvasControl : UserControl
         {
             IsEnabled = false
         };
+        Unloaded += OnControlUnloaded;
     }
 
     public CanvasViewModel ViewModel { get; }
@@ -40,22 +41,13 @@ public partial class CanvasControl : UserControl
     /// <summary>
     /// Injected scene content source (ICW-312, ADR-0007). The host supplies
     /// this dependency property so the control never touches a generic
-    /// spatial index or an application data type. The parameterless
-    /// constructor stays for XAML and designer support.
+    /// spatial index or an application data type. It is the single item-query
+    /// authority (ICW-316A F-001); the parameterless constructor stays for
+    /// XAML and designer support.
     /// </summary>
     public static readonly DependencyProperty SceneSourceProperty = DependencyProperty.Register(
         nameof(SceneSource),
         typeof(ICanvasSceneSource),
-        typeof(CanvasControl),
-        new PropertyMetadata(null));
-
-    /// <summary>
-    /// Injected non-generic spatial query source (ICW-312). The control
-    /// consumes visible items through this contract only.
-    /// </summary>
-    public static readonly DependencyProperty SpatialQuerySourceProperty = DependencyProperty.Register(
-        nameof(SpatialQuerySource),
-        typeof(ICanvasSpatialQuerySource),
         typeof(CanvasControl),
         new PropertyMetadata(null));
 
@@ -65,19 +57,65 @@ public partial class CanvasControl : UserControl
         set => SetValue(SceneSourceProperty, value);
     }
 
-    public ICanvasSpatialQuerySource? SpatialQuerySource
+    // Method-based public surface (ICW-319). No raw element or overlay canvas
+    // escapes the control; the host composes visuals through explicit methods.
+    // This is the library public face for the ICW-316 extraction.
+
+    /// <summary>
+    /// Sets the loading overlay text and visibility. The overlay is centered
+    /// by layout, so no host-side position is required (ICW-319).
+    /// </summary>
+    public void SetLoadingState(string? text, bool visible)
     {
-        get => (ICanvasSpatialQuerySource?)GetValue(SpatialQuerySourceProperty);
-        set => SetValue(SpatialQuerySourceProperty, value);
+        LoadingOverlay.Text = text ?? "BUILDING INITIAL SNAPSHOT";
+        LoadingOverlay.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        _loadingVisible = visible;
     }
 
-    public Border SurfaceHost => ViewportHost;
-    public Viewbox FrameHost => FramePresenter;
-    public TextBlock LoadingText => LoadingOverlay;
-    public TextBlock WorldReadout => PixelometerWorldText;
-    public TextBlock TileReadout => PixelometerTileText;
-    public TextBlock ValueReadout => PixelometerValueText;
-    public ProgressBar BusyBar => RenderBusyBar;
+    /// <summary>True while the loading overlay is visible.</summary>
+    public bool IsLoadingVisible => _loadingVisible;
+
+    /// <summary>Shows or hides the indeterminate busy indicator.</summary>
+    public void SetBusyIndicatorVisible(bool visible)
+    {
+        RenderBusyBar.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>Sets the pixelometer readout lines in one call.</summary>
+    public void SetPixelometerReadout(string world, string tile, string value)
+    {
+        PixelometerWorldText.Text = world;
+        PixelometerTileText.Text = tile;
+        PixelometerValueText.Text = value;
+    }
+
+    /// <summary>Clears the host-composed overlays and resets the readouts.</summary>
+    public void ClearFrame()
+    {
+        _tileGridLayer?.Children.Clear();
+        _annotationLayer?.Children.Clear();
+        SetPixelometerReadout("WORLD X --  Y --", "TILE --", "PIXEL --");
+    }
+
+    /// <summary>Applies a viewport size to the camera view model.</summary>
+    public void SetViewportSize(double width, double height)
+    {
+        ViewModel.ApplyViewportSize(width, height);
+        UpdateViewportScrollbars();
+    }
+
+    /// <summary>Converts a mouse event position to viewport coordinates.</summary>
+    public Point GetViewportPointer(MouseEventArgs e) => e.GetPosition(ViewportHost);
+
+    /// <summary>Current viewport size in device-independent units.</summary>
+    public Size GetViewportSize() => new(ViewportHost.ActualWidth, ViewportHost.ActualHeight);
+
+    /// <summary>
+    /// Internal overlay host for host-side composition. Internal so the raw
+    /// canvases never become library API (ICW-319); ICW-316 owns whether
+    /// overlay composition moves into the library.
+    /// </summary>
+    internal CanvasOverlayHost GetOverlayHost() => new(_tileGridLayer, _annotationLayer);
 
     // Persistent frame shell (ICW-317 pattern, owned by the control since
     // ICW-315). The shell attaches to the Viewbox once; each frame only swaps
@@ -87,12 +125,7 @@ public partial class CanvasControl : UserControl
     private Canvas? _tileGridLayer;
     private Canvas? _annotationLayer;
     private bool _rasterVisible = true;
-
-    /// <summary>Host-composed tile-grid overlay canvas.</summary>
-    public Canvas? TileGridLayer => _tileGridLayer;
-
-    /// <summary>Host-composed annotation overlay canvas.</summary>
-    public Canvas? AnnotationLayer => _annotationLayer;
+    private bool _loadingVisible;
 
     /// <summary>
     /// Show or hide the raster Image element without rebuilding the shell.
@@ -206,6 +239,19 @@ public partial class CanvasControl : UserControl
     public void RefreshScrollbars()
     {
         UpdateViewportScrollbars();
+    }
+
+    /// <summary>
+    /// Releases every interaction resource the control owns when it leaves the
+    /// visual tree (ICW-316A): the anchor-pan timer, mouse capture, override
+    /// cursor, pointer state, and any scrollbar drag. A host can detach and
+    /// re-attach the control without a stuck timer or captured mouse.
+    /// </summary>
+    private void OnControlUnloaded(object? sender, RoutedEventArgs e)
+    {
+        StopAnchorPan();
+        _lastPointerPosition = null;
+        _scrollbarDragAxis = null;
     }
 
     private void OnViewportMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -491,7 +537,24 @@ public partial class CanvasControl : UserControl
 
     private void ApplyViewportState()
     {
-        ViewModel.ApplyViewportSize(ViewportHost.ActualWidth, ViewportHost.ActualHeight);
-        UpdateViewportScrollbars();
+        SetViewportSize(ViewportHost.ActualWidth, ViewportHost.ActualHeight);
     }
+}
+
+/// <summary>
+/// Internal overlay surface of <see cref="CanvasControl"/> for host-side
+/// composition (ICW-319). The raw canvases never appear on the public control
+/// surface.
+/// </summary>
+internal sealed class CanvasOverlayHost
+{
+    public CanvasOverlayHost(Canvas? tileGridLayer, Canvas? annotationLayer)
+    {
+        TileGridLayer = tileGridLayer;
+        AnnotationLayer = annotationLayer;
+    }
+
+    public Canvas? TileGridLayer { get; }
+
+    public Canvas? AnnotationLayer { get; }
 }

@@ -3,7 +3,7 @@ id: ICW-320-wave-f-cancellation-follow-up
 author: InfiniteCanvas Agent
 key: ICW-320
 title: Harden coordinator cancel-and-re-request window (Wave F follow-up)
-status: Proposed
+status: Done
 type: Bug
 priority: P2
 tags:

@@ -18,6 +18,13 @@ public interface ICanvasSceneSource
     IReadOnlyList<ICanvasItem> QueryVisible(SpatialBounds viewport);
 
     /// <summary>
+    /// Items whose bounds contain the given world point. This is the named
+    /// point-query contract (ICW-316A F-001); consumers never construct a
+    /// magic probe box. ICW-314 hit-testing consumes this member.
+    /// </summary>
+    IReadOnlyList<ICanvasItem> QueryPoint(double worldX, double worldY);
+
+    /// <summary>
     /// Reads the pixel at a world point from resident payloads only.
     /// The implementation must never start tile generation as a side effect.
     /// Returns false when no tile owns the point.
