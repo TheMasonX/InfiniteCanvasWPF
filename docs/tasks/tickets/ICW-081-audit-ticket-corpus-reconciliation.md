@@ -19,6 +19,15 @@ updated: 2026-08-03
 
 The audit corpus is not a reliable de-duplication index. The current ticket directory contains duplicate numeric identities, multiple incompatible metadata shapes, and ICW ticket files that are absent from both live trackers.
 
+## Audit Synthesis Additions (2026-08-04)
+
+Audit synthesis finding F-021 added these concrete corpus actions:
+
+- Fix the literal duplicate `status:` key in ICW-307 (deleted `status: Proposed`; `status: Done` retained) and the duplicated validation block in ICW-306/ICW-307.
+- Correct the ICW-305 summary: `TileCacheBudget.TryReserve` prefers generated, unpinned entries and uses dictionary order only as a tiebreaker.
+- Merge the publish-hardening ticket family ICW-008 and ICW-062 into ICW-063 (canonical). ICW-008 also carries the Done pixelometer ticket, so the publish-hardening file under ICW-008 must not remain ambiguous.
+- Extend `Validate-TaskTracker.ps1`: reject duplicate YAML keys per frontmatter block, cross-check ticket status against active-tasks.md, and enforce key uniqueness. Coordinate with ICW-084.
+
 ## Scope
 
 - Inventory every file under `docs/tasks/tickets`.

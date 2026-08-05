@@ -34,6 +34,12 @@ User requirement: the canvas control must be responsible for object selection an
 
 Today `MainWindow.BuildFrameVisual` builds the annotation layer against the concrete `SampleAnnotation` type, wires `OnAnnotationMouseLeftButtonDown`, and attaches `DeferredAnnotationToolTip`. The canvas cannot own selection or tooltips while they are built inside the app's frame.
 
+## Audit Synthesis Scope Note (2026-08-04)
+
+- Item-query authority: ICW-314 consumes `QueryVisible`. The duplicate-authority decision (finding F-001, gated in ICW-316A) must precede hit-testing. Record as a soft dependency.
+- `SceneChanged` is declared and raised but has no subscriber; decide event-vs-polling within this ticket's scope (finding C2-031).
+- Item identity and instance lifetime across scene revisions are undefined and must be designed before selection migrates (finding C1-026).
+
 ## Scope
 
 - Define an item contract such as `ICanvasItem` with world bounds, hit testing, tooltip payload, and a visual template.

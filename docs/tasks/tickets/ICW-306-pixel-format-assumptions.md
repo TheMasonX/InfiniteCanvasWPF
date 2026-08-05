@@ -34,9 +34,6 @@ Work completed:
 Validation commands:
 - `dotnet test ./tests/InfiniteCanvas.Windows.Tests/InfiniteCanvas.Windows.Tests.csproj --filter ZeroCopyBitmapFactoryTests`
 
-Validation commands:
-- `dotnet test ./tests/InfiniteCanvas.Windows.Tests/InfiniteCanvas.Windows.Tests.csproj --filter ZeroCopyBitmapFactoryTests`
-
 Estimated effort: Small
 Risk: Low
 Suggested owner: @rendering-team

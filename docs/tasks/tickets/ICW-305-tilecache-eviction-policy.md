@@ -17,7 +17,7 @@ updated: 2026-07-25
 ---
 
 Summary:
-`TileCacheBudget.TrackTile` currently evicts dictionary-first entries which is unpredictable. Implement a clear eviction strategy (LRU or LFU) or document the current behavior and its invariants.
+`TileCacheBudget.TryReserve` prefers generated, unpinned entries and uses dictionary order only as a tiebreaker. Document this behavior and its invariants, or implement a chosen policy. Make the in-flight-candidate eviction decision explicit (see ICW-104).
 
 Scope:
 - `src/InfiniteCanvas.Rendering/SampleImageTile.cs` (or `TileCache` related classes)

@@ -38,6 +38,12 @@ Two separate issues:
 
 2. **Concurrency race:** `RegenerateSceneAsync` calls `DisposeDefectTemplatePools(_tiles)` right after `_tileCoordinator.CancelAll()`, with no guarantee that `RenderFrameAsync`'s background `Task.Run` (which reads `annotation.DefectBitmap` inside `DrawDefectPatch`) has actually finished. `CancelAll()` cancels *coordinator* work, not the render pipeline's own `Task.Run`. This is `CoalescingAsyncAction` — a separate execution path.
 
+## Audit Synthesis Rescope (2026-08-04)
+
+- The "bitmaps never disposed" root cause is stale: disposal now exists (`DefectTemplate.Dispose` calls `Bitmap?.Dispose()`; pools dispose at the scene boundary).
+- Land ICW-321 (dead `DefectBitmap`/`LockBits` sampling removal) first. After it, no render-thread code reads the template bitmaps, so the dispose-vs-render race surface is gone. Re-evaluate whether the fence (`WaitForIdleAsync` on `CoalescingAsyncAction`) is still required; it becomes defense-in-depth, not a required fix.
+- Keep the fence question open until ICW-321 lands, then decide close vs minimal-fence scope.
+
 ## Scope
 
 ### Required Changes

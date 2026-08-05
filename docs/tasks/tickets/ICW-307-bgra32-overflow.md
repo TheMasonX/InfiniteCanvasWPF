@@ -2,7 +2,7 @@
 id: ICW-307-bgra32-overflow
 key: ICW-307
 title: Document Bgra32BufferLayout overflow behavior and validate dimensions earlier
-status: Proposed
+status: Done
 type: Task
 priority: P2
 tags:
@@ -30,9 +30,6 @@ Acceptance criteria:
 Work completed:
 - Added XML documentation to `Bgra32BufferLayout` describing overflow constraints, added `MaxWidth` and `GetMaxHeightForWidth(int)` helpers.
 - Updated code to throw `ArgumentOutOfRangeException` for negative/zero dimensions (pre-existing) and documented safe bounds.
-
-Validation commands:
-- `dotnet test ./tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --filter Bgra32BufferLayout`
 
 Validation commands:
 - `dotnet test ./tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --filter Bgra32BufferLayout`

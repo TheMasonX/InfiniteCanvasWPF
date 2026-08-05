@@ -19,6 +19,8 @@ updated: 2026-07-25
 Summary:
 Many APIs use raw `double` for positions, extents, and scales across world and pixel coordinate spaces. Introducing small domain types (e.g., `WorldLength`, `PixelLength`, `Scale`) can reduce unit-mixups and improve API clarity.
 
+Audit synthesis (2026-08-04) added: `CanvasViewModel.ComputeMinimumZoom` divides by `SceneBounds` with no guard (findings C1-028 + C2-009, merged). Add a typed scale and a `HasScene`/zero-bounds guard within this ticket's scope. This is a division guard and typed-scale concern, not a boundary-semantics concern (that stays in ICW-308).
+
 Scope:
 - Audit `CameraTransform`, `SpatialBounds`, and tile selection code in `src/InfiniteCanvas.Rendering`.
 

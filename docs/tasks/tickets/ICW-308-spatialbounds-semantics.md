@@ -19,6 +19,8 @@ updated: 2026-07-25
 Summary:
 `SpatialBounds.Intersects` currently treats touching edges as intersecting (inclusive). Make this contract explicit in docs and unit tests to avoid misunderstandings.
 
+Audit synthesis (2026-08-04) widened this ticket: `TileGridIndexLookup` uses the opposite exclusive right/bottom convention, and the pixelometer performs the same half-open reads (findings C1-030 + C3-022). Document all three conventions and add edge/zero-area tests. Keep as documentation plus tests; no behavior change, to preserve spatial-index parity.
+
 Scope:
 - `src/InfiniteCanvas.Core/SpatialBounds.cs`
 

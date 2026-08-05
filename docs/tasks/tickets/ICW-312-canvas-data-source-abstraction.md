@@ -47,6 +47,10 @@ Today `MainWindow` constructs the spatial index, generates tiles, renders frames
 
 Council decision (2026-08-04): adopt a non-generic, injected data-source boundary. Implemented 2026-08-04; all five evidence gates pass. The render-pipeline and frame-boundary migration is tracked separately as ICW-315.
 
+## Audit Synthesis Correction (2026-08-04)
+
+Audit synthesis finding F-001: `QueryVisible` exists on both `ICanvasSceneSource` and `ICanvasSpatialQuerySource`, and neither is consumed by the control. This is a duplicate item-query authority that must be resolved to one contract before ICW-314 consumes it and before the ICW-316 move. The resolution is gated in ICW-316A. `CanvasBoundaryZeroReferenceTests` asserts both source dependency properties and must change atomically with the consolidation.
+
 ## Scope (council-rescoped)
 
 - Define `ICanvasItem` (string Id, SpatialBounds Bounds) in `InfiniteCanvas.Core`. No interaction members; ICW-314 extends it.

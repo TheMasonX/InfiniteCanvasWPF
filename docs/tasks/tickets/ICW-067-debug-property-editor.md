@@ -26,6 +26,11 @@ updated: 2026-08-03
 
 # ICW-067-debug-property-editor
 
+## Audit Synthesis Scope Note (2026-08-04)
+
+- `BoundedNumeric` Integer branch throws `ArgumentException` for fractional bounds narrower than one integer step instead of returning false (finding F-020 / C2-013). Fix within this ticket's scope, which owns `SliderTextBox` and `BoundedNumeric`.
+- Align the status divergence for this ticket (active-tasks In Progress vs ticket Proposed) when the scope is updated.
+
 ## Summary
 
 The debug panel repeats label-and-slider markup for the background noise settings and uses raw text boxes for tile generation fields. Create one reusable `SliderTextBox` control with the label above the slider and a numeric text box on the right.

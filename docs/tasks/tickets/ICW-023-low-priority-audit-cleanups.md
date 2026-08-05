@@ -42,6 +42,16 @@ updated: 2026-07-25
 
 - Add implementation details, blockers, or follow-up questions here.
 
+## Audit Synthesis Batch (2026-08-04)
+
+Add to this cleanup batch:
+
+- `TryGetPixelValue` naming/restriction: it is a side-effectful read with a pure-sounding name and can start generation (finding C1-018).
+- Pixelometer fallback allocation: list plus `OrderBy`/`ThenBy` under `_cacheGate` on the hover path (finding C2-020).
+- Orphaned `GetClaimantIds()` with zero callers (finding C2-022).
+
+Do NOT add the unused `sourceRow[sourceX * 3]` read here; it belongs to ICW-321 (same code region as the dead `DefectBitmap` sampling).
+
 ## Related Tasks
 
 - ICW-000

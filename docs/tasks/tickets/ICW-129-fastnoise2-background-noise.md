@@ -19,6 +19,10 @@ updated: 2026-07-26
 
 Replace the custom fractal-Brownian-motion background generator with FastNoise2 while preserving deterministic tile generation and seamless worldspace sampling.
 
+## Status Divergence Note (2026-08-04)
+
+Audit synthesis finding F-022: active-tasks.md marks this ticket Done, the ticket file says In Progress, and JIRA.md has no row. The status binds to the un-met "seamless worldspace sampling" acceptance criterion. Do not close or set status until the requirement decision in ICW-324 resolves seamless vs per-tile variance. ICW-324 also owns the JIRA row.
+
 ## Execution Plan
 - ICW-001: Capture the migration requirement and register the work in the task tracker.
 - ICW-002: Add the FastNoise2 C# binding source and native DLL to the rendering/runtime project graph with output-copy settings.

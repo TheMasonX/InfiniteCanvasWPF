@@ -30,6 +30,11 @@ User requirement (future task): the input handlers for panning, zooming, and rel
 
 Today `CanvasControl` implements pan, zoom, anchor pan, and scrollbar logic directly in its code-behind. This is a single component's responsibility, but the user asked for the handlers to become `IInputHandler` implementations.
 
+## Audit Synthesis Scope Note (2026-08-04)
+
+- Add an unload lifecycle: `CanvasControl` has no `Loaded`/`Unloaded` path to stop the anchor-pan timer, release capture, or clear `Mouse.OverrideCursor` (finding F-018).
+- Reconcile the dead `CanvasViewModel.Zoom` wrapper: the wheel path bypasses it, leaving it with zero callers and inconsistent with `Pan` (finding F-017).
+
 ## Scope
 
 - Define `IInputHandler` with attach and detach lifecycle over the viewport input.

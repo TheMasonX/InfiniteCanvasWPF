@@ -57,6 +57,10 @@ The render-pipeline migration is the largest canvas chunk and is currently untic
 - Command: `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release`
 - Command: `dotnet test tests/InfiniteCanvas.Windows.Tests/InfiniteCanvas.Windows.Tests.csproj --configuration Release`
 
+## Audit Synthesis Correction (2026-08-04)
+
+Audit synthesis finding F-003: `CanvasFrame` claims snapshot semantics but borrows mutable lists, has no `IsFrozen` check, no revision identity, and does not validate raster dimensions against `ImageSource` metadata. `Stretch.Fill` is the only display path, so a dimension mismatch would stretch silently. Frame immutability, count-consistency validation, raster-dimension validation, and revision identity are gated in ICW-316A before the type moves.
+
 ## Implementation Evidence (2026-08-04)
 
 - `CanvasFrame` defined in `src/InfiniteCanvas.App/Controls/CanvasFrame.cs`: frozen raster `ImageSource` plus items, viewport, visible/total counts, and pixel dimensions. The control never touches the backing memory section.

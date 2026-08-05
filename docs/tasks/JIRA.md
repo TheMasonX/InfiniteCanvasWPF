@@ -2,6 +2,15 @@
 
 | Key | Status | Type | Summary | Acceptance / Notes |
 | --- | --- | --- | --- | --- |
+| ICW-316A | Proposed | Story | Harden reusable canvas contracts and lifecycle before extraction | Single item-query authority (duplicate `QueryVisible` on both source contracts), immutable `CanvasFrame`, `CanvasViewModel` state invariants, Loaded/Unloaded lifecycle, named point-query contract. Audit synthesis findings F-001..F-004, F-013. First gate of the ICW-316 sequence. |
+| ICW-319 | Proposed | Improvement | Replace the CanvasControl raw-element surface with a method-based API | Seven public element properties + two overlay canvases move behind methods; center the loading overlay. Must complete before ICW-316B. Audit synthesis finding F-005. |
+| ICW-320 | Proposed | Bug | Harden coordinator cancel-and-re-request window (Wave F follow-up) | Terminal-state coalesce guard, reference-equality remove in `HandleWorkStopped`, add-then-register claimant. Three regression tests. Audit synthesis findings F-006, F-007, F-014. Land before ICW-144 closes. |
+| ICW-321 | Proposed | Bug | Remove dead DefectBitmap and LockBits sampling | Byte-identical rendered output, zero `DefectBitmap` references. Precedes the ICW-102 rescope. Audit synthesis finding F-008. |
+| ICW-322 | Proposed | Bug | Document or restructure the reentrant lock chain in cache eviction | Request → TryReserve → EvictCacheEntry → RemoveClaimant. Trigger before ICW-P0-LEASE-RELEASE. Audit synthesis finding F-009. |
+| ICW-323 | Proposed | Task | Add an epoch-wiring behavioral regression test | Fails when BeginRequest/IsCurrent/Advance wiring is removed. Fails on the 2026-07-26 revert shape. Test-only. Audit synthesis finding F-013. |
+| ICW-324 | Proposed | Task | Reconcile background noise seamlessness and ICW-129 status | Requirement conflict (per-tile streams vs seamless) resolved before seed change; one ICW-129 status and one JIRA row. Audit synthesis findings F-010, F-022. |
+| ICW-325 | Proposed | Bug | Fix anisotropic mip-level selection under non-uniform scale | SelectMipLevel binding axis is the larger scale per ADR-0005. Non-uniform-camera test plus visual regression. Audit synthesis finding F-011. |
+| ICW-326 | Proposed | Improvement | Scale the tile-grid overlay to the visible tile set | Thread visibleTiles into UpdateTileGridLayer; skip rebuild when unchanged. Audit synthesis finding F-012. |
 | ICW-206 | Done | Bug | Repair three stale tests that failed at baseline | Feature rows use plain double formatting (no percent schema); generator display items assert the full feature set; scrollbar guard moved to CanvasControl after extraction. Previously failing tests pass; core 149/150 with the remaining failure owned by the in-flight ICW-205 workstream. |
 | ICW-204 | Done | Bug | Fix tile generation permanently lost on scroll | Per-frame claimant token cancellation left the tile generation-queued flag set, so tiles never re-requested after scrolling. Reset the flag on claimant-token fire and clear the per-mip flag on mip failure. Regression tests pass; core 140/143 (3 pre-existing failures), Windows 12/12, Release build 0 errors. |
 | ICW-205 | Done | Improvement | Replace FIFO tile queue with a true priority queue using center-distance and mip tie-breakers | Heap-backed PriorityQueue ordered by visibility class, squared center distance, mip suitability, and FIFO sequence. ViewportInterestSet carries camera center, selected mip, and a squared-distance provider. No-flash rule: in-flight work for a key in the interest set survives frame-token fire; stale work is still canceled. Tombstones are sequence-scoped so re-admitted keys are never skipped. 33/33 coordinator tests, Windows 12/12, App and benchmarks build 0 errors. Full-suite runs blocked by concurrent uncommitted ICW-309 CameraTransform refactor. |
@@ -86,6 +95,7 @@
 
 | Date | Key | Update |
 | --- | --- | --- |
+| 2026-08-04 | ICW-316A/319-326 | Audit synthesis reconciliation (22 audits at HEAD 84a0cdb): 85 candidates extracted, 63 confirmed, 8 refuted, 29 net-new consolidated into 10 new ticket actions and 12 existing-ticket updates. ICW-316 split into ICW-316A (harden) + ICW-316 (move). See docs/audits/audit-synthesis-reconciliation-26-08-04-22-15-00.md. |
 | 2026-07-25 | ICW-094 | Added a reserved settings-panel scrollbar inset and disabled horizontal overflow; added a source-level wiring regression assertion. |
 | 2026-07-23 | ICW-001 | Added multi-target benchmark project, benchmark suites, documentation, and ADR-0001. |
 | 2026-07-23 | ICW-002 | Captured one immutable camera snapshot for viewport query, raster composition, and overlay projection. |
