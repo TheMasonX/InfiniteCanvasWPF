@@ -29,7 +29,7 @@ Background tile generation was permanently lost during scrolling. Tiles that did
 ### D-4: Tracker updates
 
 - New ticket `docs/tasks/tickets/ICW-204-tile-generation-lost-on-scroll.md` (Done).
-- `docs/tasks/active-tasks.md` and `docs/tasks/JIRA.md` updated to Done with evidence.
+- `docs/tasks/active-tasks.md` and `docs/tasks/task-tracker.md` updated to Done with evidence.
 - New invariant `Tile generation recovery` in `docs/requirements/functional-requirements-and-invariants.md`.
 
 ## Validation
@@ -63,3 +63,4 @@ The untracked `docs/tasks/tickets/ICW-205-priority-queue-tile-work.md` ticket be
 1. Land the remaining ICW-205 priority queue work in its own commit (the `PriorityQueue_MipSuitabilityBreaksDistanceTie` failure belongs to that workstream).
 2. Consider avoiding in-flight WorkToken cancellation at the zero-claimant frame boundary (parallel ICW-205 work is already framing this as the frame-stability invariant).
 3. Follow up on ICW-098: remove the orphaned `UpdateViewportScrollbars(CameraSnapshot, double, double)` methods in `MainWindow.xaml.cs`.
+

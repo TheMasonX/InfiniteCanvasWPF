@@ -53,7 +53,7 @@ Current evidence: the inventory found duplicate numeric identities, tracker rows
 
 ## Council Update, 2026-08-03
 
-Reopen this task. Extend the inventory to every ticket file, `active-tasks.md`, and `JIRA.md`. Record one canonical identity for each concern, preserve duplicate evidence, and correct stale status claims. Register ICW-188 and ICW-189 without creating new IDs.
+Reopen this task. Extend the inventory to every ticket file, `active-tasks.md`, and `task-tracker.md`. Record one canonical identity for each concern, preserve duplicate evidence, and correct stale status claims. Register ICW-188 and ICW-189 without creating new IDs.
 
 Validation must report duplicate identities, orphaned files, duplicate tracker rows, stale status mismatches, and missing required metadata.
 
@@ -64,3 +64,4 @@ This is a process-integrity task, not permission to delete findings casually. Pr
 ## Related Tasks
 
 - ICW-036: CI and nullable-enforcement baseline can host the validation gate once the reconciliation is complete.
+

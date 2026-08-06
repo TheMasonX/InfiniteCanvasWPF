@@ -2,7 +2,7 @@
 
 **Commit:** `b8d95ddab66b33d808a97b6b40cdd2d4bfdbf74c` — "Sprint 1 Wave E: Post-wave cleanup, deduplication, and stress benchmarks"
 **Parent:** `596fea640dfff9e5c57e0d6e8be37a43909aa41d`
-**Method:** Full patch retrieved via `git`/GitHub API (35 files, +2,922/-245), cross-referenced against the complete files at this SHA (`TileWorkCoordinator.cs`, `BackgroundTileContracts.cs`, `MainWindow.xaml.cs`, `RenderRequestTracker.cs`, `Validate-TaskTracker.ps1`) and against `docs/tasks/JIRA.md`, `docs/tasks/active-tasks.md`, and the relevant ticket files, both as committed here and as they stand after the commit.
+**Method:** Full patch retrieved via `git`/GitHub API (35 files, +2,922/-245), cross-referenced against the complete files at this SHA (`TileWorkCoordinator.cs`, `BackgroundTileContracts.cs`, `MainWindow.xaml.cs`, `RenderRequestTracker.cs`, `Validate-TaskTracker.ps1`) and against `docs/tasks/task-tracker.md`, `docs/tasks/active-tasks.md`, and the relevant ticket files, both as committed here and as they stand after the commit.
 **Scope note:** This commit's *code* footprint is small and precise (a real bug fix + two defensive guards + a benchmark file); the other 32 files are documentation/tracker changes. Because the commit's own stated purpose is deduplication and validation, this audit weighs the tracker/process claims as heavily as the code.
 
 ---
@@ -13,9 +13,9 @@ The functional code change in this commit — reworking `PublishInterestSet` to 
 
 The **process claims layered on top of it are weaker than advertised**, and this is where the audit found the most actionable material:
 
-1. **The "validation script now flags duplicate IDs" claim is false.** `scripts/Validate-TaskTracker.ps1` contains no duplicate-ID logic at all, and it explicitly excludes `active-tasks.md`/`JIRA.md` — the only two files that actually contain the duplicates — from validation entirely.
+1. **The "validation script now flags duplicate IDs" claim is false.** `scripts/Validate-TaskTracker.ps1` contains no duplicate-ID logic at all, and it explicitly excludes `active-tasks.md`/`task-tracker.md` — the only two files that actually contain the duplicates — from validation entirely.
 2. **ICW-081 ("ticket deduplication") is marked Done in this same commit, but at least one of the duplicate IDs it was scoped to fix — `ICW-100` — is still duplicated** in `active-tasks.md` after the commit, contradicting the commit's own closure claim.
-3. **`ICW-078`'s tracker rows disagree with each other and with the code.** `JIRA.md` says Done; `active-tasks.md` still carries a stale "reverted, needs re-verification" row for the same ticket, even though the code (and a *different* ticket, `ICW-100`) confirms the fix landed.
+3. **`ICW-078`'s tracker rows disagree with each other and with the code.** `task-tracker.md` says Done; `active-tasks.md` still carries a stale "reverted, needs re-verification" row for the same ticket, even though the code (and a *different* ticket, `ICW-100`) confirms the fix landed.
 4. **This commit's own bug fix orphaned a public method** (`TileWorkItem.GetClaimantIds()`) that has zero remaining call sites — a small, self-inflicted dead-code smell introduced by the very fix being celebrated.
 5. Two design-level concerns in `TileWorkCoordinator` — an O(n)-per-promotion queue-reordering algorithm and a claimant-registration cleanup gap — are worth formalizing into their own tickets rather than living as prose bullets in `ICW-143`'s "Deferred Items" section.
 
@@ -29,15 +29,15 @@ Section 5 lists what's already well-tracked so this isn't read as ignoring the p
 
 Three places in this commit assert that duplicate-ID detection was added to tooling:
 
-> JIRA.md (ICW-081 row): *"Validation script aware of duplicate IDs."*
-> JIRA.md (Activity log): *"Validation script extended to flag duplicate IDs."*
+> task-tracker.md (ICW-081 row): *"Validation script aware of duplicate IDs."*
+> task-tracker.md (Activity log): *"Validation script extended to flag duplicate IDs."*
 > active-tasks.md (Wave E summary): *"...validation script updated"*
 
 `scripts/Validate-TaskTracker.ps1` (136 lines, fetched in full at this commit) contains:
 
 - No string `"duplicate"` anywhere in the file.
 - No accumulation of seen `id`/`key` values, no `Group-Object`, no set-membership check — nothing that could detect two files claiming the same ID.
-- A `$skipNames` list that **explicitly excludes `active-tasks.md` and `JIRA.md`** from validation (`Get-TaskFiles`, line 17). Those are the two files that actually contain the duplicate rows described elsewhere in this audit. Even if duplicate-detection logic existed, it would not run against the files where the duplicates live — only against files under `docs/tasks/tickets/`.
+- A `$skipNames` list that **explicitly excludes `active-tasks.md` and `task-tracker.md`** from validation (`Get-TaskFiles`, line 17). Those are the two files that actually contain the duplicate rows described elsewhere in this audit. Even if duplicate-detection logic existed, it would not run against the files where the duplicates live — only against files under `docs/tasks/tickets/`.
 
 **Recommendation:** Either implement the claimed check (a `Group-Object id`-style pass over *all* tracked files, including the two tracker files, that fails when a group count exceeds 1) or correct the commit's own record to stop asserting a capability that doesn't exist. This is a cheap, mechanical fix and should be the actual next step for `ICW-081`, not a new ticket.
 
@@ -47,7 +47,7 @@ The council review bundled in this same commit (`docs/audits/sprint1-wave-d-coun
 
 > *"Resolve duplicate IDs (ICW-100 x4, ICW-102/094/014/098/099 x2)"* — listed as a **deferred, non-blocking** item, to be done *"before creating any new ICW-P0/P1 ticket files."*
 
-This commit's Wave E work then marks `ICW-081` (docs/tasks/tickets/ICW-081-audit-ticket-corpus-reconciliation.md) `status: Done`, and both `JIRA.md` and `active-tasks.md` describe the dedup as accomplished ("ICW-098/099/100 duplicates resolved with dedup notes").
+This commit's Wave E work then marks `ICW-081` (docs/tasks/tickets/ICW-081-audit-ticket-corpus-reconciliation.md) `status: Done`, and both `task-tracker.md` and `active-tasks.md` describe the dedup as accomplished ("ICW-098/099/100 duplicates resolved with dedup notes").
 
 Checking `active-tasks.md` **as committed at this SHA**, two unrelated rows both use the ID `ICW-100`:
 
@@ -64,9 +64,9 @@ The second row's own text ("RETAINED as unique ticket," "This is a distinct conc
 
 > *"**Status correction:** Wiring was implemented then reverted in commit `9247bff`. `RenderRequestTracker` calls (BeginRequest/IsCurrent/Advance) are absent from MainWindow.xaml.cs at HEAD 139a8b6. ICW-100 tracks re-application."* — status **In Progress**.
 
-But at this commit's HEAD, `MainWindow.xaml.cs` (verified directly, lines ~367–428 of `RenderFrameAsync`) *does* call `_renderRequestTracker.BeginRequest()`, gates `PublishFrame` on `IsCurrent(requestVersion)`, and calls `.Advance()` after publish — matching exactly what row 21 (`ICW-100`, status Done) and `JIRA.md`'s `ICW-078` row (status Done) both already claim.
+But at this commit's HEAD, `MainWindow.xaml.cs` (verified directly, lines ~367–428 of `RenderFrameAsync`) *does* call `_renderRequestTracker.BeginRequest()`, gates `PublishFrame` on `IsCurrent(requestVersion)`, and calls `.Advance()` after publish — matching exactly what row 21 (`ICW-100`, status Done) and `task-tracker.md`'s `ICW-078` row (status Done) both already claim.
 
-So as of this commit: `JIRA.md` is accurate, one `active-tasks.md` row (`ICW-100`) is accurate, and a second `active-tasks.md` row (`ICW-078` itself) is stale and describes a regression that has since been fixed — but nothing in Wave E's dedup pass touched it, because Wave E's dedup scope was ID collisions, not stale content. This is worth calling out precisely because it's the kind of drift `ICW-081` exists to catch, and it's a false negative for that ticket's own review process: the `ICW-078` row is *not* an ID collision, it's a *stale-status* row that a purely ID-based grep-for-duplicates check (even a correctly implemented one, see §1.1) would never catch.
+So as of this commit: `task-tracker.md` is accurate, one `active-tasks.md` row (`ICW-100`) is accurate, and a second `active-tasks.md` row (`ICW-078` itself) is stale and describes a regression that has since been fixed — but nothing in Wave E's dedup pass touched it, because Wave E's dedup scope was ID collisions, not stale content. This is worth calling out precisely because it's the kind of drift `ICW-081` exists to catch, and it's a false negative for that ticket's own review process: the `ICW-078` row is *not* an ID collision, it's a *stale-status* row that a purely ID-based grep-for-duplicates check (even a correctly implemented one, see §1.1) would never catch.
 
 **Recommendation:** Update the `ICW-078` row in `active-tasks.md` to `Done`, cross-reference `ICW-100`'s evidence, and add a short note to `ICW-081`'s acceptance criteria distinguishing "duplicate ID" cleanup from "stale status" cleanup — they need different detection strategies and the ticket currently only claims to solve the former.
 
@@ -110,7 +110,7 @@ The type-level XML doc above `ViewportInterestSet` still documents `<param name=
 
 ### 2.5 Benchmark scenario count is off by one relative to three tracker claims — **Low severity, but worth a one-line fix**
 
-`JIRA.md`, `active-tasks.md`, and the `ICW-144` ticket file all say *"8 benchmark scenarios"* / *"8 scenarios"*. Counting `[Benchmark]`-attributed methods in the committed `TileWorkCoordinatorBenchmarks.cs`: `PublishInterestSet_EmptyQueue`, `PublishInterestSet_AllVisible`, `PublishInterestSet_NoneVisible`, `PublishInterestSet_MixedVisibility`, `DrainQueue_FifoFallback`, `DrainQueue_VisiblePromoted`, `FastScrollStress_ThreeCycles` — **7**, not 8. (Each is separately parameterized by `[Params(10, 50)]`, giving 14 total BenchmarkDotNet cases, which may be the source of the miscount, but that's a parameter sweep, not a distinct scenario.)
+`task-tracker.md`, `active-tasks.md`, and the `ICW-144` ticket file all say *"8 benchmark scenarios"* / *"8 scenarios"*. Counting `[Benchmark]`-attributed methods in the committed `TileWorkCoordinatorBenchmarks.cs`: `PublishInterestSet_EmptyQueue`, `PublishInterestSet_AllVisible`, `PublishInterestSet_NoneVisible`, `PublishInterestSet_MixedVisibility`, `DrainQueue_FifoFallback`, `DrainQueue_VisiblePromoted`, `FastScrollStress_ThreeCycles` — **7**, not 8. (Each is separately parameterized by `[Params(10, 50)]`, giving 14 total BenchmarkDotNet cases, which may be the source of the miscount, but that's a parameter sweep, not a distinct scenario.)
 
 Small, but notable given this is a commit whose entire second half is about tracker accuracy.
 
@@ -165,14 +165,14 @@ To avoid re-litigating ground the project's own audit trail already covers well:
 
 | # | Item | Type | Suggested disposition |
 |---|---|---|---|
-| 1 | Implement real duplicate-ID detection in `Validate-TaskTracker.ps1`, including `active-tasks.md`/`JIRA.md` | Correction | Reopen `ICW-081` acceptance criteria |
+| 1 | Implement real duplicate-ID detection in `Validate-TaskTracker.ps1`, including `active-tasks.md`/`task-tracker.md` | Correction | Reopen `ICW-081` acceptance criteria |
 | 2 | Resolve the still-duplicated `ICW-100` ID in `active-tasks.md` | Correction | Reopen `ICW-081`, or fix directly (rename overlay ticket) |
 | 3 | Update the stale `ICW-078` row in `active-tasks.md` to Done; note stale-status vs. duplicate-ID as distinct dedup categories | Correction | Small `ICW-081` follow-up |
 | 4 | Delete orphaned `TileWorkItem.GetClaimantIds()` and its doc comment | Cleanup | Fold into `ICW-143` deferred-items cleanup |
 | 5 | Have `CancelWorkItem` explicitly clear claimant registrations instead of relying on eventual claimant-token firing | Robustness | New small ticket, or fold into `ICW-P0-LEASE-RELEASE`'s cleanup pass |
 | 6 | Guard `ViewportInterestSet` against `default(ViewportInterestSet)`, or document the gap, or convert to a class | Design smell | Small follow-up on `ICW-143` |
 | 7 | Fix `<param>` doc mismatch on `ViewportInterestSet` | Nitpick | Bundle with #6 |
-| 8 | Correct "8 scenarios" → "7 scenarios" (or add an 8th) across `JIRA.md`/`active-tasks.md`/`ICW-144` | Nitpick | Bundle with next `ICW-144` touch |
+| 8 | Correct "8 scenarios" → "7 scenarios" (or add an 8th) across `task-tracker.md`/`active-tasks.md`/`ICW-144` | Nitpick | Bundle with next `ICW-144` touch |
 | 9 | Add a benchmark for alternating stale/visible queue shapes; formalize the O(n·k) promotion-scan risk | Performance/Testing | New sub-ticket under `ICW-144`, e.g. `ICW-144-QUEUE-ALGORITHM` |
 | 10 | Replace `Queue<T>` with a priority-queue or two-queue split once #9's benchmark quantifies the cost | Design | Follow-on to #9, matches council's own stated trigger condition |
 | 11 | Log (don't silently swallow) exceptions in `DispatchCompleted`/`DispatchFailed` | Robustness | Small, low-risk fix — any next touch of `TileWorkCoordinator.cs` |
@@ -180,3 +180,4 @@ To avoid re-litigating ground the project's own audit trail already covers well:
 ---
 
 *Audit performed against commit `b8d95ddab66b33d808a97b6b40cdd2d4bfdbf74c` and its full tree at that SHA. Confidence levels are stated per finding; all code-line references were read in full at this commit rather than inferred from the diff alone.*
+

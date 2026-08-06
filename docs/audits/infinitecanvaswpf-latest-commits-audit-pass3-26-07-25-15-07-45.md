@@ -3,7 +3,7 @@
 **HEAD audited:** `62d1ce6001f57f4a9d55a0c8fcde80fd57cb47ab` ("Register Sonar-driven code quality tickets and normalize ticket metadata")
 **Previously audited (my report):** `1f291b9220c7b907abfcdbd5662421c1e46f1ec4`
 **8 new commits reviewed:** `addbd18` (harden tile cache/render coalescing) → `4ad0245` (viewport scrollbars + tile tuning) → `bc339ce` (task-tracker workflow docs) → `7524b88` (human commit: "I cleaned up the mainwindow xaml") → `52a3442` (next wave of high-ROI tasks) → `76c1960` (scrollbars, tile mips, exception safety net) → `9f96fe5` (ICW-036 research) → `62d1ce6` (Sonar tickets + metadata normalization).
-**Method:** Tarball diff against my previously-audited tree; read every new/changed source file in full; read all new tickets (ICW-050 through ICW-082, ICW-305) and the current `JIRA.md` (61 rows) before writing anything.
+**Method:** Tarball diff against my previously-audited tree; read every new/changed source file in full; read all new tickets (ICW-050 through ICW-082, ICW-305) and the current `task-tracker.md` (61 rows) before writing anything.
 
 ---
 
@@ -129,7 +129,7 @@ $ ls docs/tasks/tickets/ | grep -oE "ICW-[0-9]+" | sort | uniq -c | sort -rn | h
 | ICW-064 | `spatial-boundary-semantics.md` | `tile-cache-capacity-and-materialization-metrics.md` |
 | ICW-065 | `spatial-tests-and-docs.md` | `viewport-scrollbars-and-zoom-navigation.md` |
 
-This matters beyond pedantry: `ICW-064` currently has *two* completely different meanings in the ticket directory (spatial boundary semantics vs. tile-cache capacity) while `JIRA.md`'s live tracker row for `ICW-064` refers to the tile-cache one — meaning the *other* `ICW-064` file (spatial boundary semantics) has no corresponding tracker row at all and is effectively invisible to anyone reading `JIRA.md` as the source of truth. This is exactly the kind of silent data loss ICW-081 was filed to prevent, and it's larger in scope than ICW-081's own text currently credits.
+This matters beyond pedantry: `ICW-064` currently has *two* completely different meanings in the ticket directory (spatial boundary semantics vs. tile-cache capacity) while `task-tracker.md`'s live tracker row for `ICW-064` refers to the tile-cache one — meaning the *other* `ICW-064` file (spatial boundary semantics) has no corresponding tracker row at all and is effectively invisible to anyone reading `task-tracker.md` as the source of truth. This is exactly the kind of silent data loss ICW-081 was filed to prevent, and it's larger in scope than ICW-081's own text currently credits.
 
 **Recommendation:** No new ticket — feed this exact five-ID list into ICW-081's reconciliation work directly; it saves that ticket's implementer from re-running the inventory.
 
@@ -152,3 +152,4 @@ This matters beyond pedantry: `ICW-064` currently has *two* completely different
 2. **§2.2** — hand this evidence straight to ICW-077's implementation, no new ticket needed.
 3. **§3** — hand this list straight to ICW-081's implementation, no new ticket needed.
 4. **§2.3** — fold into ICW-014's remaining scope before marking it `Done`.
+

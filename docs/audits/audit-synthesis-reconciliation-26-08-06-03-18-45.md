@@ -12,7 +12,7 @@
 
 ## Executive Summary
 
-This pass reconciled six audit reports against HEAD `c552830`. It extracted 21 candidate claims (19 from the reports plus 2 independent provenance findings: the byte-identical ICW-314/ICW-316 audit files and the JIRA.md divergence for ICW-313/314). Direct source verification confirmed 21 of 21 claims; none were refuted. Eight claims were already resolved or tracked and need no new work. Ten accepted findings are recorded: four create new tasks (`ICW-327`..`ICW-330`), five update existing records, and one is a process finding.
+This pass reconciled six audit reports against HEAD `c552830`. It extracted 21 candidate claims (19 from the reports plus 2 independent provenance findings: the byte-identical ICW-314/ICW-316 audit files and the task-tracker.md divergence for ICW-313/314). Direct source verification confirmed 21 of 21 claims; none were refuted. Eight claims were already resolved or tracked and need no new work. Ten accepted findings are recorded: four create new tasks (`ICW-327`..`ICW-330`), five update existing records, and one is a process finding.
 
 **Concurrent-run resolution (Wave I):** during this synthesis, a concurrent Wave I batch (handoff `docs/handoffs/2026-08-06-wave-i-cancellation-and-boundary-hardening.md`) independently implemented and validated all four coordinator/boundary findings under the same keys. Source verification confirms the implementations and tests are present at the working tree: `TileWorkCoordinator.cs` re-coalesce registration refresh (ICW-327, line 823/834), `SampleImageTile.cs` single-pass mip scan (ICW-328, line 314), `CanvasControl.xaml.cs` stale-frame revision guard (ICW-329, lines 135/175/180), and the full ICW-330 scope (`IsRunning()` line 928, caller-held-lock docs on `StartWorkItem`/`CancelWorkItem`, eviction-discard comment precision). The canonical key mapping is therefore ICW-327 = AddClaimant, ICW-328 = mip scan, ICW-329 = revision wiring, ICW-330 = coordinator lock contract. An earlier draft of this report assigned ICW-328/329 in reverse; those duplicate Proposed records were removed this pass, the ticket files were renamed to the canonical names, and the trackers were aligned. No implementation work remains from this synthesis.
 
@@ -22,7 +22,7 @@ The material provenance corrections: the `icw-316-canvas-assembly-extraction-aud
 
 ## Review Method and Coverage
 
-Fixed point `c552830` was confirmed with `git rev-parse`. Each external claim was verified by reading the cited source directly: `TileWorkCoordinator.cs`, `SampleImageTile.cs`, `CanvasFrame.cs`, `ICanvasItem.cs`, `CanvasViewModel.cs`, `CanvasControl.xaml.cs`, and `MainWindow.xaml.cs`. File identity of the two suspect audit files was confirmed by MD5 comparison. Trackers (`active-tasks.md`, `JIRA.md`, ticket files) were read to confirm task status, ID availability, and divergence. No build or test suite was run this pass; verification is static source tracing, consistent with the source audits being reconciled. The web-inspection-viewport requirement priority comes from the user, `DesignDoc.md` (live-streaming section), `ADR-0007`, and the requirements registry.
+Fixed point `c552830` was confirmed with `git rev-parse`. Each external claim was verified by reading the cited source directly: `TileWorkCoordinator.cs`, `SampleImageTile.cs`, `CanvasFrame.cs`, `ICanvasItem.cs`, `CanvasViewModel.cs`, `CanvasControl.xaml.cs`, and `MainWindow.xaml.cs`. File identity of the two suspect audit files was confirmed by MD5 comparison. Trackers (`active-tasks.md`, `task-tracker.md`, ticket files) were read to confirm task status, ID availability, and divergence. No build or test suite was run this pass; verification is static source tracing, consistent with the source audits being reconciled. The web-inspection-viewport requirement priority comes from the user, `DesignDoc.md` (live-streaming section), `ADR-0007`, and the requirements registry.
 
 Not inspected: runtime execution, profiler logs, benchmark outputs, and the historical audit passes referenced only transitively (pass5, pass7). The unread external-audit-review documents named by the source audits remain uninspected and are listed as open questions.
 
@@ -36,7 +36,7 @@ Not inspected: runtime execution, profiler logs, benchmark outputs, and the hist
 | F-004 | Coordinator lock contract and SetRunning query semantics | Standards | Create | Confirmed | P3 | 85% | ICW-330 | S4, S5, S1 |
 | F-005 | ICW-314 item contract too shallow; host still owns selection/tooltip | Spec | Update | Confirmed | P2 | 90% | ICW-314 | S2, S3 |
 | F-006 | ICW-316 audit file is a byte-identical copy of the ICW-314 audit file | Standards | Update | Confirmed | P3 | 100% | provenance note | S2, S3 |
-| F-007 | ICW-313/314 absent from JIRA.md | Standards | Update | Confirmed | P3 | 100% | JIRA.md | S2, S3 |
+| F-007 | ICW-313/314 absent from task-tracker.md | Standards | Update | Confirmed | P3 | 100% | task-tracker.md | S2, S3 |
 | F-008 | ICW-204 "optional follow-up" note understates a precise high-severity defect | Spec | Update | Confirmed | P3 | 90% | ICW-204, ICW-327 | S6 |
 | F-009 | Eight claims already resolved or tracked; verified, no new work | Standards | Close | Confirmed | none | 95% | none | S4, S5 |
 | F-010 | Council "stale" rejection pattern lacked per-claim evidence | Standards | Reject as finding | Confirmed | P3 | 90% | process note | S5 |
@@ -290,23 +290,23 @@ S2, S3.
 
 ---
 
-### F-007 ICW-313/314 absent from JIRA.md
+### F-007 ICW-313/314 absent from task-tracker.md
 
 **Axis:** Standards
 **Provenance:** Net-new
 **Task disposition:** Update
 **Verification:** Confirmed
 **Severity:** P3
-**Confidence:** 100%, grep of JIRA.md.
+**Confidence:** 100%, grep of task-tracker.md.
 **Origin:** Independent tracker-hygiene finding this pass.
 
 #### Description
 
-`docs/tasks/JIRA.md` contains no rows for `ICW-313` or `ICW-314` (only ICW-316A/316/319 in the 31x range), while both ticket files exist and `active-tasks.md` lists both as Proposed.
+`docs/tasks/task-tracker.md` contains no rows for `ICW-313` or `ICW-314` (only ICW-316A/316/319 in the 31x range), while both ticket files exist and `active-tasks.md` lists both as Proposed.
 
 #### Rationale
 
-The two trackers diverge; without rows, the JIRA log cannot represent the dependency chain for the remaining ADR-0007 work.
+The two trackers diverge; without rows, the task tracker log cannot represent the dependency chain for the remaining ADR-0007 work.
 
 #### Counter-evidence and Deduplication
 
@@ -320,7 +320,7 @@ Rows added this pass for ICW-313, ICW-314, and the new ICW-327..330. Run the tra
 
 | Type | ID or path | Relationship |
 | --- | --- | --- |
-| Tracker | JIRA.md | Rows added |
+| Tracker | task-tracker.md | Rows added |
 | Tracker | active-tasks.md | Statuses matched |
 
 #### Finding Sources
@@ -500,7 +500,7 @@ S5.
 | S15 | docs/requirements/functional-requirements-and-invariants.md | requirement | HEAD c552830 | yes | Mandatory external-audit requirements; web-inspection rows |
 | S16 | DesignDoc.md | design | HEAD c552830 | yes | Live-streaming / web-inspection section |
 | S17 | docs/tasks/active-tasks.md | task | HEAD c552830 | yes | Task corpus; ICW-313/314 status |
-| S18 | docs/tasks/JIRA.md | task | HEAD c552830 | yes | JIRA rows; ICW-313/314 absent (F-007) |
+| S18 | docs/tasks/task-tracker.md | task | HEAD c552830 | yes | task tracker rows; ICW-313/314 absent (F-007) |
 | S19 | docs/tasks/tickets/ICW-313..ICW-330 files | task | HEAD c552830 | yes | Ticket state; ICW-327+ availability |
 | S20 | docs/audits/viewport-requirements-council-review-26-07-30.md | audit | 2026-07-30 | yes | Viewport requirement coverage context |
 | S21 | docs/audits/audit-reconciliation-council-review-26-08-03-00-00-00.md | audit | 2026-08-03 | yes | The "stale" rejection line (F-010) |
@@ -509,13 +509,14 @@ S5.
 
 | Finding | Task action | Tracker locations | Sprint impact |
 | --- | --- | --- | --- |
-| F-001 | create ICW-327 (Done by Wave I, 2026-08-06) | active-tasks.md, JIRA.md, tickets/ICW-327 | Landed; first priority item delivered |
-| F-002 | create ICW-329 (Done by Wave I; canonical key is ICW-329 for revision wiring) | active-tasks.md, JIRA.md, tickets/ICW-329 | Landed; boundary hardening delivered |
-| F-003 | create ICW-328 (Done by Wave I; canonical key is ICW-328 for the mip scan) | active-tasks.md, JIRA.md, tickets/ICW-328 | Landed; pixelometer path delivered |
-| F-004 | create ICW-330 (Done by Wave I; full scope landed: IsRunning, C11 lock-contract docs, eviction comment) | active-tasks.md, JIRA.md, tickets/ICW-330 | Landed; no remaining items |
-| F-005 | update ICW-314 | active-tasks.md, JIRA.md, tickets/ICW-314 | Priority functional slice (P2) |
+| F-001 | create ICW-327 (Done by Wave I, 2026-08-06) | active-tasks.md, task-tracker.md, tickets/ICW-327 | Landed; first priority item delivered |
+| F-002 | create ICW-329 (Done by Wave I; canonical key is ICW-329 for revision wiring) | active-tasks.md, task-tracker.md, tickets/ICW-329 | Landed; boundary hardening delivered |
+| F-003 | create ICW-328 (Done by Wave I; canonical key is ICW-328 for the mip scan) | active-tasks.md, task-tracker.md, tickets/ICW-328 | Landed; pixelometer path delivered |
+| F-004 | create ICW-330 (Done by Wave I; full scope landed: IsRunning, C11 lock-contract docs, eviction comment) | active-tasks.md, task-tracker.md, tickets/ICW-330 | Landed; no remaining items |
+| F-005 | update ICW-314 | active-tasks.md, task-tracker.md, tickets/ICW-314 | Priority functional slice (P2) |
 | F-006 | provenance note on S3 | docs/audits/icw-316-...-audit-...md | No change |
-| F-007 | add JIRA rows | JIRA.md | No change |
+| F-007 | add task tracker rows | task-tracker.md | No change |
 | F-008 | update ICW-204 note | tickets/ICW-204 | No change |
 | F-009 | close as verified | none | No change |
 | F-010 | process note | this report | No change |
+

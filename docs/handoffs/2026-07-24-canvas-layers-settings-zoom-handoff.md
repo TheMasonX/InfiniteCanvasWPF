@@ -22,7 +22,7 @@
 - Treat zoom presets as temporary commands and display calculated zoom percentage.
 - Remove the rejected standalone custom zoom UI and track its integrated replacement.
 
-The requirements and evidence are recorded in `docs/tasks/active-tasks.md`, `docs/tasks/JIRA.md`, and tickets ICW-040 through ICW-045.
+The requirements and evidence are recorded in `docs/tasks/active-tasks.md`, `docs/tasks/task-tracker.md`, and tickets ICW-040 through ICW-045.
 
 ## Implemented Changes
 

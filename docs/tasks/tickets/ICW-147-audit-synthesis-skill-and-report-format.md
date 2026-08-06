@@ -33,7 +33,7 @@ Create a reusable `audit-synthesis` skill for skeptical, source-verified synthes
 
 - Add `.github/skills/audit-synthesis/SKILL.md`.
 - Update `docs/formats/report-FORMAT.md`.
-- Register the task in `docs/tasks/active-tasks.md` and `docs/tasks/JIRA.md`.
+- Register the task in `docs/tasks/active-tasks.md` and `docs/tasks/task-tracker.md`.
 
 ## Acceptance Criteria
 
@@ -68,3 +68,4 @@ The user explicitly requested documentation edits. Existing untracked audit repo
 
 Use the master findings list as the common evidence pack for the default three-seat council.
 Keep delegated prompts, notes, and results in the recovery workspace until the final report passes validation.
+

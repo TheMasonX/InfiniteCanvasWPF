@@ -23,5 +23,6 @@ Next step
 - Implement the adapter overload, add XML doc deprecation notes on old signatures, and add parity unit tests. Keep forwarding overloads for one release before removal.
 
 Council update, 2026-08-03
-- Register this existing ticket in `docs/tasks/active-tasks.md` and `docs/tasks/JIRA.md`.
+- Register this existing ticket in `docs/tasks/active-tasks.md` and `docs/tasks/task-tracker.md`.
 - Verify direct callers, XML deprecation behavior, and pixel and tile-ID parity before closing the migration path.
+

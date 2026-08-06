@@ -47,7 +47,7 @@ lock (_claimantLock)
 
 ## 2. This bug is currently untracked — no ticket exists for it
 
-A search of `docs/tasks/tickets/` for any ticket referencing `AddClaimant`'s re-coalesce path or registration refresh returns nothing. `ICW-204` itself (Done, in both `active-tasks.md` and `JIRA.md`) has a tantalizingly close but under-specified hint in its own "Next steps" column: *"Optional follow-up: avoid dooming in-flight work when a frame boundary creates a zero-claimant window."* This shows the original `ICW-204` work sensed something in this vicinity, but filed it as a vague, optional, low-priority follow-up rather than the precisely-traced, high-severity, already-confirmed-live bug `delta-6` actually found — the "optional" framing significantly undersells what's actually going on here. This gap between the two matters: an "optional follow-up" note is easy to defer indefinitely; a specifically-diagnosed, high-confidence, currently-live cancellation-defeat bug with a five-line fix already written is a very different priority.
+A search of `docs/tasks/tickets/` for any ticket referencing `AddClaimant`'s re-coalesce path or registration refresh returns nothing. `ICW-204` itself (Done, in both `active-tasks.md` and `task-tracker.md`) has a tantalizingly close but under-specified hint in its own "Next steps" column: *"Optional follow-up: avoid dooming in-flight work when a frame boundary creates a zero-claimant window."* This shows the original `ICW-204` work sensed something in this vicinity, but filed it as a vague, optional, low-priority follow-up rather than the precisely-traced, high-severity, already-confirmed-live bug `delta-6` actually found — the "optional" framing significantly undersells what's actually going on here. This gap between the two matters: an "optional follow-up" note is easy to defer indefinitely; a specifically-diagnosed, high-confidence, currently-live cancellation-defeat bug with a five-line fix already written is a very different priority.
 
 **Recommendation:** file this properly — a new ticket (this series has no naming authority, but something like `ICW-327-addclaimant-recoalesce-registration-refresh` would fit the existing sequence) citing `delta-6`'s trace directly, with its already-provided fix:
 ```csharp
@@ -77,7 +77,7 @@ Given `ICW-320`/`ICW-322` already demonstrated exactly the right pattern for car
 | Item | Status | Finding | Basis |
 |---|---|---|---|
 | `TileWorkItem.AddClaimant` re-coalesce path | Untracked; not touched by `ICW-320` (Wave F) or `ICW-322` (Wave G) | **Confirmed still live**, high severity — permanently defeats claimant-token cancellation for any multi-frame tile generation, exactly the case `ICW-204` was built to handle. Fix already fully specified by `delta-6`. | §1 |
-| `ICW-204`'s "optional follow-up" note | Present in `active-tasks.md`/`JIRA.md` | **Correction**: this vague, low-priority note is the same underlying issue `delta-6` diagnosed precisely and rated High severity — the "optional" framing significantly understates it. Recommend replacing the vague note with a real ticket citing the precise mechanism. | §2 |
+| `ICW-204`'s "optional follow-up" note | Present in `active-tasks.md`/`task-tracker.md` | **Correction**: this vague, low-priority note is the same underlying issue `delta-6` diagnosed precisely and rated High severity — the "optional" framing significantly understates it. Recommend replacing the vague note with a real ticket citing the precise mechanism. | §2 |
 
 ---
 
@@ -90,3 +90,4 @@ Given `ICW-320`/`ICW-322` already demonstrated exactly the right pattern for car
 ---
 
 *Methodology note: this session read `icw-wave-e-audit-delta-6.md` in full, identified its one substantive finding as high-priority given its severity rating and precision, then independently re-verified every step of its trace against the current source — `AddClaimant`'s exact current body, confirmation that `ICW-320`'s fix didn't touch the re-coalesce branch, and a direct search for any existing ticket — before writing this report, rather than repeating the finding on the strength of `delta-6`'s own analysis alone.*
+

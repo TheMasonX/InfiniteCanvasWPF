@@ -1,6 +1,6 @@
 # InfiniteCanvasWPF — Audit Pass 7 (Supplementary, Same HEAD)
 
-**HEAD:** `139a8b62fa2d6363615eb6a819d07a76aa8c55c2` — unchanged since pass 6. I checked (via GitHub's commit feed and a direct `JIRA.md` content diff) and confirmed `main` has not advanced. Rather than manufacture findings against nothing new, I used this pass to finish sweeping files at this same HEAD that changed recently but weren't yet reviewed in depth: `GeneratorOptions.cs`, `MipOptions.cs`, `AnnotationGenerator.cs`, `App.xaml.cs`, `SerilogHost.cs`, and the `MainViewModel.cs` diff.
+**HEAD:** `139a8b62fa2d6363615eb6a819d07a76aa8c55c2` — unchanged since pass 6. I checked (via GitHub's commit feed and a direct `task-tracker.md` content diff) and confirmed `main` has not advanced. Rather than manufacture findings against nothing new, I used this pass to finish sweeping files at this same HEAD that changed recently but weren't yet reviewed in depth: `GeneratorOptions.cs`, `MipOptions.cs`, `AnnotationGenerator.cs`, `App.xaml.cs`, `SerilogHost.cs`, and the `MainViewModel.cs` diff.
 
 ---
 
@@ -41,3 +41,4 @@ public sealed record GeneratorOptions(
 ## Status
 
 No other new findings this pass — the remaining diffed files (`MainViewModel.cs`'s new noise-parameter plumbing, `CameraTransform.cs`'s trivial using-removal, `CanvasUserSettings.cs`'s new noise fields) were checked and are consistent/correctly wired (noise settings round-trip through persistence with matching validation ranges and defaults). Will pick back up with a full delta pass once new commits land.
+

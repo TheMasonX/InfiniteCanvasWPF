@@ -1,4 +1,4 @@
-# Infinite Canvas Jira Task Log
+# Infinite Canvas Task Log
 
 | Key | Status | Type | Summary | Acceptance / Notes |
 | --- | --- | --- | --- | --- |
@@ -10,7 +10,7 @@
 | ICW-321 | Done | Bug | Remove dead DefectBitmap and LockBits sampling | Byte-identical rendered output, zero DefectBitmap references in src, Windows 18/18. Precedes the ICW-102 rescope. Audit synthesis finding F-008. |
 | ICW-322 | Done | Bug | Document the reentrant lock chain in cache eviction | Chain documented at all three sites with a same-thread reentrancy warning. Assumption A-1 verified against the runtime: System.Threading.Lock re-enters for the current thread. No behavior change. Audit synthesis finding F-009. |
 | ICW-323 | Done | Task | Add an epoch-wiring behavioral regression test | EpochWiringTests extracts the RenderFrameAsync body and asserts BeginRequest/IsCurrent/Advance stay wired. Fails on the 2026-07-26 revert shape. Test-only. Audit synthesis finding F-013. |
-| ICW-324 | Proposed | Task | Reconcile background noise seamlessness and ICW-129 status | Requirement conflict (per-tile streams vs seamless) resolved before seed change; one ICW-129 status and one JIRA row. Audit synthesis findings F-010, F-022. |
+| ICW-324 | Proposed | Task | Reconcile background noise seamlessness and ICW-129 status | Requirement conflict (per-tile streams vs seamless) resolved before seed change; one ICW-129 status and one task tracker row. Audit synthesis findings F-010, F-022. |
 | ICW-325 | Proposed | Bug | Fix anisotropic mip-level selection under non-uniform scale | SelectMipLevel binding axis is the larger scale per ADR-0005. Non-uniform-camera test plus visual regression. Audit synthesis finding F-011. |
 | ICW-326 | Done | Improvement | Scale the tile-grid overlay to the visible tile set | UpdateTileGridLayer builds from the camera-visible tile set and skips unchanged rebuilds; no longer touches _tiles. Core 179/179, App Release 0 errors. Audit synthesis finding F-012. |
 | ICW-327 | Done | Bug | Refresh the claimant cancellation registration on AddClaimant re-coalesce | A re-coalescing claimant kept its spent frame-token registration and became permanently uncancellable. Re-coalesce branch now disposes the old registration, registers the newest token, and handles the synchronous-fire case. Regression test verified to fail on the buggy shape. core 183/183, Windows 22/22, App Release 0 errors. Wave I (2026-08-06). |
@@ -89,7 +89,7 @@
 | ICW-078 | Done | Bug | Guard render and regeneration paths against stale frame publication | Render request epochs now suppress stale frame publication after newer viewport or scene state changes. |
 | ICW-079 | Proposed | Improvement | Make busy-state updates and render coalescing resilient to rapid input churn | Net-new audit found busy-state counter churn under rapid pointer/tile/regeneration events; the task should stabilize the overlay and coalesced render behavior. |
 | ICW-080 | Done | Improvement | Extract annotation feature formatting from MainWindow into a dedicated presentation model | Feature-grid and tooltip formatting now flow through a dedicated presenter and are covered by focused tests. |
-| ICW-081 | In Progress | Task | Reconcile duplicate and orphaned audit tickets before adding more backlog work | Council review reopened this task. The corpus still contains duplicate identities, stale tracker rows, and orphaned ICW-188/189 records. Extend validation across ticket files, active-tasks.md, and JIRA.md. |
+| ICW-081 | In Progress | Task | Reconcile duplicate and orphaned audit tickets before adding more backlog work | Council review reopened this task. The corpus still contains duplicate identities, stale tracker rows, and orphaned ICW-188/189 records. Extend validation across ticket files, active-tasks.md, and task-tracker.md. |
 | ICW-082 | Done | Bug | Persist the background-image visibility toggle | `ShowBackgroundImagesCheckBox` now round-trips through settings persistence and is applied during startup and render updates. |
 | ICW-305 | Proposed | Improvement | Make tile-cache eviction policy explicit and testable | Register the orphaned cache-policy ticket; current eviction selects the first eligible dictionary value rather than a documented recency policy. |
 | ICW-096 | In Progress | Bug | Restore viewport scrollbars and preserve resident imagery during mip transitions | Restore the missing camera-native scrollbar overlay, retain an older resident tile payload while a requested mip is generated, and verify cache diagnostics identify the active instance and variant state. |
@@ -195,3 +195,4 @@
 | 2026-07-30 | ICW-081 | Wave E ticket deduplication: ICW-094 duplicate fixed (ICW-094-RESET), ICW-098/099/100 duplicates resolved with dedup notes, ICW-111/ICW-031 merge documented. Validation script extended to flag duplicate IDs. |
 | 2026-07-30 | ICW-144 | Wave E stress benchmarks: TileWorkCoordinatorBenchmarks.cs added with 8 scenarios (PublishInterestSet empty/full/none/mixed, DrainQueue FIFO/priority/stress). Build 0 errors, tests 93/93 passing. |
 | 2026-08-03 | ICW-101 | Replaced eager WPF tooltip construction with a deferred presenter-backed source. Focused tests pass 4/4, Windows tests pass 10/10, and the Release app build passes. The supplied profiler capture remains the baseline because no post-change runtime profile was available. |
+

@@ -16,7 +16,7 @@ Sprint 1 Wave D (ICW-143) is functionally correct with one confirmed bug that mu
 - docs/ADR/0006-viewport-aware-tile-work-scheduling.md
 - docs/requirements/functional-requirements-and-invariants.md
 - docs/tasks/active-tasks.md
-- docs/tasks/JIRA.md
+- docs/tasks/task-tracker.md
 - src/InfiniteCanvas.Rendering/BackgroundTileContracts.cs
 - src/InfiniteCanvas.Rendering/TileWorkCoordinator.cs
 - src/InfiniteCanvas.Rendering/SampleImageTile.cs
@@ -30,7 +30,7 @@ Sprint 1 Wave D (ICW-143) is functionally correct with one confirmed bug that mu
 |---|---|---|---|
 | **Viewport Architecture** | Fix PublishInterestSet bug: claimant removal loop drops failure callbacks, stalling _generationQueued permanently. Add null guards to ViewportInterestSet constructor. | 0.92 | **Yes** — bug causes tiles to become permanently stuck unable to generate via coordinator |
 | **Coordinator/Concurrency** | No hard concurrency bugs. Add _disposed guard to DrainQueueWithLivenessCheck. Fix theoretical _activeCount leak in success path disposed case. Fix double ReleaseReservation during cancellation storms. | 0.92 | No |
-| **Implementation Sequencing** | Update ICW-143 ticket status from To Do to Done. Resolve duplicate IDs (ICW-100 x4, ICW-102/094/014/098/099 x2). Add Wave D invariants to requirements registry. Correct handoff ordering claim. Update JIRA.md. | 0.88 | Yes — tracker inaccuracies create confusion about completion state |
+| **Implementation Sequencing** | Update ICW-143 ticket status from To Do to Done. Resolve duplicate IDs (ICW-100 x4, ICW-102/094/014/098/099 x2). Add Wave D invariants to requirements registry. Correct handoff ordering claim. Update task-tracker.md. | 0.88 | Yes — tracker inaccuracies create confusion about completion state |
 | **Rendering Performance** | Add benchmarks for viewport culling path. Eliminate duplicate bounds iteration per frame. Reduce allocations: GetClaimantIds() LINQ, empty prefetch HashSet, O(n) RemoveFromQueue during cancellation bursts. | 0.85 | No — performance concerns are future-sprint work |
 
 ## Synthesis
@@ -46,7 +46,7 @@ Sprint 1 Wave D (ICW-143) is functionally correct with one confirmed bug that mu
 ### What changes now (tracker updates)
 
 1. Update ICW-143 ticket file: status To Do → Done
-2. Update JIRA.md: ICW-143 To Do → Done
+2. Update task-tracker.md: ICW-143 To Do → Done
 3. Add Wave D invariants to functional-requirements-and-invariants.md
 4. Correct Wave D handoff ordering claim: CTS replacement runs BEFORE interest set publication, not after
 5. Mark ICW-P0-ACTIVECOUNT as Done (verified — code was already correct)
@@ -94,3 +94,4 @@ The Performance seat expressed concern about the absence of benchmarks, but this
 3. **Should the empty prefetch set be a static singleton?** The per-frame `new HashSet<BackgroundTileCacheKey>()` allocation (~80 bytes) is minor but trivially eliminated.
 
 4. **Is the one-frame CTS disposal gap sufficient for all callback patterns?** Current implementation assumes auto-removal callbacks complete within one frame. If callbacks grow longer, this needs revisiting.
+

@@ -8,7 +8,7 @@
 **Author:** GitHub Copilot
 **Timestamp:** 2026-08-03 04:30 US Central
 **Review mode:** Full reconciliation, three-seat council
-**Scope:** 15 supplied audit reports, 48 extracted claims, source paths, requirements, ADR-0003 through ADR-0006, tests, benchmarks, task tickets, `active-tasks.md`, and `JIRA.md`
+**Scope:** 15 supplied audit reports, 48 extracted claims, source paths, requirements, ADR-0003 through ADR-0006, tests, benchmarks, task tickets, `active-tasks.md`, and `task-tracker.md`
 
 ## Executive Summary
 
@@ -397,7 +397,7 @@ S2, S4, S5, S6.
 | S17 | [README.md](../../README.md) | Documentation | `b5e1e8b` | Yes | Runtime and MVVM contract comparison. |
 | S18 | [functional-requirements-and-invariants.md](../requirements/functional-requirements-and-invariants.md) | Requirement | `b5e1e8b` | Yes | Behavioral invariants and mandatory audit requirements. |
 | S19 | [ADR-0003](../ADR/0003-live-hybrid-spatial-indexing.md), [ADR-0004](../ADR/0004-zero-copy-buffer-lifecycle-and-handoff-policy.md), [ADR-0005](../ADR/0005-source-agnostic-background-tile-mips.md), [ADR-0006](../ADR/0006-viewport-aware-tile-work-scheduling.md) | ADRs | `b5e1e8b` | Yes | Boundary and sequencing decisions. |
-| S20 | [active-tasks.md](../tasks/active-tasks.md), [JIRA.md](../tasks/JIRA.md), affected ticket files | Tasks | 2026-08-03 worktree | Yes | Status, identity, and task coverage. |
+| S20 | [active-tasks.md](../tasks/active-tasks.md), [task-tracker.md](../tasks/task-tracker.md), affected ticket files | Tasks | 2026-08-03 worktree | Yes | Status, identity, and task coverage. |
 | S21 | Source, test, and benchmark paths cited by the council review | Code, test, benchmark | `b5e1e8b` | Yes | Independent mechanism checks. Runtime soak and user reproduction were unavailable. |
 | S22 | [audit-reconciliation-council-review-26-08-03-00-00-00.md](audit-reconciliation-council-review-26-08-03-00-00-00.md) | Council report | 2026-08-03 | Yes | Three-seat recommendations and dissent. |
 
@@ -405,9 +405,9 @@ S2, S4, S5, S6.
 
 | Finding | Task action | Tracker locations | Sprint impact |
 | --- | --- | --- | --- |
-| F-001, F-003, F-010 | Update existing pixelometer, blend, and mip boundary tasks. | ICW-035, ICW-076, ICW-100, `active-tasks.md`, `JIRA.md` | Keep migration ahead of new source integrations. |
-| F-002, F-007 | Extend queue evidence and correct the seven-method count. | ICW-064, ICW-144, ICW-133, `active-tasks.md`, `JIRA.md` | Require repeated evidence before queue redesign. |
-| F-004 | Reopen corpus reconciliation and extend validator scope. | ICW-081, `active-tasks.md`, `JIRA.md` | Place before new audit-derived backlog growth. |
+| F-001, F-003, F-010 | Update existing pixelometer, blend, and mip boundary tasks. | ICW-035, ICW-076, ICW-100, `active-tasks.md`, `task-tracker.md` | Keep migration ahead of new source integrations. |
+| F-002, F-007 | Extend queue evidence and correct the seven-method count. | ICW-064, ICW-144, ICW-133, `active-tasks.md`, `task-tracker.md` | Require repeated evidence before queue redesign. |
+| F-004 | Reopen corpus reconciliation and extend validator scope. | ICW-081, `active-tasks.md`, `task-tracker.md` | Place before new audit-derived backlog growth. |
 | F-005 | Register existing generator option tickets and coordinate with ICW-088. | ICW-088, ICW-188, ICW-189, both trackers | No new IDs. |
 | F-006, F-008, F-009 | Extend existing settings, boundary, ViewModel, and documentation tasks. | ICW-016, ICW-017, ICW-022, ICW-033, ICW-P1-SETTINGS-VALIDATION | No architecture change. |
 | F-011, F-012 | Reject stale claims and defer evidence-dependent cleanup. | No new task; existing related tickets remain open where applicable. | No sprint reorder. |
@@ -419,3 +419,4 @@ Command: `pwsh -File scripts/Validate-TaskTracker.ps1 -Path docs/tasks`
 Result: Failed on pre-existing legacy errors, including missing required fields in older ticket files, invalid `Deprecated` and `Reverted` statuses, unsupported `todo` status, unsupported `High` priority, and unsupported `Chore` type. The command did not report the edited ICW-081, ICW-078, ICW-144, ICW-188, or ICW-189 records.
 
 No source-code implementation was requested or performed.
+

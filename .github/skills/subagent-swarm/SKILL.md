@@ -58,7 +58,7 @@ If the recovery directory cannot be created or written, stop the swarm and repor
   - DesignDoc.md
   - README.md
   - docs/tasks/active-tasks.md
-  - docs/tasks/JIRA.md
+  - docs/tasks/task-tracker.md
   - relevant ADRs and requirements docs
 - Avoid conflicting assumptions between tracks.
 - Give every track the same recovery root and baseline manifest.
@@ -110,3 +110,4 @@ The swarm workflow is complete only when all are true:
 - /subagent-swarm audit the rendering pipeline and produce a focused implementation plan
 - /subagent-swarm investigate the spatial index and tests, then implement the smallest safe fix
 - /subagent-swarm split the work into research, implementation, and validation tracks for the current backlog item
+

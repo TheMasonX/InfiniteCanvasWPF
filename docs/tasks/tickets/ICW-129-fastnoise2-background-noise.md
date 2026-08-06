@@ -21,7 +21,7 @@ Replace the custom fractal-Brownian-motion background generator with FastNoise2 
 
 ## Status Divergence Note (2026-08-04)
 
-Audit synthesis finding F-022: active-tasks.md marks this ticket Done, the ticket file says In Progress, and JIRA.md has no row. The status binds to the un-met "seamless worldspace sampling" acceptance criterion. Do not close or set status until the requirement decision in ICW-324 resolves seamless vs per-tile variance. ICW-324 also owns the JIRA row.
+Audit synthesis finding F-022: active-tasks.md marks this ticket Done, the ticket file says In Progress, and task-tracker.md has no row. The status binds to the un-met "seamless worldspace sampling" acceptance criterion. Do not close or set status until the requirement decision in ICW-324 resolves seamless vs per-tile variance. ICW-324 also owns the task tracker row.
 
 ## Execution Plan
 - ICW-001: Capture the migration requirement and register the work in the task tracker.
@@ -40,3 +40,4 @@ Audit synthesis finding F-022: active-tasks.md marks this ticket Done, the ticke
 - Run: `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --filter SampleImageGeneratorTests`
 - Run: `dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release`
 - Result: 24/24 SampleImageGeneratorTests passed; Release app build succeeded with 12 existing FastNoise2 binding warnings.
+

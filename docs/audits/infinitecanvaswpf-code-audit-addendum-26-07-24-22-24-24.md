@@ -2,7 +2,7 @@
 
 **Supersedes/extends:** `infinitecanvaswpf-code-audit-26-07-24-13-10-55.md` (audited commit `84ddba2`)
 **New commit audited:** `43bfd55bbae7e14a590784f7831e5261eecfd69b` — *"feat: add zoom presets, cache debug controls, and class-colored defects"* (ICW-013)
-**Method:** Downloaded `main` HEAD tarball via the public repository archive, diffed byte-for-byte against the previously audited tree to isolate the exact changed lines (`diff -rq`, then per-file `diff -u`), then reviewed every changed hunk in full file context. 9 files touched: `MainWindow.xaml`, `MainWindow.xaml.cs`, `SampleImageGenerator.cs`, `SampleImageTile.cs`, `ZeroCopyBitmapFactory.Windows.cs`, `SampleImageGeneratorTests.cs`, `active-tasks.md`, `JIRA.md`, plus new file `ICW-013-zoom-presets-and-cache-debug.md`. All other files in the tree are byte-identical to the previously audited commit and are not re-litigated here.
+**Method:** Downloaded `main` HEAD tarball via the public repository archive, diffed byte-for-byte against the previously audited tree to isolate the exact changed lines (`diff -rq`, then per-file `diff -u`), then reviewed every changed hunk in full file context. 9 files touched: `MainWindow.xaml`, `MainWindow.xaml.cs`, `SampleImageGenerator.cs`, `SampleImageTile.cs`, `ZeroCopyBitmapFactory.Windows.cs`, `SampleImageGeneratorTests.cs`, `active-tasks.md`, `task-tracker.md`, plus new file `ICW-013-zoom-presets-and-cache-debug.md`. All other files in the tree are byte-identical to the previously audited commit and are not re-litigated here.
 
 ---
 
@@ -199,3 +199,4 @@ The `Interlocked.Increment` always succeeds before the `Dispatcher.Invoke` call.
 1. All assumptions from the original report (§5) still apply.
 2. This delta assumes the `main` branch HEAD at fetch time (`43bfd55b...`) is the "new commit" the user meant; the atom feed also shows this is the tip as of the fetch, with no newer commits behind it.
 3. A-05's "colors look plausible" judgment is based on decoding BGRA byte values by hand, not on rendering the app — flagged explicitly as unverified rather than asserted.
+

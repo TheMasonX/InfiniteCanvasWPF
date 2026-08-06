@@ -58,8 +58,9 @@ DesignDoc's second open question asks how aggressively window-resize events shou
 
 - DesignDoc's third open question (GPU/DirectX/`D3DImage` pivot) is a strategic technology-direction question, not something resolvable by reading more code — no finding to report either way; noted so a future session knows it was considered and correctly set aside as out of scope for a code audit.
 - I did not verify the `_resizeTimer`'s configured debounce interval is well-tuned (too short risks thrashing, too long risks visible lag) — only that the debounce mechanism itself exists and is wired correctly.
-- Open process question, following directly from §0: should a future session in this series treat `DesignDoc.md`, `README.md`, and `docs/tasks/JIRA.md` as a mandatory first-read checklist (mirroring what the project's own agent definition already requires of any contributor), given this session found real, connectable material in the one founding document that had gone unread for eight sessions?
+- Open process question, following directly from §0: should a future session in this series treat `DesignDoc.md`, `README.md`, and `docs/tasks/task-tracker.md` as a mandatory first-read checklist (mirroring what the project's own agent definition already requires of any contributor), given this session found real, connectable material in the one founding document that had gone unread for eight sessions?
 
 ---
 
 *Methodology note: this session read `DesignDoc.md` in full for the first time in this series, explicitly checked whether its illustrative example code's numeric constants should be compared against real implementation values before doing so (avoiding a false-positive drift claim), and traced both of its two concretely-checkable open questions against current code — one resolved and confirmed compliant, the other found to connect directly to a specific, already-identified, still-open code gap from the very first report in this series.*
+

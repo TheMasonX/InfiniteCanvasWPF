@@ -39,7 +39,7 @@ These items should be updated by the next agent:
 
 1. **ICW-143 ticket file** (`docs/tasks/tickets/ICW-143-viewport-tile-culling-and-priority.md`): Change `status` from `To Do` to `Done`, update `updated` date, record validation outcome (93/93 tests, Release build 0 errors).
 
-2. **JIRA.md** (`docs/tasks/JIRA.md`): Change ICW-143 status from `To Do` to `Done`.
+2. **task-tracker.md** (`docs/tasks/task-tracker.md`): Change ICW-143 status from `To Do` to `Done`.
 
 3. **ICW-P0-ACTIVECOUNT** in `docs/tasks/active-tasks.md`: Change from `Proposed` to `Done (verified — code was already correct at Sprint 1 start)`. The Wave A handoff correctly noted this but the tracker was never updated.
 
@@ -74,8 +74,9 @@ Build succeeded, 0 errors, 1 pre-existing warning
 
 ## Next Step Recommendations
 
-1. Apply the tracker updates listed above (ICW-143 ticket, JIRA.md, ICW-P0-ACTIVECOUNT, requirements registry, handoff correction).
+1. Apply the tracker updates listed above (ICW-143 ticket, task-tracker.md, ICW-P0-ACTIVECOUNT, requirements registry, handoff correction).
 2. Execute ICW-081 (ticket deduplication) before creating any new P0/P1 ticket files.
 3. Add regression tests that register `onFailed` callbacks for items cancelled by `PublishInterestSet`.
 4. Replace `GetClaimantIds()` + per-claimant iteration in `PublishInterestSet` with a direct `CancelWorkItem` call (already done in this review).
 5. Begin ICW-144 (fast-scroll stress benchmarks) to establish the performance baseline for future optimization.
+

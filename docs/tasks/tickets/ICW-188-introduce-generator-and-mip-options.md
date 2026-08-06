@@ -23,5 +23,6 @@ Next step
 - Implement the records in `src/InfiniteCanvas.Rendering` and add a small adapter overload to `SampleImageGenerator.GenerateSet(GeneratorOptions)`. Add two unit tests that compare representative pixel outputs before/after.
 
 Council update, 2026-08-03
-- Register this existing ticket in `docs/tasks/active-tasks.md` and `docs/tasks/JIRA.md`.
+- Register this existing ticket in `docs/tasks/active-tasks.md` and `docs/tasks/task-tracker.md`.
 - Keep the option records and the adapter as separate acceptance surfaces. Confirm that `MipOptions` has direct production callers before marking the task complete.
+

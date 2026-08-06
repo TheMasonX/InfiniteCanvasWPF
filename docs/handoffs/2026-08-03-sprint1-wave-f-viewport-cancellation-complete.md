@@ -27,7 +27,7 @@ Two new tests cover cooperative cancellation:
 ### F-4: Tracker updates
 
 - New ticket `docs/tasks/tickets/ICW-WAVE-F-VIEWPORT-CANCELLATION.md` (Done).
-- `docs/tasks/active-tasks.md` and `docs/tasks/JIRA.md` updated to Done with evidence.
+- `docs/tasks/active-tasks.md` and `docs/tasks/task-tracker.md` updated to Done with evidence.
 
 ## Validation
 
@@ -47,3 +47,4 @@ The workspace editor buffer and the on-disk file diverged for `SampleImageTile.c
 1. Prioritize `ICW-P0-LEASE-RELEASE` (IDisposable cache reservation lease) and `ICW-P1-PIXELCOST-MIPS` (mip-aware byte accounting). These are the remaining cache-accounting prerequisites.
 2. Land `ICW-P0-ACTIVECOUNT-residuals` before the lease work to remove the running-item double-release hazard.
 3. Continue `ICW-144` stress benchmark evidence with stage diagnostics counters (ICW-132).
+

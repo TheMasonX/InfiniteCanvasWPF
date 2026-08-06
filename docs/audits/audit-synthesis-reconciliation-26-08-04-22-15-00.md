@@ -24,7 +24,7 @@ Result counts:
 
 Highest-risk result: the duplicate item-query authority between `ICanvasSceneSource` and `ICanvasSpatialQuerySource` (`QueryVisible` on both), which must be resolved before ICW-314 builds hit-testing and before the ICW-316 assembly move publishes the split-brain contract as library API.
 
-Material provenance corrections: delta-6's headline finding (permanent loss of cancellation registration, ICW-204) is refuted; its valid core survives as the bounded cancel-and-re-request window in ICW-320. The `ICW-129` noise work is status-divergent (Done vs In Progress vs missing in JIRA) and its "seamless worldspace sampling" acceptance criterion is un-met. The `ICW-008/062/063` publish-hardening tickets are a three-file near-duplicate family.
+Material provenance corrections: delta-6's headline finding (permanent loss of cancellation registration, ICW-204) is refuted; its valid core survives as the bounded cancel-and-re-request window in ICW-320. The `ICW-129` noise work is status-divergent (Done vs In Progress vs missing in task tracker) and its "seamless worldspace sampling" acceptance criterion is un-met. The `ICW-008/062/063` publish-hardening tickets are a three-file near-duplicate family.
 
 Validation limits: the reconciliation is source-traced at HEAD for every code-path claim. No runtime reproduction was run for the concurrency candidates; those rest on mechanism tracing and the council's proposed regression tests.
 
@@ -876,12 +876,12 @@ S6, S9, S10, S24, S29.
 **Task disposition:** Update (ICW-129 via ICW-324)
 **Verification:** Confirmed
 **Severity:** P2
-**Confidence:** 85%, from cross-reading active-tasks, JIRA, and the ticket file.
+**Confidence:** 85%, from cross-reading active-tasks, task tracker, and the ticket file.
 **Origin:** C3-011 (S19), council-3.
 
 #### Description
 
-`active-tasks.md` marks ICW-129 Done, the ticket file says In Progress, and `JIRA.md` has no row. The status binds to the un-met "seamless worldspace sampling" acceptance criterion.
+`active-tasks.md` marks ICW-129 Done, the ticket file says In Progress, and `task-tracker.md` has no row. The status binds to the un-met "seamless worldspace sampling" acceptance criterion.
 
 #### Rationale
 
@@ -893,7 +893,7 @@ Not an authoring defect; the status is a real requirement question.
 
 #### Recommendation and Validation
 
-Reconcile inside ICW-324: one status, one JIRA row, and a decision on seamless vs per-tile variance.
+Reconcile inside ICW-324: one status, one task tracker row, and a decision on seamless vs per-tile variance.
 
 #### Related Artifacts
 
@@ -1122,7 +1122,7 @@ S8.
 | S21 | docs/audits/infinitecanvaswpf-external-audit-review-and-architecture-feedback-26-07-29-21-24-17.md | audit | 2026-07-29 | yes | Group 3 |
 | S22 | docs/audits/infinitecanvaswpf-external-audit-review-addendum-26-07-30-05-30-01.md | audit | 2026-07-30 | yes | Group 3 |
 | S23 | docs/tasks/active-tasks.md | task | HEAD | yes | Tracker coverage |
-| S24 | docs/tasks/JIRA.md | task | HEAD | yes | Tracker coverage |
+| S24 | docs/tasks/task-tracker.md | task | HEAD | yes | Tracker coverage |
 | S25 | docs/requirements/functional-requirements-and-invariants.md | requirement | HEAD | yes | Spec axis |
 | S26 | docs/ADR/0003..0007 | ADR | HEAD | yes | Spec axis |
 | S27 | docs/handoffs/2026-08-04-icw312-icw315-data-source-boundary.md | handoff | 2026-08-04 | yes | Current state |
@@ -1133,7 +1133,7 @@ S8.
 
 | Finding | Task action | Tracker locations | Sprint impact |
 | --- | --- | --- | --- |
-| F-001 | Update ICW-312 + ICW-316A gate | ICW-312 ticket, ICW-316A ticket, active-tasks, JIRA | First 316A gate |
+| F-001 | Update ICW-312 + ICW-316A gate | ICW-312 ticket, ICW-316A ticket, active-tasks, task tracker | First 316A gate |
 | F-002 | Create ICW-316A; rescope ICW-316 | ICW-316A ticket (new), ICW-316 ticket | Restructures the 316 sequence |
 | F-003, F-004 | Create (ICW-316A scope) | ICW-316A ticket | Part of 316A |
 | F-005 | Create ICW-319 | ICW-319 ticket (new) | Before 316 move |
@@ -1150,6 +1150,7 @@ S8.
 | F-019 | Update ICW-102 | ICW-102 ticket | After ICW-321 |
 | F-020 | Update ICW-067 | ICW-067 ticket | With ICW-067 |
 | F-021 | Update ICW-081 | ICW-081 ticket, ICW-307/306/305/063 | First, corpus safety |
-| F-022 | Update ICW-129 | ICW-129 ticket, JIRA | Inside ICW-324 |
+| F-022 | Update ICW-129 | ICW-129 ticket, task tracker | Inside ICW-324 |
 | F-023 | Update ICW-104/305 | ICW-305 ticket, active-tasks | With eviction policy |
 | F-024, F-025, F-026 | Reject/Defer | none | none |
+

@@ -1,6 +1,6 @@
 # InfiniteCanvasWPF — Deep-Dive Code Audit, Pass 2 (Addendum)
 
-**Commit audited:** `43bfd55bbae7e14a590784f7831e5261eecfd69b` — confirmed unchanged via `git ls-remote` (`refs/heads/main` still resolves to this SHA) and a byte-diff of `docs/tasks/JIRA.md` against the live branch. Same commit as the first report.
+**Commit audited:** `43bfd55bbae7e14a590784f7831e5261eecfd69b` — confirmed unchanged via `git ls-remote` (`refs/heads/main` still resolves to this SHA) and a byte-diff of `docs/tasks/task-tracker.md` against the live branch. Same commit as the first report.
 **Relationship to prior report:** `infinitecanvaswpf-deep-dive-audit-26-07-24-07-45-28.md`. This is **not a re-audit** — it's a second, more granular pass focused on areas the first pass covered at a higher level (exception flow, unmanaged interop error handling, cross-file consistency, tooling/process gaps). Findings already listed in Pass 1 are **not repeated** here. Read both together.
 **Method this pass:** Re-read every file again fresh with line-level tracing of call chains (not just per-file review) — specifically: traced the full exception path from `CoalescingAsyncAction` through `RequestRenderAsync` to every `async void` call site; traced every `Parse`/`TryParse` call for culture-invariance; checked every P/Invoke return value for silent discards; diffed the two "exception attribution" bugs to confirm a pattern; checked repo root for CI/tooling config that wasn't part of the source tree review.
 
@@ -101,7 +101,7 @@ public int GetPixelOffset(int x, int y)
 **Confidence: 95%**
 
 Checked the full repo tree for tooling/process configuration beyond the source itself:
-- **No `.github/workflows/`** — the only `.github` content is `agents/infinitecanvas.agent.md`. There is no automated build or test run on push/PR. Every "passing tests" claim currently logged in `docs/tasks/JIRA.md`'s Activity table (e.g. "Completed with passing validation: `dotnet test ...`") is a manually-run, developer-attested claim with no independent verification.
+- **No `.github/workflows/`** — the only `.github` content is `agents/infinitecanvas.agent.md`. There is no automated build or test run on push/PR. Every "passing tests" claim currently logged in `docs/tasks/task-tracker.md`'s Activity table (e.g. "Completed with passing validation: `dotnet test ...`") is a manually-run, developer-attested claim with no independent verification.
 - **No `.editorconfig`, `Directory.Build.props`, or `global.json`** anywhere in the repo. Each `.csproj` independently sets `<Nullable>enable</Nullable>` (confirmed in all 9 project files), but none set `<TreatWarningsAsErrors>` or `<WarningsAsErrors>Nullable</WarningsAsErrors>` — meaning nullable-reference warnings (`CS8600`, `CS8602`, `CS8618`, etc.) can accumulate indefinitely without ever failing a build. Given the project's explicit goal of zero technical debt, an unenforced nullable-safety net provides much weaker guarantees than the `<Nullable>enable</Nullable>` setting implies at a glance.
 - Only `tests/InfiniteCanvas.Tests.csproj` sets `<LangVersion>latest</LangVersion>` explicitly; the other 8 projects rely on the SDK's implicit default, which is fine in practice (SDK defaults track the latest C# version for the target framework) but is an inconsistency worth normalizing into a shared `Directory.Build.props` rather than leaving implicit everywhere except one project.
 
@@ -190,3 +190,4 @@ Insert after Pass 1's #1 (global exception handler):
 2. **This pass, Finding 1** — fix `CoalescingAsyncAction.ProcessAsync` exception handling. Do this *with* #1, not instead of it: #1 is the safety net for everything, this fix is what stops the render pipeline specifically from needing that net in the common case, and it independently fixes the lost-coalesced-request bug.
 3. **This pass, Finding 4** — stand up CI + `Directory.Build.props` with nullable-as-error. Do this early; it will make every subsequent fix in both reports self-verifying instead of relying on manual `dotnet test` runs.
 4. Continue with the rest of Pass 1's ordering; slot Findings 2, 3, 5, 6, 7, 8 from this pass into the "batch of small DRY/consistency cleanups" step at the end.
+

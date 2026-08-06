@@ -29,7 +29,7 @@ updated: 2026-08-04
 
 ## Summary
 
-Audit synthesis findings F-010 and F-022. `SampleImageGenerator` seeds each tile's noise with `options.Seed + 3 * tileIndex` (line 187) and normalizes each tile against its local min/max (lines 551-572). Both defeat world-continuous seamless sampling at tile boundaries. The `ICW-129` ticket claims "seamless worldspace sampling" but is status-divergent (Done in active-tasks, In Progress in the ticket, no JIRA row).
+Audit synthesis findings F-010 and F-022. `SampleImageGenerator` seeds each tile's noise with `options.Seed + 3 * tileIndex` (line 187) and normalizes each tile against its local min/max (lines 551-572). Both defeat world-continuous seamless sampling at tile boundaries. The `ICW-129` ticket claims "seamless worldspace sampling" but is status-divergent (Done in active-tasks, In Progress in the ticket, no task tracker row).
 
 ## Scope
 
@@ -40,7 +40,7 @@ Audit synthesis findings F-010 and F-022. `SampleImageGenerator` seeds each tile
 
 ## Acceptance Criteria
 
-- One status and one JIRA row for ICW-129.
+- One status and one task tracker row for ICW-129.
 - Either a world-continuous seed with a registry change, or per-tile variance documented as intended.
 - An adjacent-tile boundary test asserts no value discontinuity at the edge (if continuous).
 - No change to `annotationSeed` semantics.
@@ -48,7 +48,7 @@ Audit synthesis findings F-010 and F-022. `SampleImageGenerator` seeds each tile
 ## Validation
 
 - Command: `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release --filter "SampleImageGenerator"`
-- Command: tracker-status check for ICW-129 across active-tasks, JIRA, and the ticket file
+- Command: tracker-status check for ICW-129 across active-tasks, task tracker, and the ticket file
 
 ## Notes
 
@@ -58,3 +58,4 @@ Audit synthesis findings F-010 and F-022. `SampleImageGenerator` seeds each tile
 
 - ICW-129 (noise delivery, status reconciliation)
 - ICW-050 (deterministic tile generation)
+

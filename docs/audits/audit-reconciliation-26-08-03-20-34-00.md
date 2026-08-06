@@ -90,7 +90,7 @@ S1, S2, S3, S4, S6.
 **Task disposition:** Update
 **Verification:** Confirmed
 **Severity:** P1
-**Confidence:** 99%, because the ticket is `In Progress`, the active tracker now matches that status, and JIRA already records the task as open.
+**Confidence:** 99%, because the ticket is `In Progress`, the active tracker now matches that status, and task tracker already records the task as open.
 
 #### Description
 
@@ -98,7 +98,7 @@ The supplied synthesis says ICW-081 was reopened, but its active tracker row was
 
 #### Rationale
 
-The ticket requires one inventory across ticket files, `active-tasks.md`, and `JIRA.md`, plus validator coverage (S8). The current active tracker records `In Progress` and retains the duplicate, orphan, and cross-surface scope (S6). JIRA also records `In Progress` (S7).
+The ticket requires one inventory across ticket files, `active-tasks.md`, and `task-tracker.md`, plus validator coverage (S8). The current active tracker records `In Progress` and retains the duplicate, orphan, and cross-surface scope (S6). task tracker also records `In Progress` (S7).
 
 #### Counter-evidence and Deduplication
 
@@ -126,7 +126,7 @@ S6, S7, S8.
 **Task disposition:** Update
 **Verification:** Confirmed
 **Severity:** P2
-**Confidence:** 98%, because the current render path contains all three tracker operations and both the ticket and JIRA now record completion.
+**Confidence:** 98%, because the current render path contains all three tracker operations and both the ticket and task tracker now record completion.
 
 #### Description
 
@@ -134,7 +134,7 @@ The supplied report says ICW-078 is complete, while the active tracker and ticke
 
 #### Rationale
 
-`MainWindow.xaml.cs` calls `BeginRequest`, rejects a non-current request, and calls `Advance` after publication (S14). The current active tracker records `Done` and points to the source and tests (S6). JIRA also records `Done` (S7). The ticket validation paragraph still says `Pending implementation`, so its body needs a final evidence correction.
+`MainWindow.xaml.cs` calls `BeginRequest`, rejects a non-current request, and calls `Advance` after publication (S14). The current active tracker records `Done` and points to the source and tests (S6). task tracker also records `Done` (S7). The ticket validation paragraph still says `Pending implementation`, so its body needs a final evidence correction.
 
 #### Counter-evidence and Deduplication
 
@@ -159,7 +159,7 @@ S1, S6, S7, S9, S14.
 
 #### Description
 
-The benchmark source contains seven benchmark methods. Parameter values and stress cycles do not create additional methods. The active tracker and ticket now state seven methods. JIRA was corrected during this reconciliation.
+The benchmark source contains seven benchmark methods. Parameter values and stress cycles do not create additional methods. The active tracker and ticket now state seven methods. task tracker was corrected during this reconciliation.
 
 #### Rationale
 
@@ -184,7 +184,7 @@ S1, S6, S7, S10, S13.
 **Task disposition:** Update
 **Verification:** Confirmed
 **Severity:** P2
-**Confidence:** 99%, because both ticket files existed and JIRA contained rows while the active tracker lacked them before this reconciliation.
+**Confidence:** 99%, because both ticket files existed and task tracker contained rows while the active tracker lacked them before this reconciliation.
 
 #### Description
 
@@ -192,7 +192,7 @@ ICW-188 and ICW-189 are distinct existing ticket files. Their absence from `acti
 
 #### Rationale
 
-The ticket files define separate option-record and adapter acceptance surfaces (S11, S12). JIRA already contained both rows (S7). The active tracker now contains both rows and preserves the direct-caller and parity evidence gates (S6).
+The ticket files define separate option-record and adapter acceptance surfaces (S11, S12). task tracker already contained both rows (S7). The active tracker now contains both rows and preserves the direct-caller and parity evidence gates (S6).
 
 #### Counter-evidence and Deduplication
 
@@ -250,7 +250,7 @@ The supplied audit set does not cover current Wave F cancellation work or the cu
 
 #### Rationale
 
-The active tracker records Wave F as Done and ICW-150 and ICW-151 as Proposed with explicit next steps (S6). JIRA records Wave F as Done (S7). These are post-fixed-point scope additions, not evidence that the earlier audit claims were wrong.
+The active tracker records Wave F as Done and ICW-150 and ICW-151 as Proposed with explicit next steps (S6). task tracker records Wave F as Done (S7). These are post-fixed-point scope additions, not evidence that the earlier audit claims were wrong.
 
 #### Counter-evidence and Deduplication
 
@@ -326,7 +326,7 @@ S6, S18.
 | S4 | [README.md](../../README.md) and [DesignDoc.md](../../DesignDoc.md) | Documentation and design | `4467593` | Yes | Current project context. |
 | S5 | [docs/tasks/tickets/ICW-078-stale-frame-epoch-guarding.md](../tasks/tickets/ICW-078-stale-frame-epoch-guarding.md) | Ticket | 2026-08-03 worktree | Yes | Status and validation text. |
 | S6 | [active-tasks.md](../tasks/active-tasks.md) | Tracker | 2026-08-03 worktree | Yes | Current active status and task scope. |
-| S7 | [JIRA.md](../tasks/JIRA.md) | Tracker | 2026-08-03 worktree | Yes | Current JIRA status and history. |
+| S7 | [task-tracker.md](../tasks/task-tracker.md) | Tracker | 2026-08-03 worktree | Yes | Current task tracker status and history. |
 | S8 | [ICW-081-audit-ticket-corpus-reconciliation.md](../tasks/tickets/ICW-081-audit-ticket-corpus-reconciliation.md) | Ticket | 2026-08-03 worktree | Yes | Reconciliation acceptance criteria and open status. |
 | S9 | [ICW-078-stale-frame-epoch-guarding.md](../tasks/tickets/ICW-078-stale-frame-epoch-guarding.md) | Ticket | 2026-08-03 worktree | Yes | Stale-frame task contract. |
 | S10 | [TileWorkCoordinatorBenchmarks.cs](../../benchmarks/InfiniteCanvas.Benchmarks/TileWorkCoordinatorBenchmarks.cs) | Benchmark source | `4467593` | Yes | Seven `[Benchmark]` methods. |
@@ -343,10 +343,10 @@ S6, S18.
 
 | Finding | Task action | Tracker locations | Sprint impact |
 | --- | --- | --- | --- |
-| F-001, F-002 | Keep ICW-081 open and reconcile all three surfaces. | ICW-081 ticket, `active-tasks.md`, `JIRA.md` | Complete before new audit-derived backlog growth. |
-| F-003 | Keep ICW-078 Done and update stale ticket validation text after focused rerun. | ICW-078 ticket, `active-tasks.md`, `JIRA.md` | No reorder. |
-| F-004 | Keep seven benchmark methods and retain repeated-measurement gates. | ICW-144 ticket, `active-tasks.md`, `JIRA.md` | No performance claims before repeated runs. |
-| F-005, F-006 | Keep ICW-188 and ICW-189 separate and registered. | Both ticket files, `active-tasks.md`, `JIRA.md` | Confirm direct callers and parity before closure. |
+| F-001, F-002 | Keep ICW-081 open and reconcile all three surfaces. | ICW-081 ticket, `active-tasks.md`, `task-tracker.md` | Complete before new audit-derived backlog growth. |
+| F-003 | Keep ICW-078 Done and update stale ticket validation text after focused rerun. | ICW-078 ticket, `active-tasks.md`, `task-tracker.md` | No reorder. |
+| F-004 | Keep seven benchmark methods and retain repeated-measurement gates. | ICW-144 ticket, `active-tasks.md`, `task-tracker.md` | No performance claims before repeated runs. |
+| F-005, F-006 | Keep ICW-188 and ICW-189 separate and registered. | Both ticket files, `active-tasks.md`, `task-tracker.md` | Confirm direct callers and parity before closure. |
 | F-007 | Preserve post-fixed-point Wave F, ICW-150, and ICW-151 records. | Their tickets and `active-tasks.md` | Follow current Wave F and cache-accounting order. |
 | F-008 | Defer legacy schema normalization to ICW-081. | `docs/tasks/tickets`, validator, `active-tasks.md` | Existing baseline remains visible. |
 
@@ -359,3 +359,4 @@ Result: Failed on pre-existing legacy ticket metadata. The current failures conc
 Command: `git diff --check`
 
 Result: Passed.
+

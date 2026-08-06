@@ -41,7 +41,7 @@
 - `docs/tasks/active-tasks.md`
   - ICW-008 marked done.
   - ICW-009 added and marked done.
-- `docs/tasks/JIRA.md`
+- `docs/tasks/task-tracker.md`
   - ICW-008 and ICW-009 logged in task table and activity history.
 - `docs/tasks/tickets/ICW-008-pixelometer-and-2x16-grid.md`
 - `docs/tasks/tickets/ICW-009-resize-overlay-sync.md`
@@ -51,3 +51,4 @@
 1. Evaluate whether `Stretch.Fill` distortion during aggressive aspect-ratio changes is acceptable for inspection users, or whether an optional letterboxed mode (`Stretch.Uniform`) should be exposed.
 2. ICW-005: define explicit DPI-aware resize and max surface policy, especially for high-DPI 4K/5K monitors.
 3. ICW-007: profile and potentially pool retained annotation overlay elements if visible density increases.
+

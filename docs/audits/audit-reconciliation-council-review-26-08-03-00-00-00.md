@@ -24,7 +24,7 @@ Accept only independently supported runtime, specification, provenance, and trac
 - [ADR-0005](../ADR/0005-source-agnostic-background-tile-mips.md)
 - [ADR-0006](../ADR/0006-viewport-aware-tile-work-scheduling.md)
 - [Active tracker](../tasks/active-tasks.md)
-- [JIRA tracker](../tasks/JIRA.md)
+- [task tracker tracker](../tasks/task-tracker.md)
 - All 15 audit sources listed in the master ledger.
 
 ## Seat Findings
@@ -60,7 +60,7 @@ Accept only independently supported runtime, specification, provenance, and trac
 
 ### What changes now
 
-1. Reopen ICW-081 and expand validation to ticket files, active-tasks.md, and JIRA.md.
+1. Reopen ICW-081 and expand validation to ticket files, active-tasks.md, and task-tracker.md.
 2. Update ICW-078 and ICW-017 tracker and ticket status to match completed source behavior.
 3. Correct ICW-144 from eight benchmark scenarios to seven benchmark methods, and keep repeated hardware evidence open.
 4. Register existing ICW-188 and ICW-189 in both trackers. Do not create duplicate IDs.
@@ -110,8 +110,8 @@ Accept only independently supported runtime, specification, provenance, and trac
 
 | Finding | Task action | Tracker locations |
 | --- | --- | --- |
-| C2-C5, C47-C48 | Reopen ICW-081 and correct validator and identity inventory. | ICW-081 ticket, active-tasks.md, JIRA.md |
-| C6, C35-C38 | Correct ICW-144 method count and add queue allocation and callback evidence gates. | ICW-144 ticket, active-tasks.md, JIRA.md |
+| C2-C5, C47-C48 | Reopen ICW-081 and correct validator and identity inventory. | ICW-081 ticket, active-tasks.md, task-tracker.md |
+| C6, C35-C38 | Correct ICW-144 method count and add queue allocation and callback evidence gates. | ICW-144 ticket, active-tasks.md, task-tracker.md |
 | C14-C19 | Register ICW-188/189, update ICW-088, and extend settings validation scope. | Existing tickets, both trackers |
 | C24-C25, C40-C41 | Route pixelometer migration through ICW-076 and preserve ADR-0005. | ICW-076, ICW-018, requirements registry |
 | C26 | Exercise the shipped tile compositor in ICW-133. | ICW-133 ticket, benchmark source |
@@ -123,3 +123,4 @@ Accept only independently supported runtime, specification, provenance, and trac
 ## Status
 
 Council review complete. No source-code changes were made.
+

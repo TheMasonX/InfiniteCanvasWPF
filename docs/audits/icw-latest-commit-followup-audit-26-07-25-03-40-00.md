@@ -156,8 +156,8 @@ Treat the frame shell as a persistent object and update its child layers in plac
 **Status:** Documentation drift, not code breakage
 
 **Evidence**
-The requirements registry and ICW-064 ticket describe the cache admission ceiling as `4 GiB` of Gray8 tile bytes. `docs/tasks/JIRA.md` still contains a later note describing the cache as defaulting to `32 full Gray8 tiles`, which is a different capacity framing.  
-Sources: `docs/requirements/functional-requirements-and-invariants.md`, `docs/tasks/tickets/ICW-064-tile-cache-capacity-and-materialization-metrics.md`, `docs/tasks/JIRA.md`.
+The requirements registry and ICW-064 ticket describe the cache admission ceiling as `4 GiB` of Gray8 tile bytes. `docs/tasks/task-tracker.md` still contains a later note describing the cache as defaulting to `32 full Gray8 tiles`, which is a different capacity framing.  
+Sources: `docs/requirements/functional-requirements-and-invariants.md`, `docs/tasks/tickets/ICW-064-tile-cache-capacity-and-materialization-metrics.md`, `docs/tasks/task-tracker.md`.
 
 **Why it matters**
 Future work will be easier to misread if the backlog and contract docs disagree on the same sizing policy. That kind of mismatch tends to create duplicate investigation and accidental “fixes” to the wrong number.
@@ -193,3 +193,4 @@ Normalize the cache policy wording in one place and have the backlog point to th
 - Is `imageCount` supposed to be an exact count, or a minimum that rounds up to full rows?
 - Which defect appearance is canonical: renderer grayscale overwrite or pixelometer subtractive blending?
 - Should the cache-budget docs and task log be normalized to byte-capacity language everywhere?
+

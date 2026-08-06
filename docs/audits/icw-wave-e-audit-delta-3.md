@@ -35,10 +35,11 @@ This is a **regression-from-documentation**, not a newly-introduced bug: `ICW-06
 
 ## Investigated, already tracked (no new report needed — recorded so it isn't re-flagged)
 
-- **Eviction uses non-deterministic dictionary-order `FirstOrDefault` instead of LRU/recency.** Already tracked three times over (`ICW-003-tilecachebudget-lru`, `ICW-104-tilecache-eviction-policy`, `ICW-305-tilecache-eviction-policy` — itself a known duplicate/orphan situation per `JIRA.md`'s own entry for `ICW-305`, *"Register the orphaned cache-policy ticket."*). Confirmed the code matches the description in all three; nothing to add.
+- **Eviction uses non-deterministic dictionary-order `FirstOrDefault` instead of LRU/recency.** Already tracked three times over (`ICW-003-tilecachebudget-lru`, `ICW-104-tilecache-eviction-policy`, `ICW-305-tilecache-eviction-policy` — itself a known duplicate/orphan situation per `task-tracker.md`'s own entry for `ICW-305`, *"Register the orphaned cache-policy ticket."*). Confirmed the code matches the description in all three; nothing to add.
 - **`TileCacheBudget.UsedBytes` can drift from actual resident bytes because reservation release doesn't cover every discard path, and `_pixelCost` is mip-0-only.** Both already tracked in detail and at high stated confidence under `ICW-P0-LEASE-RELEASE` (98%) and `ICW-P1-PIXELCOST-MIPS` (95%) respectively — independently tracing the stale-epoch-discard path in `OnCoordinatorPixelsGenerated` (no `Release()` call on discard) confirms the mechanism `ICW-P0-LEASE-RELEASE` describes, but adds no new information beyond what that ticket already states with higher confidence than I'd independently claim.
 - **`DescribeStatus()` reads `UsedBytes`, `MaxBytes`, `ResidentTileCount`, and `EvictionCount` via separate, non-atomic reads/locks**, so the status string could theoretically interleave with a concurrent eviction. Considered but not written up as its own finding — this is cosmetic-only (a status label momentarily very slightly stale, self-correcting on the next update tick) and not worth a ticket on its own; noting it here only in case a future pass is tempted to treat it as more serious than it is.
 
 ---
 
 *This delta report should be read alongside `icw-wave-e-audit.md` and `icw-wave-e-audit-delta-2.md`; it does not repeat their content.*
+

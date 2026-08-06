@@ -1,8 +1,8 @@
 # InfiniteCanvasWPF — Deep-Dive Code Audit
 
 **Commit audited:** `43bfd55bbae7e14a590784f7831e5261eecfd69b` (main, 2026-07-24, "feat: add zoom presets, cache debug controls, and class-colored defects")
-**Scope:** Every file in `src/`, `tests/`, `benchmarks/`, plus all docs (`DesignDoc.md`, ADRs, handoffs, JIRA/tickets) — 70 files, ~3,770 lines of C#/XAML reviewed line-by-line.
-**Method:** Full source pulled via the public repository archive tarball at the exact commit (not the repository web UI/web_fetch, to avoid truncation). Cross-checked every finding against `docs/tasks/JIRA.md`, `docs/tasks/active-tasks.md`, `docs/tasks/tickets/*.md`, and both ADRs before writing it up, to avoid re-reporting already-tracked work.
+**Scope:** Every file in `src/`, `tests/`, `benchmarks/`, plus all docs (`DesignDoc.md`, ADRs, handoffs, task tracker/tickets) — 70 files, ~3,770 lines of C#/XAML reviewed line-by-line.
+**Method:** Full source pulled via the public repository archive tarball at the exact commit (not the repository web UI/web_fetch, to avoid truncation). Cross-checked every finding against `docs/tasks/task-tracker.md`, `docs/tasks/active-tasks.md`, `docs/tasks/tickets/*.md`, and both ADRs before writing it up, to avoid re-reporting already-tracked work.
 **Confidence values** reflect how certain I am the finding is a real, reproducible issue given only static reading (no compiler/runtime in this environment) — not how severe it is.
 
 ---
@@ -73,7 +73,7 @@ Six independent preconditions are OR'd together but the exception always names `
 
 `README.md` "Run the MVP" section states: *"The demo starts with 100,000 deterministic spatial records, ingests 250 more every 500 ms, and publishes the hot buffer into a packed STR snapshot every two seconds. Drag to pan and use the mouse wheel to zoom."*
 
-This describes the point-cloud demo that ADR-0002 explicitly superseded: *"Generate the static inspection scene once. Do not run the former periodic point-ingestion timer."* (`docs/ADR/0002-inspection-raster-and-annotation-layers.md`). I confirmed via `grep` that `MainWindow.xaml.cs` contains exactly two `DispatcherTimer` instances — `_resizeTimer` (150ms debounce) and `_anchorPanTimer` (16ms RMB-pan tick) — and no periodic-ingestion timer exists anywhere in the codebase. The actual current default is 64 static tiles (2×32) generated once at startup (`docs/tasks/JIRA.md` ICW-012).
+This describes the point-cloud demo that ADR-0002 explicitly superseded: *"Generate the static inspection scene once. Do not run the former periodic point-ingestion timer."* (`docs/ADR/0002-inspection-raster-and-annotation-layers.md`). I confirmed via `grep` that `MainWindow.xaml.cs` contains exactly two `DispatcherTimer` instances — `_resizeTimer` (150ms debounce) and `_anchorPanTimer` (16ms RMB-pan tick) — and no periodic-ingestion timer exists anywhere in the codebase. The actual current default is 64 static tiles (2×32) generated once at startup (`docs/tasks/task-tracker.md` ICW-012).
 
 **Recommendation:** Rewrite the "Run the MVP" section to describe the current tile/annotation inspection scene, side panel, zoom presets, and pan/zoom/select interactions. This is a 10-minute fix that removes a materially incorrect onboarding description for anyone new to the repo.
 
@@ -82,7 +82,7 @@ This describes the point-cloud demo that ADR-0002 explicitly superseded: *"Gener
 ### 2.4 [MEDIUM] `CanvasViewportViewModel.RefreshCommand` is dead in production
 **Confidence: 90%**
 
-`grep` confirms `RefreshCommand`/`RefreshAsync` (`src/InfiniteCanvas.ViewModels/CanvasViewportViewModel.cs:41-56`) is invoked only from `tests/InfiniteCanvas.Tests/CanvasViewportViewModelTests.cs`. `MainWindow.xaml.cs` calls `_viewModel.ApplyFrame(...)` directly (line 211) and never touches `RefreshCommand`. JIRA/ICW-003 ("Remove duplicate spatial query per rendered frame... Render statistics reuse the viewport query result") documents exactly the refactor that made `RefreshAsync`'s separate `_spatialIndexService.Query(viewport)` call redundant — but the old command was left in place afterward instead of removed.
+`grep` confirms `RefreshCommand`/`RefreshAsync` (`src/InfiniteCanvas.ViewModels/CanvasViewportViewModel.cs:41-56`) is invoked only from `tests/InfiniteCanvas.Tests/CanvasViewportViewModelTests.cs`. `MainWindow.xaml.cs` calls `_viewModel.ApplyFrame(...)` directly (line 211) and never touches `RefreshCommand`. task tracker/ICW-003 ("Remove duplicate spatial query per rendered frame... Render statistics reuse the viewport query result") documents exactly the refactor that made `RefreshAsync`'s separate `_spatialIndexService.Query(viewport)` call redundant — but the old command was left in place afterward instead of removed.
 
 This is a textbook case of the instruction's own concern: dead code retained after a refactor, still tested (so CI stays green and gives false confidence), in a project explicitly trying to avoid legacy debt.
 
@@ -158,7 +158,7 @@ This isn't unique to this repo (code-behind coupling is a known WPF/MVVM tension
 
 ## 3. Supplementary Evidence for Already-Tracked Backlog Items
 
-These are **not new tickets** — cross-referenced against `docs/tasks/JIRA.md` and open items to avoid duplication. Listed here only because I found specific line-level evidence that may help whoever picks up the existing ticket.
+These are **not new tickets** — cross-referenced against `docs/tasks/task-tracker.md` and open items to avoid duplication. Listed here only because I found specific line-level evidence that may help whoever picks up the existing ticket.
 
 - **ICW-004 (measure zoomed-out pixel overdraw, To Do):** `DrawTile`/`DrawDefectPatch` (`ZeroCopyBitmapFactory.Windows.cs:161-183`, `200-228`) recompute `worldX`/`worldY` via a **division** for every destination pixel in the inner loop (`(x - camera.OffsetX) / camera.ScaleX`), rather than hoisting a per-row starting value and incrementing by a precomputed step. This compounds whatever overdraw cost ICW-004 measures — worth benchmarking division-vs-increment alongside the overdraw question rather than as a separate pass. Confidence 70%.
 - **ICW-005 (DPI-aware resize / max surface policy, To Do):** The `4096` max-render-dimension clamp is duplicated as a literal in two places (`RenderFrameAsync` line ~191, `ClampCameraToScene` line ~397) with no shared named constant. Whoever implements ICW-005 will need to touch both call sites; worth consolidating into one constant as part of that work rather than leaving two literals to keep in sync. Confidence 90%.
@@ -196,7 +196,7 @@ These are **not new tickets** — cross-referenced against `docs/tasks/JIRA.md` 
 - I did not run `dotnet build`/`dotnet test` in this environment (no .NET SDK / Windows runtime available in the sandbox); all findings are from static reading. Line numbers were taken directly from the fetched source and should match the given commit exactly.
 - I assumed "every line of every file" includes `tests/` and `benchmarks/`, which I read in full; I did not deep-audit `DesignDoc.md`'s prose beyond confirming code matches or diverges from it, since it's a planning artifact rather than shipped code.
 - The tearing risk in §2.9 is the one finding here I could not confirm without actually running the app under a fast pan/zoom stress scenario — flagged at lower confidence accordingly. If someone can reproduce (or rule out) visible tearing during rapid interaction, that would resolve the open question definitively.
-- I did not find any existing ticket discussing global exception handling (§2.1) or the README staleness (§2.3) — if either is already known and intentionally deferred, apologies for the duplication; I checked `active-tasks.md`, `JIRA.md`, and all six ticket files and found no reference to either.
+- I did not find any existing ticket discussing global exception handling (§2.1) or the README staleness (§2.3) — if either is already known and intentionally deferred, apologies for the duplication; I checked `active-tasks.md`, `task-tracker.md`, and all six ticket files and found no reference to either.
 
 ---
 
@@ -210,3 +210,4 @@ These are **not new tickets** — cross-referenced against `docs/tasks/JIRA.md` 
 6. **§2.10** — Extract pure zoom/generation-validation logic out of `MainWindow` for testability (larger refactor; do this before the codebase grows further, since every additional interaction feature currently adds more untested code-behind).
 7. **§2.6, §2.7, §2.9** — Roll into whichever session next touches `ZeroCopyBitmapFactory`/`BuildFrameVisual`/ICW-007, since they're all in the same area of the rendering pipeline.
 8. Everything in §4 — low-effort DRY/consistency cleanups, batch them into one pass.
+

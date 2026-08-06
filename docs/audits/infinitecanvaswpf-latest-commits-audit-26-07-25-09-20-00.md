@@ -23,7 +23,7 @@ The latest delta introduces:
 - richer task-tracker and ADR scaffolding, plus many new tickets and audit docs
 - continued work in the rendering and spatial layers
 
-This is a meaningful maturation step, but it also means the repo now has multiple sources of truth: code, ADRs, task tracker, handoffs, benchmark docs, and audit corpus. That makes drift and duplicate planning more likely unless task hygiene stays tight. [Sources: compare result for latest main delta; `docs/tasks/README.md` `turn78file0`; `docs/tasks/JIRA.md` `turn60file0`; `docs/tasks/active-tasks.md` `turn61file0`]
+This is a meaningful maturation step, but it also means the repo now has multiple sources of truth: code, ADRs, task tracker, handoffs, benchmark docs, and audit corpus. That makes drift and duplicate planning more likely unless task hygiene stays tight. [Sources: compare result for latest main delta; `docs/tasks/README.md` `turn78file0`; `docs/tasks/task-tracker.md` `turn60file0`; `docs/tasks/active-tasks.md` `turn61file0`]
 
 ## Actionable findings
 
@@ -134,3 +134,4 @@ The next implementation slice should be small and structural:
 - Async error boundary risk: 80%
 - Doc/task drift risk: 94%
 - Zero-copy throughput ceiling risk: 83%
+

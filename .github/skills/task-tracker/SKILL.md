@@ -30,7 +30,7 @@ Use this skill when asked to:
 ## Inputs
 
 - task intent: summary, scope, acceptance criteria, validation command
-- repository context: docs/tasks/README.md, docs/tasks/active-tasks.md, docs/tasks/JIRA.md, docs/tasks/tickets/
+- repository context: docs/tasks/README.md, docs/tasks/active-tasks.md, docs/tasks/task-tracker.md, docs/tasks/tickets/
 - optional references: ADRs, requirements registry, implementation files, related tasks
 - optional schema preference: keep it markdown-first and parser-friendly
 
@@ -124,3 +124,4 @@ A task is complete only when all are true:
 - /task-tracker create a task for the README refresh work with status To Do and tags docs,readme
 - /task-tracker update ICW-064 with the latest validation evidence and link the benchmark file
 - /task-tracker add a ticket for a new rendering bug with related tasks and a validation command
+

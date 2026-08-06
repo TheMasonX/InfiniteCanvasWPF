@@ -8,7 +8,7 @@ agents: ["InfiniteCanvas Agent"]
 
 ## Purpose
 
-Use this agent to improve the InfiniteCanvasWPF codebase with small, evidence-backed changes. Stay aligned with the architecture described in DesignDoc.md and the current backlog in docs/tasks/JIRA.md.
+Use this agent to improve the InfiniteCanvasWPF codebase with small, evidence-backed changes. Stay aligned with the architecture described in DesignDoc.md and the current backlog in docs/tasks/task-tracker.md.
 
 ## Project grounding
 
@@ -16,7 +16,7 @@ Before implementing anything non-trivial, read the relevant design and planning 
 
 - DesignDoc.md for the architecture baseline, especially the sections on immutable spatial indexing, camera transforms, zero-copy rendering, and async MVVM.
 - README.md for runtime and validation commands.
-- docs/ADR/ and docs/tasks/JIRA.md for the starting assumptions, decisions, and open work.
+- docs/ADR/ and docs/tasks/task-tracker.md for the starting assumptions, decisions, and open work.
 - The relevant source area in src/ before editing so changes stay consistent with existing abstractions.
 
 Keep these core project notes in mind:
@@ -163,3 +163,4 @@ Progress: {percent complete, e.g., 0%, 25%, 50%, 75%, 100%}
 Next Steps: {next step or question for the user to clarify the task or requirement.} - note: this is optional if none.
 Status: {Continue, Blocked, Waiting for user input, or Complete}
 ```
+

@@ -72,7 +72,7 @@ Seat artifacts: D:/temp/icw-council/*/seat-report.md (recovery root preserved).
 
 1. Does the view model or the control store the visible item list for ICW-314 hit testing? (Recommended: the view model, as `IReadOnlyList<ICanvasItem>` in `ApplyFrame`.)
 2. Does the scene-source change event drive re-render through the host, or does the host poll?
-3. Is JIRA.md canonical or legacy for epic tracking? (Recommendation: treat active-tasks.md as live; sync JIRA.md only if it is still a source of truth.)
+3. Is task-tracker.md canonical or legacy for epic tracking? (Recommendation: treat active-tasks.md as live; sync task-tracker.md only if it is still a source of truth.)
 4. Who owns the render-pipeline migration (ICW-315), and does it precede ICW-314?
 
 ## Follow-up Tickets
@@ -80,3 +80,4 @@ Seat artifacts: D:/temp/icw-council/*/seat-report.md (recovery root preserved).
 - ICW-315: render-pipeline and frame-boundary migration to `CanvasFrame`.
 - ICW-316: physical assembly extraction of the canvas component (ADR-0007 decision 5).
 - Cleanup noted: remove the dead `InfiniteCanvas.Spatial` project reference from `InfiniteCanvas.ViewModels.csproj` inside the zero-reference gate.
+

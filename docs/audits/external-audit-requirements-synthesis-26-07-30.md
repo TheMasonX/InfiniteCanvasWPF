@@ -14,7 +14,7 @@
 
 **Cross-referenced against:**
 - `docs/tasks/active-tasks.md`
-- `docs/tasks/JIRA.md`
+- `docs/tasks/task-tracker.md`
 - `docs/requirements/functional-requirements-and-invariants.md`
 - `docs/ADR/0006-viewport-aware-tile-work-scheduling.md`
 - Individual ticket files under `docs/tasks/tickets/`
@@ -128,3 +128,4 @@
 ---
 
 *This synthesis was produced by cross-referencing the external audit verification files (which contain verbatim extracts from the four .docx documents) against the current task tracker, ADRs, and requirements registry at HEAD 139a8b62fa2d6363615eb6a819d07a76aa8c55c2.*
+

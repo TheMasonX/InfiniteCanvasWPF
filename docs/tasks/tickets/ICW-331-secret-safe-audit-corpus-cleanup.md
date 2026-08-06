@@ -19,7 +19,7 @@ links:
   - docs/audits/
   - docs/requirements/functional-requirements-and-invariants.md
   - docs/tasks/active-tasks.md
-  - docs/tasks/JIRA.md
+  - docs/tasks/task-tracker.md
 created: 2026-08-06
 updated: 2026-08-06
 ---
@@ -63,4 +63,5 @@ Remove product-specific names, private provenance, and internal source reference
 
 - ICW-147
 - REQ-001
+
 

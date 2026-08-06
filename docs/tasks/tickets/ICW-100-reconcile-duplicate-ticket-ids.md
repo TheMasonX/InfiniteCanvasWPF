@@ -15,15 +15,15 @@ validation: pwsh -File scripts/Validate-TaskTracker.ps1 -Path docs/tasks && git 
 ---
 
 ## Problem
-Inventory found duplicated ticket numeric IDs across multiple files (ICW-061..ICW-065 duplicated), causing tracker divergence and invisible ticket files in `docs/tasks/JIRA.md`.
+Inventory found duplicated ticket numeric IDs across multiple files (ICW-061..ICW-065 duplicated), causing tracker divergence and invisible ticket files in `docs/tasks/task-tracker.md`.
 
 ## Evidence
-`ls docs/tasks/tickets/ | grep -oE "ICW-[0-9]+" | sort | uniq -c` shows duplicates for ICW-061..ICW-065; the `JIRA.md` references a different file for some of these IDs, leaving the other copy effectively orphaned.
+`ls docs/tasks/tickets/ | grep -oE "ICW-[0-9]+" | sort | uniq -c` shows duplicates for ICW-061..ICW-065; the `task-tracker.md` references a different file for some of these IDs, leaving the other copy effectively orphaned.
 
 ## Recommendation
 - Identify canonical file per numeric ID and either merge or supersede duplicates.
 - Update front-matter `id:` fields to unique canonical IDs.
-- Update `docs/tasks/JIRA.md` mapping rows to reference the canonical files.
+- Update `docs/tasks/task-tracker.md` mapping rows to reference the canonical files.
 - Extend `scripts/Validate-TaskTracker.ps1` to fail when duplicate `id:` values are detected.
 
 ## Estimate
@@ -31,3 +31,4 @@ Inventory found duplicated ticket numeric IDs across multiple files (ICW-061..IC
 
 ## Risks
 - Merging could accidentally change historical context or lose references; keep redundant copies as archived superseded files with `superseded-by:` front-matter if necessary.
+

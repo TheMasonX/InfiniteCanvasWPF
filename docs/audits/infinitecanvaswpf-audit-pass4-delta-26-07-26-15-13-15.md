@@ -13,7 +13,7 @@ This report contains **only new findings and corrections to existing tickets** �
 
 | # | Finding | Severity | Confidence |
 |---|---|---|---|
-| 1 | **ICW-078's stale-frame-publication guard was fully implemented, then silently reverted two commits later** by `9247bff` — the epoch tracker, its `BeginRequest()`/`IsCurrent()` calls, and the `.Advance()` hook were all deleted from `MainWindow.xaml.cs`. `JIRA.md` and `active-tasks.md` **still say ICW-078 is `Done`** at current HEAD. This is an active regression of a real correctness fix, mis-tracked as complete. | **High** | 95% |
+| 1 | **ICW-078's stale-frame-publication guard was fully implemented, then silently reverted two commits later** by `9247bff` — the epoch tracker, its `BeginRequest()`/`IsCurrent()` calls, and the `.Advance()` hook were all deleted from `MainWindow.xaml.cs`. `task-tracker.md` and `active-tasks.md` **still say ICW-078 is `Done`** at current HEAD. This is an active regression of a real correctness fix, mis-tracked as complete. | **High** | 95% |
 | 2 | The same revert commit reintroduced string-keyed `annotation.Features["Confidence"]`/`["Severity"]` dictionary access in `CreateAnnotationToolTip`, undoing the one call site `AnnotationFeaturePresenter.BuildTooltipContent` was built for. That method is now dead code — unused and untested — while the sidebar path (`BuildRows`) still correctly uses the presenter. Split-brain: half the annotation-display code is typed, half reverted to stringly-typed. | **Medium** | 90% |
 | 3 | Three background-generation slider handlers (`OnBackgroundTargetChanged`, `OnBackgroundNoiseChanged`, `OnBackgroundCircleCountChanged`) are now empty `{ }` method bodies — live event wiring to methods that do nothing. Values are read only at Regenerate-click time via `TryReadGenerationOptions`. Not incorrect, but dead/misleading wiring nobody has cleaned up. | **Low** | 90% |
 | 4 | Correction to ICW-103 (`Protect DefectBitmap GDI+ usage from concurrent mutation/dispose`): its premise assumes a `Dispose()` call exists somewhere that needs synchronizing. It doesn't — the defect-template `Bitmap` pool is **never disposed at all** when a scene is regenerated (confirmed still true at this HEAD; this is the same gap I reported in my first pass). ICW-103 should have "add the missing disposal call" in scope, not just "guard the eventual one." | **Low** (ticket-scope correction) | 85% |
@@ -38,7 +38,7 @@ This report contains **only new findings and corrections to existing tickets** �
    ...
    _renderRequestTracker.Advance();                                   // in OnViewportMouseMove, per pan tick
    ```
-   This is a correct, real fix for exactly the race its own handoff doc describes (`docs/handoffs/2026-07-25-render-stability-sprint-handoff.md`: *"in-flight frame work is ignored if a newer request supersedes it before completion"*). `JIRA.md` is updated to mark `ICW-078` `Done` in this same commit.
+   This is a correct, real fix for exactly the race its own handoff doc describes (`docs/handoffs/2026-07-25-render-stability-sprint-handoff.md`: *"in-flight frame work is ignored if a newer request supersedes it before completion"*). `task-tracker.md` is updated to mark `ICW-078` `Done` in this same commit.
 
 2. `9247bff` ("Restore scrollbar wiring and harden canvas interactions") — **deletes every one of those four lines**:
    ```diff
@@ -54,11 +54,11 @@ This report contains **only new findings and corrections to existing tickets** �
    ...
    -        _renderRequestTracker.Advance();
    ```
-   Nothing in this commit's message, `JIRA.md` row, or `active-tasks.md` row for `ICW-078` mentions this removal — the row for `ICW-078` is untouched by this commit and still reads `Done`. The commit's own JIRA-row summary for what it *did* change is about scrollbar wiring and camera-scale defaults (matches ICW-079), not ICW-078 — this looks like a merge/rebase-style loss rather than a deliberate, acknowledged revert.
+   Nothing in this commit's message, `task-tracker.md` row, or `active-tasks.md` row for `ICW-078` mentions this removal — the row for `ICW-078` is untouched by this commit and still reads `Done`. The commit's own task tracker-row summary for what it *did* change is about scrollbar wiring and camera-scale defaults (matches ICW-079), not ICW-078 — this looks like a merge/rebase-style loss rather than a deliberate, acknowledged revert.
 
 3. I confirmed directly against the **current HEAD** file (not just the commit diff) that all four elements remain absent: `grep -n "RenderRequestTracker\|requestVersion\|BeginRequest\|IsCurrent" MainWindow.xaml.cs` returns zero matches. `RenderFrameAsync` currently runs start-to-finish with no epoch check at all before `PublishFrame(factory, frameVisual)`.
 
-4. The `RenderRequestTracker` class and its dedicated test file (`RenderRequestTrackerTests.cs`) **still exist and still pass** — they're just no longer called from anywhere in the app. This is the exact "tests are green so it must be fixed" trap: a reader checking `dotnet test` results, or the JIRA row, or even the class's own existence, would reasonably conclude ICW-078 is handled. Only reading `MainWindow.xaml.cs` itself shows otherwise.
+4. The `RenderRequestTracker` class and its dedicated test file (`RenderRequestTrackerTests.cs`) **still exist and still pass** — they're just no longer called from anywhere in the app. This is the exact "tests are green so it must be fixed" trap: a reader checking `dotnet test` results, or the task tracker row, or even the class's own existence, would reasonably conclude ICW-078 is handled. Only reading `MainWindow.xaml.cs` itself shows otherwise.
 
 **Why this matters concretely:** the bug ICW-078 was filed for — a slow frame completing after a newer pan/zoom/regenerate request and briefly flashing stale content — is live again today, at HEAD, in a build whose own tracker says it's fixed.
 
@@ -137,3 +137,4 @@ private void OnBackgroundCircleCountChanged(object sender, RoutedPropertyChanged
 2. **§2** — one-line restore, bundle with §1 since it's the same commit and the same "silent partial revert" failure mode.
 3. **§4** — scope correction, costs nothing to fold into ICW-103 now before someone implements it against the wrong assumption.
 4. **§3** — trivial cleanup, batch with any other low-priority pass.
+

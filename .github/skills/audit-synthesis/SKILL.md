@@ -159,7 +159,7 @@ For each accepted finding, choose one disposition:
 - `Reject`
 - `Defer pending evidence`
 
-Cross-reference `docs/tasks/active-tasks.md`, `docs/tasks/JIRA.md`, and ticket files. Do not create duplicate ICW keys. Every created task needs scope, acceptance criteria, validation, findings or blockers, and next step.
+Cross-reference `docs/tasks/active-tasks.md`, `docs/tasks/task-tracker.md`, and ticket files. Do not create duplicate ICW keys. Every created task needs scope, acceptance criteria, validation, findings or blockers, and next step.
 
 ### 11. Write the synthesis report
 
@@ -178,7 +178,7 @@ In net-new mode, omit unchanged findings but retain enough cross-reference to ex
 
 ### 12. Update durable planning records
 
-Update the relevant task ticket, `active-tasks.md`, `JIRA.md`, and sprint plan when the synthesis changes execution order or coverage. Add an ADR only when the synthesis changes architecture or a system boundary.
+Update the relevant task ticket, `active-tasks.md`, `task-tracker.md`, and sprint plan when the synthesis changes execution order or coverage. Add an ADR only when the synthesis changes architecture or a system boundary.
 
 Run the tracker validator. Existing unrelated legacy errors do not justify hiding new errors. Report the baseline failures and verify that the new records introduce none.
 
@@ -218,3 +218,4 @@ The complete template and field definitions are in [docs/formats/report-FORMAT.m
 - `/audit-synthesis independently verify the latest external audit against source at HEAD`
 - `/audit-synthesis correct provenance and task duplication across the audit series`
 - `/audit-synthesis review the rendering audit with Standards and Spec axes`
+

@@ -464,7 +464,7 @@ For production viewport, start with safe copy or a conservative ring. Optimize o
 - Generate file inventory, project graph, and public API list.
 - Map every opened source path to GitHub path and production viewport host integration path.
 - Create a reusable ViewportViewportReadiness test matrix.
-- Freeze current report findings into Jira/ADO issues with source anchors.
+- Freeze current report findings into task tracker/ADO issues with source anchors.
 
 **Unit tests:**
 - Happy path test for the new behavior.
@@ -991,5 +991,6 @@ Prior audits were valuable and largely directionally consistent with the source 
 - **KB/wiki findings**: useful for orientation and requirements, but still requiring source verification before code-claim promotion.
 
 This preserves evidence discipline while still using the previous report formats as requested.
+
 
 

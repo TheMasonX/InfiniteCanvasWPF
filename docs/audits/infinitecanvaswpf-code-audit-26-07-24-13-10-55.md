@@ -2,7 +2,7 @@
 
 **Repo:** `TheMasonX/InfiniteCanvasWPF` · **Commit audited:** `84ddba2320296d0bbbe31171bf5b9d91bf8010a8` (branch `main`)
 **Scope:** Every file in the tree — `src/`, `tests/`, `benchmarks/`, `docs/`, project/solution files, README, DesignDoc. 4,786 LOC across .cs/.xaml/.md.
-**Method:** Full-text retrieval via the public repository archive tarball (bypasses web UI/`web_fetch` truncation), line-by-line manual review, cross-checked against `docs/tasks/JIRA.md`, `docs/tasks/active-tasks.md`, tickets, ADRs, and handoffs to avoid duplicating already-tracked work.
+**Method:** Full-text retrieval via the public repository archive tarball (bypasses web UI/`web_fetch` truncation), line-by-line manual review, cross-checked against `docs/tasks/task-tracker.md`, `docs/tasks/active-tasks.md`, tickets, ADRs, and handoffs to avoid duplicating already-tracked work.
 
 ---
 
@@ -201,7 +201,7 @@ When `rows` is supplied, `tileCount` is derived purely from `columns * rows` and
 **Files:** `CanvasViewportViewModel.cs:41-56`, `MainWindow.xaml` (no `Command` binding anywhere — confirmed via grep)
 **Confidence: 90%**
 
-`RefreshAsync` re-queries `_spatialIndexService.Query(viewport)` from scratch to get a count — this is precisely the "duplicate spatial query per rendered frame" that ICW-003 (`docs/tasks/JIRA.md`) was completed to eliminate, by introducing `ApplyFrame(viewport, visibleItemCount)` which reuses the render pipeline's already-computed count. `ApplyFrame` is what `MainWindow.RenderFrameAsync` actually calls (line 206); `RefreshCommand` has no XAML `Command` binding and no code-behind caller — it exists solely to be exercised by `CanvasViewportViewModelTests.cs`. Also note lines 35-38 and 52-55 duplicate the identical `is LiveSpatialIndexService<T>` snapshot-timestamp check.
+`RefreshAsync` re-queries `_spatialIndexService.Query(viewport)` from scratch to get a count — this is precisely the "duplicate spatial query per rendered frame" that ICW-003 (`docs/tasks/task-tracker.md`) was completed to eliminate, by introducing `ApplyFrame(viewport, visibleItemCount)` which reuses the render pipeline's already-computed count. `ApplyFrame` is what `MainWindow.RenderFrameAsync` actually calls (line 206); `RefreshCommand` has no XAML `Command` binding and no code-behind caller — it exists solely to be exercised by `CanvasViewportViewModelTests.cs`. Also note lines 35-38 and 52-55 duplicate the identical `is LiveSpatialIndexService<T>` snapshot-timestamp check.
 
 **Fix:** Delete `RefreshAsync`/`RefreshCommand` and its two tests, or wire it to an actual "Refresh" UI affordance if one is wanted; either way, extract the duplicated snapshot-timestamp check into one private helper first.
 
@@ -414,3 +414,4 @@ Two magic strings (`"Confidence"`, `"Severity"`) connect the producer and consum
 ## 6. Confidence Methodology
 
 Confidence values reflect: (a) how directly the finding is confirmed by the retrieved source (grep verification of call sites counts as high confidence; behavioral claims about timing/races that depend on unobserved runtime conditions are capped lower), and (b) whether a counter-explanation was actively searched for and ruled out (e.g., F-16's moderate confidence explicitly reflects that `MainWindow`'s double-buffering *does* mitigate the naive single-buffer tearing concern — full credit was given to that mitigation rather than flagging the naive version of the issue at high confidence).
+

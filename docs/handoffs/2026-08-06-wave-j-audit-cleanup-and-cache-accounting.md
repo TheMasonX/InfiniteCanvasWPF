@@ -58,7 +58,7 @@ Do not start these items.
 - docs/requirements/functional-requirements-and-invariants.md
 - docs/tasks/tickets/ICW-331-secret-safe-audit-corpus-cleanup.md
 - docs/tasks/active-tasks.md
-- docs/tasks/JIRA.md
+- docs/tasks/task-tracker.md
 - docs/handoffs/2026-08-06-wave-j-audit-cleanup-and-cache-accounting.md
 
 ## Validation Commands
@@ -73,3 +73,4 @@ Do not start these items.
 Start with `ICW-P0-LEASE-RELEASE`, then `ICW-P1-PIXELCOST-MIPS`, then
 `ICW-134`. Add the `MemoryGovernor_AccountsForAllResidentMipLevelsNotJustNative`
 and leak-detection tests that ICW-134 specifies.
+

@@ -75,7 +75,7 @@ effect. Added a non-mutating `IsRunning()` and used it for the query.
 - tests/InfiniteCanvas.Tests/SampleImageTileTests.cs (ICW-329 tiebreak test)
 - tests/InfiniteCanvas.Windows.Tests/CanvasControlConsumerHostTests.cs (ICW-328 test)
 - docs/tasks/tickets/ICW-327/328/329/330 (new or updated)
-- docs/tasks/active-tasks.md, docs/tasks/JIRA.md (tracker)
+- docs/tasks/active-tasks.md, docs/tasks/task-tracker.md (tracker)
 - docs/audits/ untracked 2026-08-05 audit reports (committed this wave)
 
 ## Validation Evidence
@@ -106,4 +106,5 @@ effect. Added a non-mutating `IsRunning()` and used it for the query.
 - ICW-144 needs fresh fast-scroll BenchmarkDotNet evidence on target hardware.
 - The remaining untracked audit findings are now all committed with this wave.
   The next audit session can start from a clean tree.
+
 

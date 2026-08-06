@@ -27,7 +27,7 @@ The 22-audit reconciliation is complete. The synthesis report, the new backlog, 
 ### Tracker updates
 
 - `docs/tasks/active-tasks.md`: new rows for ICW-316A and ICW-319..326; ICW-316 row rescoped.
-- `docs/tasks/JIRA.md`: new rows for all new keys plus an activity entry.
+- `docs/tasks/task-tracker.md`: new rows for all new keys plus an activity entry.
 - Ticket corpus fixes under ICW-081: ICW-307 duplicate `status:` key removed, ICW-306/307 duplicate validation blocks removed, ICW-305 summary corrected.
 - Correction and scope notes added to ICW-312, ICW-315, ICW-313, ICW-314, ICW-304, ICW-308, ICW-023, ICW-067, ICW-102, ICW-129.
 
@@ -50,3 +50,4 @@ The 22-audit reconciliation is complete. The synthesis report, the new backlog, 
 2. Prioritize the ICW-081 corpus batch (duplicate keys, ICW-008/062/063 merge, validator extension), then start ICW-316A with the item-query authority gate.
 3. Get the seamless-noise decision (gates ICW-324) and the item-query authority decision (gates ICW-316A) from the user.
 4. Implement ICW-320 before ICW-144 closes so its benchmark evidence does not measure the cancellation bug.
+

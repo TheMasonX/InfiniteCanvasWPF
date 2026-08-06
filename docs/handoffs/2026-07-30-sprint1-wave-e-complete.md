@@ -21,7 +21,7 @@ Sprint 1 Wave E completed the tracker cleanup recommended by the council review,
 - **ICW-094 duplicate fixed**: Tile-reset entry (`In Progress`) reassigned to `ICW-094-RESET` to eliminate ID collision with scrollbar-layout entry (`Done`)
 - **ICW-098/099/100 duplicates**: Already resolved with dedup notes in active-tasks.md (ICW-098-scrollbar, ICW-099 Deprecated, ICW-081 and ICW-022 references for ICW-100)
 - **ICW-111/ICW-031 merge**: Already documented in active-tasks.md
-- **ICW-081 ticket**: Status changed Proposed → Done, JIRA.md updated
+- **ICW-081 ticket**: Status changed Proposed → Done, task-tracker.md updated
 
 ### E-3: ICW-144 Stress Benchmarks
 
@@ -83,3 +83,4 @@ Build succeeded. 0 Error(s) 0 Warning(s)
 2. **Add stage-level diagnostics (ICW-132)** so benchmark counters distinguish canceled, stale, failed, resident-fallback, and useful completions.
 3. **Prioritize ICW-P0-LEASE-RELEASE** (IDisposable lease pattern) — it is a prerequisite for ICW-134 (variant cache accounting) and was flagged by the external audit as mandatory.
 4. **Continue ICW-132/133** for structured stage instrumentation and stable benchmark matrix.
+

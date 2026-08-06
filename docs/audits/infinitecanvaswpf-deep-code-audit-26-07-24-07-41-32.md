@@ -7,11 +7,11 @@
 
 ## Executive summary
 
-The codebase is in strong greenfield shape overall: the core math, spatial indexing, rendering interop, and test scaffolding are coherent and mostly well-covered. The main risks are not low-level correctness failures; they are architectural drift, stale documentation/task metadata, and a few implicit contracts that will become expensive once more scene types or data sources are added. [Sources: README.md L5-L20; docs/tasks/JIRA.md L7-L19; docs/tasks/active-tasks.md L10-L15]
+The codebase is in strong greenfield shape overall: the core math, spatial indexing, rendering interop, and test scaffolding are coherent and mostly well-covered. The main risks are not low-level correctness failures; they are architectural drift, stale documentation/task metadata, and a few implicit contracts that will become expensive once more scene types or data sources are added. [Sources: README.md L5-L20; docs/tasks/task-tracker.md L7-L19; docs/tasks/active-tasks.md L10-L15]
 
 The largest maintainability problem is that `MainWindow.xaml.cs` has become an orchestration monolith. It owns scene generation, view-model updates, render scheduling, camera policy, input handling, selection state, resize debounce, buffer lifecycle, and UI composition in one file. That is workable today, but it is the clearest place where future technical debt will compound. [Sources: src/InfiniteCanvas.App/MainWindow.xaml.cs L19-L349; src/InfiniteCanvas.ViewModels/CanvasViewportViewModel.cs L10-L59]
 
-The second risk is consistency drift: the README and task logs describe older scene behavior and validation counts that no longer match the current code and test inventory. That is not cosmetic; it makes the repo harder to trust as a source of truth. [Sources: README.md L5-L26; docs/tasks/JIRA.md L25-L38; docs/tasks/active-tasks.md L10-L15]
+The second risk is consistency drift: the README and task logs describe older scene behavior and validation counts that no longer match the current code and test inventory. That is not cosmetic; it makes the repo harder to trust as a source of truth. [Sources: README.md L5-L26; docs/tasks/task-tracker.md L25-L38; docs/tasks/active-tasks.md L10-L15]
 
 The third risk is implicit contracts. Several APIs assume data shape, key presence, or calling conventions without encoding them in types or guardrails. Those assumptions are fine while the demo is small, but they are exactly the kind of hidden coupling that turns into brittle edge cases later. [Sources: src/InfiniteCanvas.App/MainWindow.xaml.cs L445-L452; src/InfiniteCanvas.Rendering/SampleImageGenerator.cs L23-L87; src/InfiniteCanvas.Rendering/SampleImageTile.cs L21-L44, L205-L242]
 
@@ -32,11 +32,11 @@ Confidence: 96%
 
 The README still describes the earlier point-cloud style demo and says the sample scene generates eight deterministic `8192x2048` Gray8 images and ingests 250 more points every 500 ms, publishing a snapshot every two seconds. The current code instead defaults to a 64-tile inspection scene (`2 x 32`), uses annotation patches, and does not have the periodic ingestion loop described there. [Sources: README.md L5-L26; src/InfiniteCanvas.Rendering/SampleImageGenerator.cs L23-L87; src/InfiniteCanvas.App/MainWindow.xaml.cs L104-L156]
 
-The task tracker also appears stale on validation counts: `docs/tasks/JIRA.md` records ICW-013 as "22/22", but the visible test files in this commit cover 24 named tests across the fetched suites (`CameraTransformTests`, `LiveSpatialIndexServiceTests`, `StrTreeSpatialIndexServiceTests`, `CoalescingAsyncActionTests`, `SampleImageGeneratorTests`, `CanvasViewportViewModelTests`, and `ZeroCopyBitmapFactoryTests`). [Sources: docs/tasks/JIRA.md L31-L38; tests/InfiniteCanvas.Tests/CameraTransformTests.cs L10-L95; tests/InfiniteCanvas.Tests/LiveSpatialIndexServiceTests.cs L11-L119; tests/InfiniteCanvas.Tests/StrTreeSpatialIndexServiceTests.cs L11-L26; tests/InfiniteCanvas.Tests/CoalescingAsyncActionTests.cs L10-L59; tests/InfiniteCanvas.Tests/SampleImageGeneratorTests.cs L10-L114; tests/InfiniteCanvas.Tests/CanvasViewportViewModelTests.cs L12-L77; tests/InfiniteCanvas.Windows.Tests/ZeroCopyBitmapFactoryTests.cs L13-L70]
+The task tracker also appears stale on validation counts: `docs/tasks/task-tracker.md` records ICW-013 as "22/22", but the visible test files in this commit cover 24 named tests across the fetched suites (`CameraTransformTests`, `LiveSpatialIndexServiceTests`, `StrTreeSpatialIndexServiceTests`, `CoalescingAsyncActionTests`, `SampleImageGeneratorTests`, `CanvasViewportViewModelTests`, and `ZeroCopyBitmapFactoryTests`). [Sources: docs/tasks/task-tracker.md L31-L38; tests/InfiniteCanvas.Tests/CameraTransformTests.cs L10-L95; tests/InfiniteCanvas.Tests/LiveSpatialIndexServiceTests.cs L11-L119; tests/InfiniteCanvas.Tests/StrTreeSpatialIndexServiceTests.cs L11-L26; tests/InfiniteCanvas.Tests/CoalescingAsyncActionTests.cs L10-L59; tests/InfiniteCanvas.Tests/SampleImageGeneratorTests.cs L10-L114; tests/InfiniteCanvas.Tests/CanvasViewportViewModelTests.cs L12-L77; tests/InfiniteCanvas.Windows.Tests/ZeroCopyBitmapFactoryTests.cs L13-L70]
 
 Why it matters: docs and task trackers are part of the repo’s memory. When they drift, future work gets duplicated, and validation evidence becomes less trustworthy.
 
-Recommendation: refresh README and JIRA/active-tasks to reflect current behavior, current defaults, and actual test counts. Treat validation records as per-commit evidence, not permanent claims. [Sources: docs/tasks/README.md L9-L19; docs/tasks/JIRA.md L21-L38]
+Recommendation: refresh README and task tracker/active-tasks to reflect current behavior, current defaults, and actual test counts. Treat validation records as per-commit evidence, not permanent claims. [Sources: docs/tasks/README.md L9-L19; docs/tasks/task-tracker.md L21-L38]
 
 Confidence: 99%
 
@@ -72,11 +72,11 @@ Confidence: 89%
 
 ### 6) Medium — The overlay rebuild path is the next scale bottleneck, and the backlog already knows it
 
-`BuildFrameVisual` recreates the overlay visual tree on every frame, including new `Border`, `Grid`, `Rectangle`, `TextBlock`, and brush instances for each visible annotation. That is acceptable for a demo, but it will become expensive as visible annotation density rises. The backlog already tracks overlay pooling as ICW-007, so this is not a new duplicate task; it is the next obvious scale pressure point. [Sources: src/InfiniteCanvas.App/MainWindow.xaml.cs L265-L349; docs/tasks/JIRA.md L13-L16]
+`BuildFrameVisual` recreates the overlay visual tree on every frame, including new `Border`, `Grid`, `Rectangle`, `TextBlock`, and brush instances for each visible annotation. That is acceptable for a demo, but it will become expensive as visible annotation density rises. The backlog already tracks overlay pooling as ICW-007, so this is not a new duplicate task; it is the next obvious scale pressure point. [Sources: src/InfiniteCanvas.App/MainWindow.xaml.cs L265-L349; docs/tasks/task-tracker.md L13-L16]
 
-Why it matters: retained WPF element churn will dominate frame time long before the spatial index or bitmap composition do, especially on resize and drag. [Sources: src/InfiniteCanvas.App/MainWindow.xaml.cs L265-L349; docs/tasks/JIRA.md L13-L16]
+Why it matters: retained WPF element churn will dominate frame time long before the spatial index or bitmap composition do, especially on resize and drag. [Sources: src/InfiniteCanvas.App/MainWindow.xaml.cs L265-L349; docs/tasks/task-tracker.md L13-L16]
 
-Recommendation: keep the current behavior for now, but move element pooling or a custom retained visual layer ahead of feature work that increases annotation density. [Sources: docs/tasks/JIRA.md L13-L16]
+Recommendation: keep the current behavior for now, but move element pooling or a custom retained visual layer ahead of feature work that increases annotation density. [Sources: docs/tasks/task-tracker.md L13-L16]
 
 Confidence: 84%
 
@@ -94,25 +94,26 @@ Confidence: 82%
 
 The core math and spatial pieces are in good shape. `CameraTransform` has dedicated tests for pan/zoom, capture stability, clamp behavior, and non-uniform scaling, and `LiveSpatialIndexService` has good coverage around snapshot publication and concurrent queries. That is the strongest part of the repo right now. [Sources: tests/InfiniteCanvas.Tests/CameraTransformTests.cs L10-L95; tests/InfiniteCanvas.Tests/LiveSpatialIndexServiceTests.cs L11-L94]
 
-`ICW-007` is still the one explicitly tracked follow-up I would not duplicate here: overlay pooling is already on the backlog in `docs/tasks/JIRA.md`. I would keep this audit focused on the architectural debt above instead of creating a second ticket for the same work. [Sources: docs/tasks/JIRA.md L13-L16]
+`ICW-007` is still the one explicitly tracked follow-up I would not duplicate here: overlay pooling is already on the backlog in `docs/tasks/task-tracker.md`. I would keep this audit focused on the architectural debt above instead of creating a second ticket for the same work. [Sources: docs/tasks/task-tracker.md L13-L16]
 
 ## Assumptions
 
 - I treated commit `43bfd55bbae7e14a590784f7831e5261eecfd69b` as the audit baseline.
 - I treated the repo task logs as intended source-of-truth for planned work, and used them to avoid duplicating already-tracked items.
-- I counted tests from the visible fetched test files in this commit, not from any external runner output. [Sources: docs/tasks/README.md L9-L19; docs/tasks/JIRA.md L21-L38]
+- I counted tests from the visible fetched test files in this commit, not from any external runner output. [Sources: docs/tasks/README.md L9-L19; docs/tasks/task-tracker.md L21-L38]
 
 ## Open questions
 
 - Should `GenerateSet` treat `imageCount` or `(columns, rows)` as the authoritative shape input when both are supplied?
 - Should annotation features remain dictionary-based, or should the known keys become typed properties?
 - Should the README describe the current inspection scene, or is there still a planned return to the older point-cloud demo?
-- Is overlay pooling still intentionally deferred under ICW-007, or should it be promoted now that frame composition is fully interactive? [Sources: docs/tasks/JIRA.md L13-L16; docs/tasks/active-tasks.md L10-L15]
+- Is overlay pooling still intentionally deferred under ICW-007, or should it be promoted now that frame composition is fully interactive? [Sources: docs/tasks/task-tracker.md L13-L16; docs/tasks/active-tasks.md L10-L15]
 
 ## Suggested next implementation slice
 
 1. Extract `MainWindow` orchestration into small services with testable seams.
 2. Replace magic-number policy values with named options/records.
 3. Make annotation metadata strongly typed.
-4. Refresh README, JIRA, and active-tasks so validation counts and runtime behavior match the current commit.
-5. Add tests for `GenerateSet` shape precedence and tooltip key fallback. [Sources: docs/tasks/README.md L9-L19; docs/tasks/JIRA.md L31-L38; tests/InfiniteCanvas.Tests/SampleImageGeneratorTests.cs L10-L114]
+4. Refresh README, task tracker, and active-tasks so validation counts and runtime behavior match the current commit.
+5. Add tests for `GenerateSet` shape precedence and tooltip key fallback. [Sources: docs/tasks/README.md L9-L19; docs/tasks/task-tracker.md L31-L38; tests/InfiniteCanvas.Tests/SampleImageGeneratorTests.cs L10-L114]
+

@@ -47,9 +47,10 @@ I checked for an existing ticket first: `ICW-146` (loading indicator, Done) cove
 
 ## 4. Assumptions & Open Questions
 
-- Both flagged gaps from the prior two reports (`CanvasControl.xaml` and the full council review) are now closed; I don't have a specific next-file target queued for a future session beyond what the council review's own "Open Questions" and "Follow-up Tickets" sections already name (`ICW-315`, `ICW-316`, and the four open questions about hit-testing ownership, change-event vs. polling, `JIRA.md` canonicity, and `ICW-315`/`ICW-314` sequencing).
+- Both flagged gaps from the prior two reports (`CanvasControl.xaml` and the full council review) are now closed; I don't have a specific next-file target queued for a future session beyond what the council review's own "Open Questions" and "Follow-up Tickets" sections already name (`ICW-315`, `ICW-316`, and the four open questions about hit-testing ownership, change-event vs. polling, `task-tracker.md` canonicity, and `ICW-315`/`ICW-314` sequencing).
 - The row-definition ratio observation in §1 is speculative and not verified against how `MainWindow`'s equivalent (pre-extraction) markup handled the same layout — a quick comparison against `MainWindow.xaml`'s history (if this control's markup was lifted from there) could confirm or dismiss it in a future session.
 
 ---
 
 *Methodology note: this session read `CanvasControl.xaml` and `canvas-data-source-abstraction-council-review-26-08-04.md` in full — the two specific gaps named in the previous two reports' "Assumptions & Open Questions" sections — then, per this session's practice of verifying rather than assuming, directly re-checked the council review's one already-flagged cleanup item against the current `.csproj` file rather than assuming it had already been actioned given the review's recency.*
+

@@ -30,7 +30,7 @@ Do not use this skill for simple bug fixes or single-file code edits.
 ## Inputs
 
 - Audit scope: full repository or specific modules such as rendering, spatial indexing, bitmap lifecycle, or WPF app startup/shutdown
-- Baseline artifacts: existing audits, DesignDoc.md, README.md, docs/tasks/active-tasks.md, docs/tasks/JIRA.md, ticket files, ADRs
+- Baseline artifacts: existing audits, DesignDoc.md, README.md, docs/tasks/active-tasks.md, docs/tasks/task-tracker.md, ticket files, ADRs
 - Constraint mode: net-new findings only vs full re-evaluation
 - (Optional) Fixed point for diff-based review: a commit SHA, branch name, tag, or other git reference to compare HEAD against
 
@@ -61,7 +61,7 @@ If the audit is scope-based (e.g., “full rendering pipeline”) rather than di
 ### 1. Establish audit baseline
 
 - Read existing audits in docs/audits.
-- Read docs/tasks/JIRA.md and docs/tasks/active-tasks.md.
+- Read docs/tasks/task-tracker.md and docs/tasks/active-tasks.md.
 - Enumerate existing tickets under docs/tasks/tickets.
 - Classify current backlog coverage so new findings can be de-duplicated.
 
@@ -153,7 +153,7 @@ Drop weak findings and keep only defensible items.
 ### 9. Update durable trackers
 
 - Add or refine entries in docs/tasks/active-tasks.md.
-- Add matching keys and activity rows in docs/tasks/JIRA.md.
+- Add matching keys and activity rows in docs/tasks/task-tracker.md.
 - Ensure each new key has a ticket file under docs/tasks/tickets.
 - Prefer the repo’s existing ICW naming and task conventions so work stays consistent with the current backlog.
 
@@ -181,7 +181,7 @@ Audit work is complete only when all are true:
 - a new audit document is written with net-new findings and task corrections
 - findings are reported under separate Standards and Spec headings
 - every accepted new finding is captured as a durable ICW task/ticket
-- tracker updates are synchronized across active-tasks and JIRA
+- tracker updates are synchronized across active-tasks and task tracker
 - priorities and rationale are explicit
 - open questions and confidence limits are called out
 
@@ -211,3 +211,4 @@ Use this structure for audit files:
 - /codebase-audit reconcile backlog coverage against code and ADRs
 - /codebase-audit review since HEAD~5 -- focus on spec compliance
 - /codebase-audit reconcile backlog coverage against code and ADRs
+

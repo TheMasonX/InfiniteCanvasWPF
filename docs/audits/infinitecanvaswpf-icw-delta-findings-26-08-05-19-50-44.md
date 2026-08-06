@@ -49,7 +49,7 @@ I checked directly this session: `ZeroCopyBitmapFactory.Windows.cs` has **zero r
 
 ## 5. Confirmed superseded, no action needed: `pass10`
 
-`pass10` (2026-07-28) found `ICW-078`'s `RenderRequestTracker` epoch-guard fix had been silently reverted, contradicting `JIRA.md`'s "Done" status. This is now moot: this series' own report 2 (session 2, well before this session) confirmed `RenderRequestTracker` was correctly re-wired into `MainWindow.xaml.cs` during Sprint 1 Wave A, after `pass10` was written. No new action; recorded here only to close the loop on this specific historical document rather than leave it looking unaddressed.
+`pass10` (2026-07-28) found `ICW-078`'s `RenderRequestTracker` epoch-guard fix had been silently reverted, contradicting `task-tracker.md`'s "Done" status. This is now moot: this series' own report 2 (session 2, well before this session) confirmed `RenderRequestTracker` was correctly re-wired into `MainWindow.xaml.cs` during Sprint 1 Wave A, after `pass10` was written. No new action; recorded here only to close the loop on this specific historical document rather than leave it looking unaddressed.
 
 ---
 
@@ -75,3 +75,4 @@ I checked directly this session: `ZeroCopyBitmapFactory.Windows.cs` has **zero r
 ---
 
 *Methodology note: this session read four historical audit documents identified as unread in the prior session's "Assumptions & Open Questions," then, for each finding in them, checked current source directly to determine resolution status rather than assuming either "still open" (the documents' own age) or "surely fixed by now" (this series' general experience of findings getting addressed) — three of six findings were confirmed fixed, two confirmed already correctly tracked with no gap, and one confirmed still genuinely open.*
+

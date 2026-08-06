@@ -53,7 +53,7 @@ Reviewed both external audits against the current task tracker and ticket files.
 ## Remaining Tracker Issues
 
 1. **ICW-081** (duplicate ID reconciliation) is still Proposed. This handoff fixed the most confusing duplicates in active-tasks.md, but ticket files under `docs/tasks/tickets/` still have duplicate filenames (e.g., ICW-100 appears 4 times with different content). A mechanical script pass is needed.
-2. **JIRA.md** (`docs/tasks/JIRA.md`) was not updated in this pass — it still has stale statuses.
+2. **task-tracker.md** (`docs/tasks/task-tracker.md`) was not updated in this pass — it still has stale statuses.
 3. **Scripts/Validate-TaskTracker.ps1** (ICW-084) was not updated — still needs cognitive complexity reduction and duplicate-ID validation.
 
 ## Next Step Recommendations
@@ -61,7 +61,7 @@ Reviewed both external audits against the current task tracker and ticket files.
 1. **Implement ICW-101 first** (tooltip presenter restore) — cheapest fix, independent of everything else, eliminates a crash vector.
 2. **Land ICW-P0-ACTIVECOUNT-residuals** before ICW-P0-LEASE-RELEASE (removes double-dispose hazard).
 3. **Implement ICW-P0-LEASE-RELEASE + ICW-P1-PIXELCOST-MIPS together** (same accounting correctness problem, interdependent).
-4. **Update JIRA.md** to match active-tasks.md statuses.
+4. **Update task-tracker.md** to match active-tasks.md statuses.
 5. **Run ICW-084** (Validate-TaskTracker.ps1 refactor) before creating more ticket files.
 
 ## Validation
@@ -72,3 +72,4 @@ dotnet test tests/InfiniteCanvas.Tests --configuration Release
 ```
 
 No code changes in this handoff — documentation only. Build and tests should be unaffected.
+

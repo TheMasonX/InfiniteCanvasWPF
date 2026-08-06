@@ -55,7 +55,7 @@ Minimum pack should include:
 
 - `docs/requirements/functional-requirements-and-invariants.md`
 - `docs/tasks/active-tasks.md`
-- `docs/tasks/JIRA.md`
+- `docs/tasks/task-tracker.md`
 - `DesignDoc.md`
 - Relevant ADRs under `docs/ADR/`
 - Relevant handoff notes under `docs/handoffs/`
@@ -201,3 +201,4 @@ Use this structure in the final output:
 - [Task Tracker](../../tasks/active-tasks.md) — live task corpus
 - [Requirements Registry](../../requirements/functional-requirements-and-invariants.md) — canonical requirements
 - [Example council report](../../audits/viewport-requirements-council-review-26-07-30.md) — first council run output
+

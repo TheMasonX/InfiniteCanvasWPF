@@ -14,7 +14,7 @@ function Get-TaskFiles {
   param([string[]]$Entries)
 
   $files = New-Object System.Collections.Generic.List[string]
-  $skipNames = @('README.md', 'TASK_SCHEMA.md', 'active-tasks.md', 'JIRA.md', 'agent-to-human-requests.md', 'human-requests.md')
+  $skipNames = @('README.md', 'TASK_SCHEMA.md', 'active-tasks.md', 'task-tracker.md', 'agent-to-human-requests.md', 'human-requests.md')
 
   foreach ($entry in $Entries) {
     if (-not (Test-Path -LiteralPath $entry)) {
@@ -134,3 +134,4 @@ if ($issues.Count -gt 0) {
 }
 
 Write-Host "Validated $validatedCount task file(s); skipped $skippedCount legacy markdown file(s)."
+
