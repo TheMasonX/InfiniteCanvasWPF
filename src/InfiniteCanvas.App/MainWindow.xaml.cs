@@ -565,7 +565,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
         if (!_renderRequestTracker.IsCurrent(requestVersion))
             return;
 
-        PublishFrame(factory, frame.Bitmap, frame.VisibleItems, frame.VisibleTiles, camera, width, height);
+        PublishFrame(factory, frame.Bitmap, frame.VisibleItems, frame.VisibleTiles, camera, width, height, requestVersion);
         _renderRequestTracker.Advance();
 
         stopwatch.Stop();
@@ -650,7 +650,8 @@ public partial class MainWindow : Window, ICanvasSceneSource
         IReadOnlyList<SampleImageTile> visibleTiles,
         CameraSnapshot camera,
         int frameWidth,
-        int frameHeight)
+        int frameHeight,
+        int revision)
     {
         _lastPublishedCamera = camera;
         _lastPublishedVisibleTiles = visibleTiles;
@@ -658,7 +659,9 @@ public partial class MainWindow : Window, ICanvasSceneSource
         // tree (ICW-315, ADR-0007). The raster handoff is zero-copy: the canvas
         // displays the frozen ImageSource and never touches its backing memory
         // section. IReadOnlyList<out T> covariance carries the SampleAnnotation
-        // list through the ICanvasItem contract without a mapping.
+        // list through the ICanvasItem contract without a mapping. The revision
+        // is the render request version (ICW-328); the canvas discards any
+        // frame older than the last one displayed.
         var frame = new CanvasFrame(
             raster: bitmap,
             items: annotations,
@@ -666,7 +669,8 @@ public partial class MainWindow : Window, ICanvasSceneSource
             visibleItemCount: annotations.Count,
             totalItemCount: _spatialIndex.Count,
             width: frameWidth,
-            height: frameHeight);
+            height: frameHeight,
+            revision: revision);
         CanvasSurface.PublishFrame(frame);
         // Triple-buffer rotation (ICW-P0-BUFFER-REUSE-SYNC). The buffer that
         // was displayed until now moves to the retired slot instead of being

@@ -66,6 +66,10 @@ Outcome: Passed for changed areas. Core 140 passed, 3 pre-existing unrelated fai
 
 The per-frame CTS design intentionally creates a zero-claimant window at every frame boundary. The dedup flag must be per-frame scoped, matching the ADR-0006 rule that a frame owns a request only for its lifetime.
 
+## Follow-up (2026-08-06, audit synthesis)
+
+The previous "optional follow-up: avoid dooming in-flight work when a frame boundary creates a zero-claimant window" note understated a precisely-diagnosed, high-severity defect in the same vicinity: `TileWorkItem.AddClaimant` re-coalesce never refreshed the claimant's `CancellationTokenRegistration`. The per-frame CTS design means every claimant token fires at the next frame boundary; after one coalesce cycle a multi-frame generation became uncancellable. Tracked and fixed by ICW-327 (Wave I, 2026-08-06).
+
 ## Findings
 
 - Confirmed: auto-removal via claimant token leaves `_items` entries with `ClaimantCount == 0` and no callback delivery.

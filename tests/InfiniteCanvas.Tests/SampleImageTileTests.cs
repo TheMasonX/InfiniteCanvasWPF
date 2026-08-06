@@ -414,4 +414,43 @@ public class SampleImageTileTests
 
         Assert.That(mipTwoGenerationStarted.Wait(TimeSpan.FromMilliseconds(50)), Is.False);
     }
+
+    [Test]
+    public void ResidentRead_EqualDistance_PrefersHigherResolutionMip()
+    {
+        // ICW-329: at equal absolute distance the fallback prefers the lower
+        // mip level (higher resolution). Request mip 2 with mip 1 and mip 3
+        // both resident: distance 1 to each, so mip 1 wins.
+        var tile = new SampleImageTile(
+            "tile-resident-read-tiebreak",
+            new SpatialBounds(0, 0, 8, 8),
+            8,
+            8,
+            () => Enumerable.Repeat((byte)11, 64).ToArray(),
+            [],
+            mipPixelFactory: mipLevel =>
+            {
+                var dims = BackgroundTileMipPolicy.GetDimensions(8, 8, mipLevel);
+                return Enumerable.Repeat((byte)(20 + mipLevel), dims.Width * dims.Height).ToArray();
+            });
+
+        // Make mip 1 resident through the generating path.
+        Assert.That(tile.TryGetPixelsNonBlocking(1, out _, out _), Is.False);
+        SpinWait.SpinUntil(() => tile.IsMipGenerated(1), TimeSpan.FromSeconds(2));
+        Assert.That(tile.IsMipGenerated(1), Is.True);
+
+        // Requesting mip 3 starts mip-3 generation. The call itself returns
+        // true via the mip-1 fallback, so only the generation flag is asserted.
+        _ = tile.TryGetPixelsNonBlocking(3, out _, out _);
+        SpinWait.SpinUntil(() => tile.IsMipGenerated(3), TimeSpan.FromSeconds(2));
+        Assert.That(tile.IsMipGenerated(3), Is.True);
+
+        Assert.That(tile.TryGetResidentPixels(2, out var fallbackPixels, out var residentMipLevel), Is.True);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(residentMipLevel, Is.EqualTo(1),
+                "At equal distance the fallback must prefer the higher-resolution mip.");
+            Assert.That(fallbackPixels[0], Is.EqualTo((byte)21));
+        }
+    }
 }

@@ -35,6 +35,10 @@ Today `CanvasControl` implements pan, zoom, anchor pan, and scrollbar logic dire
 - Add an unload lifecycle: `CanvasControl` has no `Loaded`/`Unloaded` path to stop the anchor-pan timer, release capture, or clear `Mouse.OverrideCursor` (finding F-018).
 - Reconcile the dead `CanvasViewModel.Zoom` wrapper: the wheel path bypasses it, leaving it with zero callers and inconsistent with `Pan` (finding F-017).
 
+## Audit Synthesis Scope Note (2026-08-06)
+
+Verified at HEAD c552830: the ICW-316/ICW-316A audits confirmed input abstraction is orthogonal to assembly extraction, which has landed. This ticket remains user-deferred (P3) and stays Proposed. It is not required to reach a functional web-inspection viewport; ICW-314 is the priority slice.
+
 ## Scope
 
 - Define `IInputHandler` with attach and detach lifecycle over the viewport input.

@@ -311,25 +311,44 @@ public sealed class SampleImageTile
     {
         lock (_cacheGate)
         {
-            var fallbackCandidates = new List<(int MipLevel, byte[] Pixels)>(_mipPixels.Count + 1);
+            // Single-pass scan (ICW-329): the pixelometer fallback read path
+            // runs on hover and must not allocate a candidate list or sort it
+            // under _cacheGate. The mip set is bounded by
+            // BackgroundTileMipPolicy.MaxMipLevel, so a linear scan is cheap.
+            // Preference order matches the removed OrderBy/ThenBy: smallest
+            // absolute distance from the requested mip, then the lower mip
+            // level (higher resolution) at equal distance.
+            byte[]? bestPixels = null;
+            var bestDistance = int.MaxValue;
+            var bestMip = 0;
+
             if (_pixels is not null)
             {
-                fallbackCandidates.Add((0, _pixels));
+                bestPixels = _pixels;
+                bestDistance = Math.Abs(0 - mipLevel);
+                bestMip = 0;
             }
 
-            foreach (var pair in _mipPixels)
+            foreach (var (mip, mipPixels) in _mipPixels)
             {
-                fallbackCandidates.Add((pair.Key, pair.Value));
+                if (mipPixels is null)
+                {
+                    continue;
+                }
+
+                var distance = Math.Abs(mip - mipLevel);
+                if (distance < bestDistance || (distance == bestDistance && mip < bestMip))
+                {
+                    bestPixels = mipPixels;
+                    bestDistance = distance;
+                    bestMip = mip;
+                }
             }
 
-            var fallback = fallbackCandidates
-                .OrderBy(candidate => Math.Abs(candidate.MipLevel - mipLevel))
-                .ThenBy(candidate => candidate.MipLevel)
-                .FirstOrDefault(candidate => candidate.Pixels is not null);
-            if (fallback.Pixels is not null)
+            if (bestPixels is not null)
             {
-                pixels = fallback.Pixels;
-                residentMipLevel = fallback.MipLevel;
+                pixels = bestPixels;
+                residentMipLevel = bestMip;
                 return true;
             }
         }

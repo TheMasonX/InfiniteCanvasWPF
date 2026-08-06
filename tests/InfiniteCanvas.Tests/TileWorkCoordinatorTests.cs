@@ -515,6 +515,45 @@ public class TileWorkCoordinatorTests
     }
 
     [Test]
+    public void ReCoalescedClaimant_RegistersNewestToken_CancelStopsWork()
+    {
+        // ICW-327: a multi-frame generation re-claims the same key each frame
+        // with a fresh frame token. The re-coalesce path must refresh the
+        // token registration. On HEAD it kept the registration on the already
+        // fired (or not-yet-relevant) old token, so the newest token was never
+        // registered and the claimant became permanently uncancellable.
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 1);
+        using var frame1 = new CancellationTokenSource();
+        using var frame2 = new CancellationTokenSource();
+        var started = new ManualResetEventSlim(false);
+        var release = new ManualResetEventSlim(false);
+
+        // Frame 1 admits the work and generation starts.
+        coordinator.Request(Key1, BlockingFactory(started, release), ClaimantA, frame1.Token);
+        Assert.That(started.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        // Frame 2 re-claims the same key while generation is still running.
+        // The re-coalesce path must register frame2's token.
+        coordinator.Request(Key1, BlockingFactory(started, release), ClaimantA, frame2.Token);
+
+        // Canceling the latest frame token must remove the claimant and cancel
+        // the work. The interest set is empty, so no no-flash exemption holds.
+        frame2.Cancel();
+
+        // Release the worker so it observes its work token.
+        release.Set();
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(() => coordinator.GetCounters().CanceledCount,
+                Is.EqualTo(1).After(2, 100),
+                "Canceling the newest claimant token must cancel the work.");
+            Assert.That(coordinator.GetCounters().CompletedCount, Is.EqualTo(0),
+                "The work must not run to completion after the newest token fires.");
+        }
+    }
+
+    [Test]
     public void CompletingWork_InvokesOnCompletedCallback()
     {
         using var coordinator = new TileWorkCoordinator(maxConcurrency: 4);

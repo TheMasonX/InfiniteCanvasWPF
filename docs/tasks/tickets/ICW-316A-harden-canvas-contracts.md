@@ -63,6 +63,10 @@ Audit synthesis finding F-001..F-004 and F-013. Before the physical assembly mov
 - Gate order: item-query authority first, then frame, then view-model state.
 - Must land before ICW-316B (physical move) and before ICW-314 consumes `QueryVisible`.
 
+## Revision-identity correction (2026-08-06, audit synthesis)
+
+"Revision identity" is listed as delivered above, but at HEAD c552830 `CanvasFrame.Revision` was never assigned a real value (construction site `MainWindow.PublishFrame` omitted `revision:`) and never consumed (zero `.Revision` readers; `CanvasControl.PublishFrame` did not reference it). This was corrected by ICW-329 (Wave I, 2026-08-06): the host threads the render-request version into the frame and the control discards out-of-order frames. Revision identity is now behaviorally true.
+
 ## Related Tasks
 
 - ICW-312 (data source abstraction, Done)

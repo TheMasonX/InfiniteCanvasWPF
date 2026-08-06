@@ -23,7 +23,7 @@ links:
   - docs/ADR/0007-canvas-reusable-component-boundary.md
   - docs/audits/canvas-data-source-abstraction-council-review-26-08-04.md
 created: 2026-08-04
-updated: 2026-08-04
+updated: 2026-08-06
 ---
 
 # ICW-314-canvas-selection-and-tooltip-ownership
@@ -39,6 +39,16 @@ Today `MainWindow.BuildFrameVisual` builds the annotation layer against the conc
 - Item-query authority: ICW-314 consumes `QueryVisible`. The duplicate-authority decision (finding F-001, gated in ICW-316A) must precede hit-testing. Record as a soft dependency.
 - `SceneChanged` is declared and raised but has no subscriber; decide event-vs-polling within this ticket's scope (finding C2-031).
 - Item identity and instance lifetime across scene revisions are undefined and must be designed before selection migrates (finding C1-026).
+
+## Audit Synthesis Scope Note (2026-08-06)
+
+Verified at HEAD c552830 (Wave H landed). This ticket is the next functional slice on the ADR-0007 path to a reusable web-inspection viewport. State of the code:
+
+- `ICanvasItem` exposes only `Id` + `Bounds` (`src/InfiniteCanvas.Core/ICanvasItem.cs`); its own doc comment says ICW-314 extends it with interaction members. The contract must grow (hit testing, tooltip payload, visual template) before selection/tooltip move honestly.
+- `MainWindow` still owns selection state (`_selectedAnnotationId`, `MainWindow.xaml.cs:43`), tooltip creation (`DeferredAnnotationToolTip`, line 793), and selection writeback (line 896). `CanvasViewModel.VisibleItems` (`CanvasViewModel.cs:59`) is the required bridge for the control to hit-test; it is not the destination.
+- Assembly extraction (ICW-316) and interaction ownership (this ticket) are orthogonal; extraction landed, this ticket remains the behavioral slice.
+- Scope wording should read: "Move selection and tooltip hover into `CanvasControl`, extend `ICanvasItem` with the interaction payloads needed for hit testing and tooltip rendering, and keep `CanvasViewModel` only as the bridge until the control owns the full interaction path."
+- Council 2026-08-04: tooltip half waits on ICW-031 (typed metrics).
 
 ## Scope
 

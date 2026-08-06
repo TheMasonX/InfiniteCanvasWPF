@@ -50,6 +50,53 @@ public sealed class CanvasControlConsumerHostTests
     }
 
     [Test]
+    public void ConsumerHost_StaleFrameRevision_IsDiscarded()
+    {
+        // ICW-329: the canvas discards a frame whose revision is older than
+        // the last one displayed. The revision is the host render-request
+        // version; an out-of-order publish must never overwrite newer state.
+        var control = new CanvasControl();
+        control.SceneSource = new HostSceneSource();
+
+        var raster1 = CreateFrozenRaster(64, 48);
+        var frame1 = new CanvasFrame(
+            raster1,
+            [new HostItem("a", new SpatialBounds(0, 0, 10, 10))],
+            new SpatialBounds(0, 0, 100, 100),
+            visibleItemCount: 1,
+            totalItemCount: 3,
+            width: 64,
+            height: 48,
+            revision: 7);
+
+        var raster2 = CreateFrozenRaster(64, 48);
+        var frame2 = new CanvasFrame(
+            raster2,
+            [new HostItem("b", new SpatialBounds(0, 0, 10, 10))],
+            new SpatialBounds(0, 0, 100, 100),
+            visibleItemCount: 1,
+            totalItemCount: 3,
+            width: 64,
+            height: 48,
+            revision: 5);
+
+        var publishedCount = 0;
+        control.FramePublished += (_, _) => publishedCount++;
+
+        control.PublishFrame(frame1);
+        control.PublishFrame(frame2);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(publishedCount, Is.EqualTo(1),
+                "An older-revision frame must be discarded and not raise FramePublished.");
+            Assert.That(control.ViewModel.VisibleItems, Has.Count.EqualTo(1));
+            Assert.That(control.ViewModel.VisibleItems[0].Id, Is.EqualTo("a"),
+                "The stale frame must not overwrite the newer frame state.");
+        });
+    }
+
+    [Test]
     public void ConsumerHost_SceneSourceDependencyProperty_AcceptsHostImplementation()
     {
         var control = new CanvasControl

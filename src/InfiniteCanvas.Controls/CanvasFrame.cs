@@ -101,6 +101,13 @@ public sealed class CanvasFrame
     /// <summary>Raster height in pixels.</summary>
     public int Height { get; }
 
-    /// <summary>Stale-frame revision identity (ICW-316A).</summary>
+    /// <summary>
+    /// Stale-frame revision identity (ICW-316A, ICW-328). The host assigns a
+    /// monotonic render-request version. The canvas discards any frame whose
+    /// revision is not newer than the last one displayed, so an out-of-order
+    /// publish can never overwrite newer frame state. Hosts that publish
+    /// frames must pass an increasing value; the default of zero is accepted
+    /// only as the first frame.
+    /// </summary>
     public int Revision { get; }
 }

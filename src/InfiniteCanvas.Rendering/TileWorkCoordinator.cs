@@ -179,8 +179,12 @@ public sealed class TileWorkCoordinator : IDisposable
             // scroll-away-and-back re-request: its factory token is already
             // canceled, so the fresh regeneration never starts (ICW-320 F-006).
             // Treat a canceled item as not present and admit fresh work. The
-            // duplicate-CPU cost of the overlapping worker is accepted; epoch
-            // guards discard the stale result.
+            // duplicate-CPU cost of the overlapping worker is accepted; the
+            // tile's OnCoordinatorPixelsGenerated guard (_pixels is null
+            // first-writer check plus the epoch comparison) discards the
+            // stale result (ICW-330). For the eviction case specifically the
+            // epoch is NOT bumped, so the _pixels is null check is what drops
+            // the evicted-but-still-running generation.
             if (_items.TryGetValue(key, out var existing)
                 && existing.State is not (TileWorkItemState.Canceled
                     or TileWorkItemState.Completed
@@ -425,6 +429,11 @@ public sealed class TileWorkCoordinator : IDisposable
         }
     }
 
+    /// <summary>
+    /// Starts a work item's background factory. Must be called while holding
+    /// <c>_lock</c> (ICW-330): it mutates shared item state and the active
+    /// count. Never await inside this method.
+    /// </summary>
     private void StartWorkItem(TileWorkItem item)
     {
         item.State = TileWorkItemState.Running;
@@ -543,12 +552,21 @@ public sealed class TileWorkCoordinator : IDisposable
         }
     }
 
+    /// <summary>
+    /// Cancels a work item: signals the work token for running items, or
+    /// removes and releases queued items. Must be called while holding
+    /// <c>_lock</c> (ICW-330): it mutates shared item state, the queue, and
+    /// reservations. Never await inside this method.
+    /// </summary>
     private void CancelWorkItem(BackgroundTileCacheKey key, TileWorkItem item)
     {
         if (item.State is TileWorkItemState.Completed or TileWorkItemState.Failed or TileWorkItemState.Canceled)
             return;
 
-        var wasRunning = !item.SetRunning() && _activeCount > 0;
+        // ICW-330: query prior state with IsRunning(). Reusing the mutating
+        // SetRunning() transition purely to query state would flip a queued
+        // item's _running flag as a side effect of cancellation.
+        var wasRunning = item.IsRunning() && _activeCount > 0;
         item.State = TileWorkItemState.Canceled;
         Interlocked.Increment(ref _canceledCount);
 
@@ -793,16 +811,48 @@ public sealed class TileWorkCoordinator : IDisposable
         {
             lock (_claimantLock)
             {
-                // If already registered, just update callbacks.
+                // If already registered, refresh the registration and callbacks.
+                // A multi-frame generation re-claims the same key every frame
+                // with a fresh frame token (ICW-327). The old registration is
+                // bound to a token the host already canceled; a spent
+                // registration can never fire again, so without a refresh the
+                // claimant becomes permanently uncancellable.
                 var existing = _claimants.Find(c => c.Id.Equals(claimantId));
                 if (existing is not null)
                 {
-                    // Update callbacks for the existing claimant.
-                    _claimants[_claimants.IndexOf(existing)] = existing with
+                    existing.Registration?.Dispose();
+                    if (claimantToken.CanBeCanceled)
                     {
-                        OnCompleted = onCompleted,
-                        OnFailed = onFailed
-                    };
+                        var registration = claimantToken.Register(() => RemoveClaimant(claimantId));
+                        var index = _claimants.FindIndex(c => c.Id.Equals(claimantId));
+                        if (index >= 0)
+                        {
+                            _claimants[index] = _claimants[index] with
+                            {
+                                OnCompleted = onCompleted,
+                                OnFailed = onFailed,
+                                Registration = registration
+                            };
+                        }
+                        else
+                        {
+                            // The token was already canceled; the callback ran
+                            // synchronously (same-thread Lock reentrancy) and
+                            // removed the claimant. Nothing to keep tracking;
+                            // dispose the fired registration.
+                            registration.Dispose();
+                        }
+                    }
+                    else
+                    {
+                        _claimants[_claimants.IndexOf(existing)] = existing with
+                        {
+                            OnCompleted = onCompleted,
+                            OnFailed = onFailed,
+                            Registration = null
+                        };
+                    }
+
                     return;
                 }
 
@@ -868,6 +918,16 @@ public sealed class TileWorkCoordinator : IDisposable
         public bool SetRunning()
         {
             return Interlocked.Exchange(ref _running, 1) == 0;
+        }
+
+        /// <summary>
+        /// Non-mutating query: true when this item was already marked Running.
+        /// Use this for read-only state checks (ICW-330). SetRunning() is a
+        /// transition and must not be reused purely to query prior state.
+        /// </summary>
+        public bool IsRunning()
+        {
+            return Volatile.Read(ref _running) == 1;
         }
 
         /// <summary>

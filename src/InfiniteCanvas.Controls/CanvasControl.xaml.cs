@@ -128,6 +128,13 @@ public partial class CanvasControl : UserControl
     private bool _loadingVisible;
 
     /// <summary>
+    /// Highest frame revision displayed so far (ICW-328). Starts at the
+    /// minimum so a host's first frame, even with the default revision of
+    /// zero, is accepted.
+    /// </summary>
+    private int _lastPublishedRevision = int.MinValue;
+
+    /// <summary>
     /// Show or hide the raster Image element without rebuilding the shell.
     /// The host drives this from its layer-visibility settings.
     /// </summary>
@@ -159,6 +166,18 @@ public partial class CanvasControl : UserControl
     public void PublishFrame(CanvasFrame frame)
     {
         ArgumentNullException.ThrowIfNull(frame);
+
+        // Stale-frame guard (ICW-328): the host may race render requests and
+        // publish an out-of-order frame. Revision is the host render-request
+        // version; a frame older than the last one displayed is stale and must
+        // not overwrite newer frame state. Equal revisions are accepted as an
+        // idempotent republish of the same frame.
+        if (frame.Revision < _lastPublishedRevision)
+        {
+            return;
+        }
+
+        _lastPublishedRevision = frame.Revision;
         EnsureFrameShell();
         _frameShell!.Width = frame.Width;
         _frameShell.Height = frame.Height;
