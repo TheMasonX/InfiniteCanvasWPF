@@ -179,6 +179,7 @@
                             </Grid.ColumnDefinitions>
                             <Button Grid.Column="1" x:Name="RegenerateButton" Content="Regenerate" Height="30" Click="OnRegenerateClicked" />
                             <Button Grid.Column="3" x:Name="DebugDumpCacheButton" Content="Reset Cache" Height="30" Click="OnDebugDumpCacheClicked" />
+                            <Button Grid.Column="4" x:Name="ExportCacheDiagnosticsButton" Content="Export Diagnostics" Height="30" Click="OnExportCacheDiagnosticsClicked" />
                         </Grid>
                         <TextBlock x:Name="CacheStatusText" Margin="0,8,0,0" FontSize="11"
                                    Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" />

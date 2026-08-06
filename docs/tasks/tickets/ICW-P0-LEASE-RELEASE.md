@@ -3,7 +3,7 @@ id: ICW-P0-LEASE-RELEASE
 author: External Audit (Integration-1)
 key: ICW-P0-LEASE-RELEASE
 title: Replace ReleaseReservation counter with IDisposable lease pattern
-status: Proposed
+status: Done
 type: Bug
 priority: P0
 tags:
@@ -25,7 +25,7 @@ links:
   - docs/audits/infinitecanvaswpf-icw-implementation-audit-26-07-30-16-40-49.md
   - docs/audits/infinitecanvaswpf-icw-followup-audit-26-07-30-22-04-25.md
 created: 2026-07-30
-updated: 2026-07-30
+updated: 2026-08-06
 ---
 
 # ICW-P0-LEASE-RELEASE — Replace `ReleaseReservation` counter with `IDisposable` lease pattern

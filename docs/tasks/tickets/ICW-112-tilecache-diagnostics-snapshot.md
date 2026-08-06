@@ -2,7 +2,7 @@
 id: ICW-112
 key: ICW-112
 title: Expose structured TileCache diagnostics snapshot API
-status: To Do
+status: Done
 type: Task
 priority: P2
 tags:
@@ -13,7 +13,7 @@ dependsOn:
 related:
   - ICW-098
 created: 2026-07-26
-updated: 2026-07-26
+updated: 2026-08-06
 owner: unassigned
 ---
 
@@ -38,6 +38,10 @@ Current tile cache diagnostics are textual and insufficient for debugging varian
 ## Validation
 
 - Command: `dotnet test --filter TileCacheDiagnosticsSnapshotTests`
+
+## Completion Evidence
+
+`TileCacheDiagnosticsSnapshot` now captures the requested fields. `TileCacheDiagnosticsExporter` serializes the snapshot and writes JSON asynchronously. The debug panel exposes a save dialog and throttles export attempts to one per second. Focused exporter tests pass.
 
 ## Notes
 

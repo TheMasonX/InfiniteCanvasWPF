@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -61,6 +62,8 @@ public partial class MainWindow : Window, ICanvasSceneSource
     private long _lastFrameTicks;
     private long _totalFrameTicks;
     private int _frameCount;
+    private int _shutdownStarted;
+    private long _lastDiagnosticsExportTicks;
 
     public IReadOnlyList<FeatureDisplayItem> SelectedAnnotationFeatures => _selectedAnnotationFeatures;
 
@@ -208,7 +211,12 @@ public partial class MainWindow : Window, ICanvasSceneSource
         return true;
     }
 
-    private async void OnCanvasViewportChanged(object? sender, EventArgs e)
+    private void OnCanvasViewportChanged(object? sender, EventArgs e)
+    {
+        SafeAsyncEventHandler.Handle(OnCanvasViewportChangedAsync, ReportAsyncEventFailure, "viewport refresh");
+    }
+
+    private async Task OnCanvasViewportChangedAsync()
     {
         if (!IsLoaded || _lifetime.IsCancellationRequested)
         {
@@ -229,7 +237,12 @@ public partial class MainWindow : Window, ICanvasSceneSource
         new AboutDialog { Owner = this }.ShowDialog();
     }
 
-    private async void OnLoaded(object sender, RoutedEventArgs e)
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        SafeAsyncEventHandler.Handle(OnLoadedAsync, ReportAsyncEventFailure, "window initialization");
+    }
+
+    private async Task OnLoadedAsync()
     {
         Loaded -= OnLoaded;
         try
@@ -334,7 +347,6 @@ public partial class MainWindow : Window, ICanvasSceneSource
                 _tiles[i].Coordinator = _tileCoordinator;
                 _tiles[i].ClaimantIdProvider = null; // Use per-tile claimant identity
                 _tiles[i].ClaimantTokenProvider = () => _frameTileCts?.Token ?? CancellationToken.None;
-                _tiles[i].ReleaseReservedCacheEntry = _tileCacheBudget.Release;
             }
 
             // Cache tile bounds by id for center-distance scheduling (ICW-205).
@@ -893,7 +905,15 @@ public partial class MainWindow : Window, ICanvasSceneSource
         CanvasSurface.RefreshScrollbars();
     }
 
-    private async void OnAnnotationMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void OnAnnotationMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        SafeAsyncEventHandler.Handle(
+            () => OnAnnotationMouseLeftButtonDownAsync(sender, e),
+            ReportAsyncEventFailure,
+            "annotation selection");
+    }
+
+    private async Task OnAnnotationMouseLeftButtonDownAsync(object sender, MouseButtonEventArgs e)
     {
         if (sender is Border { Tag: SampleAnnotation annotation })
         {
@@ -904,7 +924,15 @@ public partial class MainWindow : Window, ICanvasSceneSource
         }
     }
 
-    private async void OnShowBackgroundImagesChanged(object sender, RoutedEventArgs e)
+    private void OnShowBackgroundImagesChanged(object sender, RoutedEventArgs e)
+    {
+        SafeAsyncEventHandler.Handle(
+            () => OnShowBackgroundImagesChangedAsync(sender, e),
+            ReportAsyncEventFailure,
+            "background visibility update");
+    }
+
+    private async Task OnShowBackgroundImagesChangedAsync(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded)
         {
@@ -916,7 +944,15 @@ public partial class MainWindow : Window, ICanvasSceneSource
         await RequestRenderAsync();
     }
 
-    private async void OnShowImageTilesChanged(object sender, RoutedEventArgs e)
+    private void OnShowImageTilesChanged(object sender, RoutedEventArgs e)
+    {
+        SafeAsyncEventHandler.Handle(
+            () => OnShowImageTilesChangedAsync(sender, e),
+            ReportAsyncEventFailure,
+            "image visibility update");
+    }
+
+    private async Task OnShowImageTilesChangedAsync(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded)
         {
@@ -948,7 +984,15 @@ public partial class MainWindow : Window, ICanvasSceneSource
         ZoomPresetComboBox.Text = $"{percent:F0}%";
     }
 
-    private async void OnZoomPresetSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void OnZoomPresetSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        SafeAsyncEventHandler.Handle(
+            () => OnZoomPresetSelectionChangedAsync(sender, e),
+            ReportAsyncEventFailure,
+            "zoom preset update");
+    }
+
+    private async Task OnZoomPresetSelectionChangedAsync(object sender, SelectionChangedEventArgs e)
     {
         if (!IsLoaded)
         {
@@ -974,12 +1018,20 @@ public partial class MainWindow : Window, ICanvasSceneSource
         await ApplyZoomPresetAsync(mode);
     }
 
-    private async void OnCustomZoomClicked(object sender, RoutedEventArgs e)
+    private void OnCustomZoomClicked(object sender, RoutedEventArgs e)
     {
-        await ApplyCustomZoomAsync();
+        SafeAsyncEventHandler.Handle(ApplyCustomZoomAsync, ReportAsyncEventFailure, "custom zoom update");
     }
 
-    private async void OnCustomZoomKeyDown(object sender, KeyEventArgs e)
+    private void OnCustomZoomKeyDown(object sender, KeyEventArgs e)
+    {
+        SafeAsyncEventHandler.Handle(
+            () => OnCustomZoomKeyDownAsync(sender, e),
+            ReportAsyncEventFailure,
+            "custom zoom input");
+    }
+
+    private async Task OnCustomZoomKeyDownAsync(object sender, KeyEventArgs e)
     {
         if (e.Key != Key.Enter)
         {
@@ -1106,7 +1158,12 @@ public partial class MainWindow : Window, ICanvasSceneSource
         _resizeTimer.Start();
     }
 
-    private async void OnResizeElapsed(object? sender, EventArgs e)
+    private void OnResizeElapsed(object? sender, EventArgs e)
+    {
+        SafeAsyncEventHandler.Handle(OnResizeElapsedAsync, ReportAsyncEventFailure, "resize refresh");
+    }
+
+    private async Task OnResizeElapsedAsync()
     {
         _resizeTimer.Stop();
         try
@@ -1119,7 +1176,15 @@ public partial class MainWindow : Window, ICanvasSceneSource
         }
     }
 
-    private async void OnDisplayModeSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void OnDisplayModeSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        SafeAsyncEventHandler.Handle(
+            () => OnDisplayModeSelectionChangedAsync(sender, e),
+            ReportAsyncEventFailure,
+            "display mode update");
+    }
+
+    private async Task OnDisplayModeSelectionChangedAsync(object sender, SelectionChangedEventArgs e)
     {
         if (!IsLoaded)
         {
@@ -1130,7 +1195,15 @@ public partial class MainWindow : Window, ICanvasSceneSource
         await RequestRenderAsync();
     }
 
-    private async void OnOutlineThicknessChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void OnOutlineThicknessChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        SafeAsyncEventHandler.Handle(
+            () => OnOutlineThicknessChangedAsync(sender, e),
+            ReportAsyncEventFailure,
+            "outline thickness update");
+    }
+
+    private async Task OnOutlineThicknessChangedAsync(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (!IsLoaded)
         {
@@ -1141,7 +1214,15 @@ public partial class MainWindow : Window, ICanvasSceneSource
         await RequestRenderAsync();
     }
 
-    private async void OnLabelSizeChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void OnLabelSizeChanged(object sender, RoutedEventArgs e)
+    {
+        SafeAsyncEventHandler.Handle(
+            () => OnLabelSizeChangedAsync(sender, e),
+            ReportAsyncEventFailure,
+            "label size update");
+    }
+
+    private async Task OnLabelSizeChangedAsync(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded)
         {
@@ -1152,7 +1233,15 @@ public partial class MainWindow : Window, ICanvasSceneSource
         await RequestRenderAsync();
     }
 
-    private async void OnLabelDisplaySelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void OnLabelDisplaySelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        SafeAsyncEventHandler.Handle(
+            () => OnLabelDisplaySelectionChangedAsync(sender, e),
+            ReportAsyncEventFailure,
+            "label display update");
+    }
+
+    private async Task OnLabelDisplaySelectionChangedAsync(object sender, SelectionChangedEventArgs e)
     {
         if (!IsLoaded)
         {
@@ -1163,7 +1252,15 @@ public partial class MainWindow : Window, ICanvasSceneSource
         await RequestRenderAsync();
     }
 
-    private async void OnShowLabelsChanged(object sender, RoutedEventArgs e)
+    private void OnShowLabelsChanged(object sender, RoutedEventArgs e)
+    {
+        SafeAsyncEventHandler.Handle(
+            () => OnShowLabelsChangedAsync(sender, e),
+            ReportAsyncEventFailure,
+            "label visibility update");
+    }
+
+    private async Task OnShowLabelsChangedAsync(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded)
         {
@@ -1191,7 +1288,12 @@ public partial class MainWindow : Window, ICanvasSceneSource
             ShowLabelsCheckBox.IsChecked ?? true);
     }
 
-    private async void OnRegenerateClicked(object sender, RoutedEventArgs e)
+    private void OnRegenerateClicked(object sender, RoutedEventArgs e)
+    {
+        SafeAsyncEventHandler.Handle(OnRegenerateClickedAsync, ReportAsyncEventFailure, "scene regeneration");
+    }
+
+    private async Task OnRegenerateClickedAsync()
     {
         if (!TryReadGenerationOptions(out var validationError))
         {
@@ -1204,7 +1306,12 @@ public partial class MainWindow : Window, ICanvasSceneSource
         await RegenerateSceneAsync(fitToWidth: true);
     }
 
-    private async void OnDebugDumpCacheClicked(object sender, RoutedEventArgs e)
+    private void OnDebugDumpCacheClicked(object sender, RoutedEventArgs e)
+    {
+        SafeAsyncEventHandler.Handle(OnDebugDumpCacheClickedAsync, ReportAsyncEventFailure, "cache reset");
+    }
+
+    private async Task OnDebugDumpCacheClickedAsync()
     {
         var fetchedTiles = _tiles.Where(tile => tile.IsBackgroundFetched).Select(tile => tile.Id).ToArray();
         var dump = $"Cache fetched {fetchedTiles.Length}/{_tiles.Count}: {string.Join(", ", fetchedTiles.Take(10))}{(fetchedTiles.Length > 10 ? "..." : string.Empty)}";
@@ -1219,6 +1326,54 @@ public partial class MainWindow : Window, ICanvasSceneSource
         UpdateCacheStatus();
         StatusText.Text = "Image cache reset. Tiles will regenerate lazily as they come into range.";
         await RequestRenderAsync();
+    }
+
+    private void OnExportCacheDiagnosticsClicked(object sender, RoutedEventArgs e)
+    {
+        SafeAsyncEventHandler.Handle(OnExportCacheDiagnosticsClickedAsync, ReportAsyncEventFailure, "cache diagnostics export");
+    }
+
+    private async Task OnExportCacheDiagnosticsClickedAsync()
+    {
+        var now = Stopwatch.GetTimestamp();
+        var last = Volatile.Read(ref _lastDiagnosticsExportTicks);
+        if (last != 0 && Stopwatch.GetElapsedTime(last, now) < TimeSpan.FromSeconds(1))
+        {
+            StatusText.Text = "Diagnostics export is throttled. Try again shortly.";
+            return;
+        }
+
+        if (Interlocked.CompareExchange(ref _lastDiagnosticsExportTicks, now, last) != last)
+        {
+            StatusText.Text = "Diagnostics export is throttled. Try again shortly.";
+            return;
+        }
+
+        var dialog = new SaveFileDialog
+        {
+            AddExtension = true,
+            DefaultExt = ".json",
+            FileName = "tile-cache-diagnostics.json",
+            Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*"
+        };
+        if (dialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        var snapshot = _tileCacheBudget.GetDiagnosticsSnapshot(_tileCoordinator.GetCounters().PendingCount);
+        await TileCacheDiagnosticsExporter.WriteAsync(dialog.FileName, snapshot, _lifetime.Token);
+        StatusText.Text = $"Cache diagnostics exported to {System.IO.Path.GetFileName(dialog.FileName)}";
+    }
+
+    private void ReportAsyncEventFailure(Exception exception)
+    {
+        StatusText.Text = $"Operation failed: {exception.Message}";
+    }
+
+    internal void ReportUnhandledException(Exception exception)
+    {
+        ReportAsyncEventFailure(exception);
     }
 
     private void UpdateCacheStatus(int? visibleBackgroundTileCount = null)
@@ -1273,8 +1428,21 @@ public partial class MainWindow : Window, ICanvasSceneSource
         return true;
     }
 
-    private async void OnClosed(object? sender, EventArgs e)
+    private void OnClosed(object? sender, EventArgs e)
     {
+        SafeAsyncEventHandler.Handle(
+            OnClosedAsync,
+            exception => StatusText.Text = $"Shutdown failed: {exception.Message}",
+            "window shutdown");
+    }
+
+    private async Task OnClosedAsync()
+    {
+        if (Interlocked.Exchange(ref _shutdownStarted, 1) != 0)
+        {
+            return;
+        }
+
         SaveSettings();
         _resizeTimer.Stop();
         UnsubscribeTileGenerationEvents(_tiles);

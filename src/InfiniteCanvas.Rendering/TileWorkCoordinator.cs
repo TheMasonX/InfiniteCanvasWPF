@@ -24,8 +24,7 @@ public readonly record struct TileWorkCoordinatorCounters(
     int CoalescedCount,
     int CompletedCount,
     int CanceledCount,
-    int FailedCount,
-    int ReservationReleases)
+    int FailedCount)
 {
     public int TotalCount => AdmittedCount + CoalescedCount;
 
@@ -34,8 +33,7 @@ public readonly record struct TileWorkCoordinatorCounters(
     public override string ToString() =>
         $"Active {ActiveCount}  Queued {QueuedCount}  |  " +
         $"Admitted {AdmittedCount}  Coalesced {CoalescedCount}  |  " +
-        $"Completed {CompletedCount}  Canceled {CanceledCount}  Failed {FailedCount}  |  " +
-        $"ResReleases {ReservationReleases}";
+        $"Completed {CompletedCount}  Canceled {CanceledCount}  Failed {FailedCount}";
 }
 
 /// <summary>
@@ -126,7 +124,6 @@ public sealed class TileWorkCoordinator : IDisposable
     private int _completedCount;
     private int _canceledCount;
     private int _failedCount;
-    private int _reservationReleases;
 
     private bool _disposed;
 
@@ -412,8 +409,7 @@ public sealed class TileWorkCoordinator : IDisposable
                 CoalescedCount: Volatile.Read(ref _coalescedCount),
                 CompletedCount: Volatile.Read(ref _completedCount),
                 CanceledCount: Volatile.Read(ref _canceledCount),
-                FailedCount: Volatile.Read(ref _failedCount),
-                ReservationReleases: Volatile.Read(ref _reservationReleases));
+                FailedCount: Volatile.Read(ref _failedCount));
         }
     }
 
@@ -547,7 +543,6 @@ public sealed class TileWorkCoordinator : IDisposable
                 _items.Remove(item.CacheKey);
             }
 
-            ReleaseReservation(item.CacheKey);
             item.DisposeReservation();
         }
     }
@@ -596,7 +591,6 @@ public sealed class TileWorkCoordinator : IDisposable
             // Queued work never reaches HandleWorkStopped, so it owns removal
             // and reservation cleanup on this path.
             _items.Remove(key);
-            ReleaseReservation(key);
             item.DisposeReservation();
         }
 
@@ -728,11 +722,6 @@ public sealed class TileWorkCoordinator : IDisposable
                 StartWorkItem(item);
             }
         }
-    }
-
-    private void ReleaseReservation(BackgroundTileCacheKey key)
-    {
-        Interlocked.Increment(ref _reservationReleases);
     }
 
     /// <summary>

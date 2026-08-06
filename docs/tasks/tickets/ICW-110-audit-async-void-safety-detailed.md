@@ -3,7 +3,7 @@ id: ICW-110-detailed
 author: External Audit (Integration-1)
 key: ICW-110
 title: Audit and convert async void handlers to safe wrappers (detailed implementation plan)
-status: To Do
+status: Done
 type: Bug
 priority: P1
 tags:
@@ -21,7 +21,7 @@ links:
   - src/InfiniteCanvas.App/App.xaml.cs
   - docs/audits/infinitecanvaswpf-icw-implementation-audit-26-07-30-16-40-49.md
 created: 2026-07-30
-updated: 2026-07-30
+updated: 2026-08-06
 ---
 
 # ICW-110 — Audit and convert `async void` handlers to safe wrappers (detailed plan)
@@ -101,6 +101,10 @@ WPF event handlers must return `void` (not `Task`). When marked `async`, any unh
 ```
 dotnet test tests/InfiniteCanvas.Tests --configuration Release --filter "SafeAsyncHandler|AsyncVoid"
 ```
+
+## Completion Evidence
+
+All MainWindow async event entry points now call `SafeAsyncEventHandler.Handle`. The task bodies use `Task` methods. The wrapper logs cancellation and failures and reports failure text in the status bar. The dispatcher handler reports unhandled UI exceptions through the same status surface. App Release build passes.
 
 ## Notes
 

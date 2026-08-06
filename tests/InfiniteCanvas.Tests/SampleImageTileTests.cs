@@ -67,6 +67,90 @@ public class SampleImageTileTests
     }
 
     [Test]
+    public void TileCacheBudget_AccountsForAllResidentMipPayloads()
+    {
+        var tile = new SampleImageTile(
+            "tile-budget-mips",
+            new SpatialBounds(0, 0, 8, 8),
+            8,
+            8,
+            () => Enumerable.Repeat((byte)1, 64).ToArray(),
+            [],
+            mipPixelFactory: mipLevel =>
+            {
+                var dimensions = BackgroundTileMipPolicy.GetDimensions(8, 8, mipLevel);
+                return Enumerable.Repeat((byte)mipLevel, dimensions.Width * dimensions.Height).ToArray();
+            });
+        _ = tile.Pixels;
+        _ = tile.TryGetPixelsNonBlocking(1, out _, out _);
+        _ = tile.TryGetPixelsNonBlocking(2, out _, out _);
+        SpinWait.SpinUntil(() => tile.IsMipGenerated(1) && tile.IsMipGenerated(2), TimeSpan.FromSeconds(2));
+
+        var budget = new TileCacheBudget(tile.ResidentByteCount);
+        var key = new BackgroundTileCacheKey("synthetic", tile.Id, 0, 2);
+        using var reservation = budget.TryReserve(tile, key, tile.ResidentByteCount);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(reservation, Is.Not.Null);
+            Assert.That(budget.UsedBytes, Is.EqualTo(tile.ResidentByteCount));
+        }
+    }
+
+    [Test]
+    public void TileCacheBudget_DoubleDisposeDoesNotReleaseTwice()
+    {
+        var tile = new SampleImageTile(
+            "tile-budget-lease",
+            new SpatialBounds(0, 0, 2, 2),
+            2,
+            2,
+            () => [1, 2, 3, 4],
+            []);
+        _ = tile.Pixels;
+        var budget = new TileCacheBudget(4);
+        var key = new BackgroundTileCacheKey("synthetic", tile.Id, 0, 0);
+        var reservation = budget.TryReserve(tile, key, tile.ResidentByteCount);
+
+        Assert.That(reservation, Is.Not.Null);
+        reservation!.Dispose();
+        reservation.Dispose();
+
+        Assert.That(budget.UsedBytes, Is.Zero);
+    }
+
+    [Test]
+    public void TileCacheBudget_DiagnosticsSnapshotReportsVariantIdentityAndReset()
+    {
+        var tile = new SampleImageTile(
+            "tile-diagnostics",
+            new SpatialBounds(0, 0, 2, 2),
+            2,
+            2,
+            () => [1, 2, 3, 4],
+            []);
+        _ = tile.Pixels;
+        var budget = new TileCacheBudget(4);
+        var key = new BackgroundTileCacheKey("source", tile.Id, 7, 0);
+        using var reservation = budget.TryReserve(tile, key, tile.ResidentByteCount);
+
+        var snapshot = budget.GetDiagnosticsSnapshot(queuedWorkCount: 3);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(snapshot.ActiveCacheId, Is.Not.EqualTo(Guid.Empty));
+            Assert.That(snapshot.ResidentCount, Is.EqualTo(1));
+            Assert.That(snapshot.ResidentVariants, Has.One.Items);
+            Assert.That(snapshot.ResidentVariants[0].Key, Is.EqualTo(key));
+            Assert.That(snapshot.ResidentVariants[0].ByteCost, Is.EqualTo(4));
+            Assert.That(snapshot.ResidentVariants[0].IsGenerated, Is.True);
+            Assert.That(snapshot.QueuedWorkCount, Is.EqualTo(3));
+            Assert.That(snapshot.ReservationCount, Is.EqualTo(1));
+            Assert.That(snapshot.LastResetAtUtc, Is.Not.EqualTo(default(DateTimeOffset)));
+        }
+    }
+
+    [Test]
     public void ResidentMipFallback_PrefersClosestResidentMipOverNativeLevelZero()
     {
         var mipThreeGenerationStarted = new ManualResetEventSlim(false);

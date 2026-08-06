@@ -30,6 +30,11 @@ public partial class App : Application
     private static void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         Log.Error(e.Exception, "Unhandled exception on the WPF dispatcher");
+        if (Current?.MainWindow is MainWindow mainWindow)
+        {
+            mainWindow.ReportUnhandledException(e.Exception);
+        }
+
         e.Handled = true;
     }
 

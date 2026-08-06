@@ -3,7 +3,7 @@ id: ICW-P1-PIXELCOST-MIPS
 author: External Audit (Integration-1)
 key: ICW-P1-PIXELCOST-MIPS
 title: Replace _pixelCost with sum of all resident mip payload bytes
-status: Proposed
+status: Done
 type: Bug
 priority: P1
 tags:
@@ -20,7 +20,7 @@ links:
   - src/InfiniteCanvas.Rendering/SampleImageTile.cs
   - docs/audits/infinitecanvaswpf-icw-implementation-audit-26-07-30-16-40-49.md
 created: 2026-07-30
-updated: 2026-07-30
+updated: 2026-08-06
 ---
 
 # ICW-P1-PIXELCOST-MIPS — Replace `_pixelCost` with sum of all resident mip payload bytes

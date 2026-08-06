@@ -3,7 +3,7 @@ id: ICW-134
 author: Copilot
 key: ICW-134
 title: Add variant-aware background cache accounting and reuse
-status: To Do
+status: Done
 type: Improvement
 priority: P1
 tags:
@@ -23,7 +23,7 @@ links:
   - src/InfiniteCanvas.Rendering/ZeroCopyBitmapFactory.Windows.cs
   - docs/ADR/0005-source-agnostic-background-tile-mips.md
 created: 2026-07-26
-updated: 2026-07-26
+updated: 2026-08-06
 ---
 
 ## Summary
@@ -49,6 +49,10 @@ Prevent avoidable native noise regeneration across mip transitions and make cach
 - `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release`
 - `dotnet test tests/InfiniteCanvas.Windows.Tests/InfiniteCanvas.Windows.Tests.csproj --configuration Release`
 - Run the mip-transition and cache benchmark matrix from ICW-133.
+
+## Completion Evidence
+
+Reservations use complete `BackgroundTileCacheKey` identity and dispose through `ICacheReservation`. Resident byte accounting covers native and mip payloads. Tile and complete-key pinning coexist. Regression tests cover multi-mip accounting, duplicate disposal, and diagnostics snapshots.
 
 ## Notes
 

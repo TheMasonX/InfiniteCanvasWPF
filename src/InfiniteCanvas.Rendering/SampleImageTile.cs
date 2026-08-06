@@ -49,7 +49,6 @@ public sealed class SampleImageTile
     /// If null, CancellationToken.None is used (no auto-removal).
     /// </summary>
     public Func<CancellationToken>? ClaimantTokenProvider { get; set; }
-    public Action<BackgroundTileCacheKey>? ReleaseReservedCacheEntry { get; set; }
     public event EventHandler? PixelsGenerated;
     public event EventHandler? PixelsGenerationFailed;
 
@@ -383,7 +382,6 @@ public sealed class SampleImageTile
         {
             var oldKey = new BackgroundTileCacheKey("synthetic", Id, oldRevision, mip);
             _coordinator?.RemoveClaimant(oldKey, claimant);
-            ReleaseReservedCacheEntry?.Invoke(oldKey);
         }
 
         lock (_cacheGate)
@@ -665,7 +663,6 @@ public sealed class SampleImageTile
 
         if (!published)
         {
-            ReleaseReservedCacheEntry?.Invoke(key);
             Log.Debug("TileGen DISCARD {TileId} mip{MipLevel} expectedEpoch={ExpectedEpoch} currentEpoch={CurrentEpoch} pixelsAlreadySet={PixelsSet}",
                 Id, key.MipLevel, expectedEpoch, currentEpoch, _pixels is not null);
         }
@@ -855,7 +852,6 @@ public sealed class SampleImageTile
 
         if (!published)
         {
-            ReleaseReservedCacheEntry?.Invoke(key);
             Log.Debug("TileGen DISCARD mip {TileId} mip{MipLevel} expectedEpoch={ExpectedEpoch} currentEpoch={CurrentEpoch}",
                 Id, mipLevel, expectedEpoch, currentEpoch);
         }
@@ -963,10 +959,13 @@ public sealed class TileCacheBudget
     public const long DefaultMaxBytes = 4L * 1024 * 1024 * 1024;
 
     private readonly long _maxBytes;
+    private readonly Guid _activeCacheId = Guid.NewGuid();
     private readonly Dictionary<BackgroundTileCacheKey, CacheEntry> _trackedEntries = new();
     private readonly HashSet<string> _pinnedTileIds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<BackgroundTileCacheKey> _pinnedKeys = new();
     private long _usedBytes;
     private int _evictionCount;
+    private DateTimeOffset _lastResetAtUtc = DateTimeOffset.UtcNow;
 
     public TileCacheBudget(long maxBytes)
     {
@@ -1016,10 +1015,48 @@ public sealed class TileCacheBudget
         lock (_trackedEntries)
         {
             _pinnedTileIds.Clear();
+            _pinnedKeys.Clear();
             foreach (var tile in tiles)
             {
                 _pinnedTileIds.Add(tile.Id);
             }
+        }
+    }
+
+    public void SetPinnedKeys(IEnumerable<BackgroundTileCacheKey> keys)
+    {
+        ArgumentNullException.ThrowIfNull(keys);
+
+        lock (_trackedEntries)
+        {
+            _pinnedTileIds.Clear();
+            _pinnedKeys.Clear();
+            foreach (var key in keys)
+            {
+                _pinnedKeys.Add(key);
+            }
+        }
+    }
+
+    public TileCacheDiagnosticsSnapshot GetDiagnosticsSnapshot(int queuedWorkCount = 0)
+    {
+        lock (_trackedEntries)
+        {
+            var variants = _trackedEntries.Values
+                .Select(entry => new TileCacheVariantDiagnostics(
+                    entry.Key,
+                    entry.ByteCost,
+                    entry.Tile.IsCacheEntryGenerated(entry.Key)))
+                .ToArray();
+
+            return new TileCacheDiagnosticsSnapshot(
+                _activeCacheId,
+                variants.Select(variant => variant.Key.TileId).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+                variants,
+                queuedWorkCount,
+                _trackedEntries.Count,
+                _evictionCount,
+                _lastResetAtUtc);
         }
     }
 
@@ -1053,17 +1090,19 @@ public sealed class TileCacheBudget
                 var evictedEntry = _trackedEntries.Values.FirstOrDefault(candidate =>
                     !candidate.Key.Equals(key)
                     && !_pinnedTileIds.Contains(candidate.Tile.Id)
+                    && !_pinnedKeys.Contains(candidate.Key)
                     && candidate.Tile.IsCacheEntryGenerated(candidate.Key))
                     ?? _trackedEntries.Values.FirstOrDefault(candidate =>
                         !candidate.Key.Equals(key)
-                        && !_pinnedTileIds.Contains(candidate.Tile.Id));
+                        && !_pinnedTileIds.Contains(candidate.Tile.Id)
+                        && !_pinnedKeys.Contains(candidate.Key));
 
                 if (evictedEntry is null)
                 {
                     _trackedEntries.Remove(key);
                     Interlocked.Add(ref _usedBytes, -byteCost);
                     Log.Warning("Cache EVICT REJECTED: no evictable entries. Tile={TileId} keyMip={MipLevel} cost={Cost} used={UsedBytes} max={MaxBytes} pinned={PinnedCount} tracked={TrackedCount}",
-                        tile.Id, key.MipLevel, byteCost, UsedBytes, _maxBytes, _pinnedTileIds.Count, _trackedEntries.Count);
+                        tile.Id, key.MipLevel, byteCost, UsedBytes, _maxBytes, _pinnedTileIds.Count + _pinnedKeys.Count, _trackedEntries.Count);
                     return null;
                 }
 
@@ -1117,8 +1156,10 @@ public sealed class TileCacheBudget
         {
             _trackedEntries.Clear();
             _pinnedTileIds.Clear();
+            _pinnedKeys.Clear();
             Interlocked.Exchange(ref _usedBytes, 0);
             Interlocked.Exchange(ref _evictionCount, 0);
+            _lastResetAtUtc = DateTimeOffset.UtcNow;
         }
     }
 
