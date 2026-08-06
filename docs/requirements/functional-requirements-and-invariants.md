@@ -114,3 +114,4 @@ When a change touches any of the behaviors above, confirm all of the following:
 | Area | Requirement | Related work | Notes |
 | --- | --- | --- | --- |
 | Audit corpus safety | Reusable repository documentation must use neutral viewport, source, layer, and host terminology. It must not contain product names, private authorship, private source locations, internal service names, or proprietary integration details. | ICW-331, ICW-147 | Preserve general engineering findings, use cases, requirements, and validation needs. Keep product-specific adapter mappings outside reusable contracts and public planning records. |
+| Artifact naming | Internal repository artifacts must use neutral names. They must not use third-party product or brand names such as JIRA. | ICW-331 | Renamed `docs/tasks/JIRA.md` to `docs/tasks/task-tracker.md` (commit 11095d2). Update all references when renaming an artifact. |
