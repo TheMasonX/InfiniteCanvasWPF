@@ -2,7 +2,7 @@
 
 **Repo:** `TheMasonX/InfiniteCanvasWPF` · **Commit audited:** `84ddba2320296d0bbbe31171bf5b9d91bf8010a8` (branch `main`)
 **Scope:** Every file in the tree — `src/`, `tests/`, `benchmarks/`, `docs/`, project/solution files, README, DesignDoc. 4,786 LOC across .cs/.xaml/.md.
-**Method:** Full-text retrieval via `codeload.github.com` tarball (bypasses GitHub/`web_fetch` truncation), line-by-line manual review, cross-checked against `docs/tasks/JIRA.md`, `docs/tasks/active-tasks.md`, tickets, ADRs, and handoffs to avoid duplicating already-tracked work.
+**Method:** Full-text retrieval via the public repository archive tarball (bypasses web UI/`web_fetch` truncation), line-by-line manual review, cross-checked against `docs/tasks/JIRA.md`, `docs/tasks/active-tasks.md`, tickets, ADRs, and handoffs to avoid duplicating already-tracked work.
 
 ---
 
@@ -400,7 +400,7 @@ Two magic strings (`"Confidence"`, `"Severity"`) connect the producer and consum
 ## 5. Assumptions & Open Questions
 
 **Assumptions made during this audit:**
-1. The `main` branch tarball fetched via `codeload.github.com` at the given SHA is authoritative and matches what `git show <sha>` would return (GitHub's REST API was rate-limited during this session, so commit metadata itself — author/date/message — was not independently re-verified; only the tree contents were, via the tarball).
+1. The `main` branch tarball fetched via the public repository archive at the given SHA is authoritative and matches what `git show <sha>` would return (the repository host REST API was rate-limited during this session, so commit metadata itself — author/date/message — was not independently re-verified; only the tree contents were, via the tarball).
 2. "Production" means the `InfiniteCanvas.App` WPF executable specifically; findings about dead code (F-10, F-11, F-12) are scoped to that binary, not to the solution as a whole — those types remain reachable and tested elsewhere.
 3. `DesignDoc.md`'s code samples (namespace `SpatialViz.*`, type `GeoPoint`) are explicitly aspirational/illustrative and were not compared line-for-line against the real `InfiniteCanvas.*` implementation — only its stated architectural principles (zero-copy, immutable STR-tree, MVVM, matrix clamping) were used as a conformance baseline, since the actual namespaces/types differ intentionally.
 4. No `dotnet build`/`dotnet test` was executed in this sandbox (no .NET 10 SDK / Windows target available here); all findings are static-analysis-based. The repo's own handoff docs report a clean, passing build/test state as of the audited commit, which is taken at face value.

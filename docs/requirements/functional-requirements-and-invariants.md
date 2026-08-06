@@ -108,3 +108,9 @@ When a change touches any of the behaviors above, confirm all of the following:
 2. The relevant task ticket and any impacted ADR remain aligned.
 3. Regression coverage or validation evidence exists for the affected behavior.
 4. The UX remains consistent with the documented invariant, even if the implementation approach changes.
+
+## Documentation safety requirements
+
+| Area | Requirement | Related work | Notes |
+| --- | --- | --- | --- |
+| Audit corpus safety | Reusable repository documentation must use neutral viewport, source, layer, and host terminology. It must not contain product names, private authorship, private source locations, internal service names, or proprietary integration details. | ICW-331, ICW-147 | Preserve general engineering findings, use cases, requirements, and validation needs. Keep product-specific adapter mappings outside reusable contracts and public planning records. |

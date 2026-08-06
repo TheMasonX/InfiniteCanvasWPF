@@ -1,7 +1,7 @@
 # InfiniteCanvasWPF — Deep-Dive Code Audit
 
 **Repo**: TheMasonX/InfiniteCanvasWPF · **Ref audited**: `main`@`52a3442` (2026-07-25 08:01 UTC), cross-checked against `main`@`43bfd55` (prior HEAD) to isolate deltas.
-**Method**: Full-repository fetch via `codeload.github.com` tarball (not GitHub UI/`web_fetch`, which truncate). Every `.cs` file under `src/`, `tests/`, `benchmarks/` read in full; all XAML read in full; all of `docs/` (ADRs, handoffs, requirements, 7 prior audit artifacts, ~130 ticket files) read or sampled for status. No files were skipped.
+**Method**: Full-repository fetch via the public repository archive tarball (not the repository web UI/`web_fetch`, which truncate). Every `.cs` file under `src/`, `tests/`, `benchmarks/` read in full; all XAML read in full; all of `docs/` (ADRs, handoffs, requirements, 7 prior audit artifacts, ~130 ticket files) read or sampled for status. No files were skipped.
 **Confidence values** below are this auditor's subjective calibration, not a formal statistical measure — treat as "how likely is this finding correct and reproducible from the cited code," not "probability of user-facing impact."
 
 ---

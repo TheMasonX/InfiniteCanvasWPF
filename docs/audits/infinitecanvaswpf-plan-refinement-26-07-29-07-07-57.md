@@ -1,6 +1,6 @@
 # ICW Compatibility Plan — Refinement Pass
 
-**Subject document:** `Comprehensive ICW Bug Audit Request 1.docx` ("Changes Needed to Make ICW Suitable as a Reusable Production Viewport Engine") — read in full this pass (all 1922 lines/22 sections), cross-checked against current HEAD (`139a8b6`) and against the other three uploaded documents.
+**Subject document:** the compatibility architecture plan document ("Changes Needed to Make ICW Suitable as a Reusable Production Viewport Engine") — read in full this pass (all 1922 lines/22 sections), cross-checked against current HEAD (`139a8b6`) and against the other three uploaded documents.
 **Prior output:** `infinitecanvaswpf-external-audit-validation-26-07-29-06-45-13.md` (claim-by-claim validation). This report is additive — concrete, section-numbered edits to the plan itself, not a restatement of that validation.
 
 **Overall assessment first, since it changes the shape of useful feedback:** the plan is genuinely comprehensive at the specification level. Nearly every gap this audit series independently found already has a corresponding section, contract, or acceptance criterion somewhere in the plan's 22 sections (readback determinism, surface leases, physical-concurrency correctness, versioned spatial entities, overlay batching are all already specified correctly). The refinements below are not "the plan is missing X" so much as three narrower things: (a) one place where a *different* uploaded document already contains a better answer than this plan does, and the two should be reconciled; (b) two specific, still-open code-level facts this audit series has now confirmed that the plan's existing acceptance criteria should name explicitly rather than leave implicit; (c) one gap the plan genuinely doesn't cover anywhere.
@@ -13,7 +13,7 @@
 
 The plan's own sequencing puts "Package and Boundary Cleanup" in Phase 1 and defers "Cancellation and Scheduler Hardening" — the claimant-token, active-count-timing, and queued-work-stranding fixes — to Phase 6, after Phases 2–5 have already built `SceneSnapshot`, `RenderFrameSnapshot`, source adapters, the layer graph, and the lease-based resource model on top of the coordinator as it exists today.
 
-`ICW Bug Audit Report Integration 1.docx` — one of the three other documents in this same upload — already proposes the better order, and it isn't reflected here:
+The independent bug audit report document — one of the three other documents in this same upload — already proposes the better order, and it isn't reflected here:
 > **Phase 0 — Safety Harness Before Refactor:** render publication stale-generation rejection; physical concurrency cap under cancellation; queued work draining after running cancellation; pixelometer does not initiate tile acquisition; old scene survives failed regeneration; old published surfaces do not mutate after new publication; live spatial index replacement/move/delete semantics; memory lease exactly-once release accounting.
 > **Phase 1 — Fix P0/P1 Correctness Before UI Scalability:** enable frame/viewport claimant IDs instead of `DefaultCoordinatorClaimant`; change active count to represent physically executing factories only; make native tile generation cooperatively cancellable; add stale-frame rejection; make regeneration transactional; convert readout to published-frame readout.
 

@@ -3,12 +3,12 @@
 **HEAD:** 139a8b62fa2d6363615eb6a819d07a76aa8c55c2
 **Date:** 2026-07-30
 **Source documents:**
-- `Comprehensive ICW Bug Audit Request.docx` (original bug audit, IDs ICW-P0/P1/P2-###)
-- `Comprehensive ICW Bug Audit Request 1.docx` (compatibility/architecture plan, "Changes Needed to Make ICW Suitable as a Reusable Production Viewport Engine")
-- `ICW Bug Audit Report Integration 1.docx` (independent second bug audit, IDs ICW-BUG-###, Phase 0/1 sequencing, R-004/R-007)
-- `ICW Bug Audit and Improvements.docx` (synthesis of both audits)
+- The external bug audit request document (original bug audit, IDs ICW-P0/P1/P2-###)
+- The compatibility architecture plan document ("Changes Needed to Make ICW Suitable as a Reusable Production Viewport Engine")
+- The independent bug audit report document (independent second bug audit, IDs ICW-BUG-###, Phase 0/1 sequencing, R-004/R-007)
+- The audit synthesis document (synthesis of both audits)
 
-**Audit verification files (containing verbatim extracts from the four .docx documents):**
+**Audit verification files (containing verbatim extracts from the four source documents):**
 - `docs/audits/infinitecanvaswpf-external-audit-validation-26-07-29-06-45-13.md`
 - `docs/audits/infinitecanvaswpf-plan-refinement-26-07-29-07-07-57.md`
 

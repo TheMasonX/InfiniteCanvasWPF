@@ -2,7 +2,7 @@
 
 **Commit audited:** `43bfd55bbae7e14a590784f7831e5261eecfd69b` (main, 2026-07-24, "feat: add zoom presets, cache debug controls, and class-colored defects")
 **Scope:** Every file in `src/`, `tests/`, `benchmarks/`, plus all docs (`DesignDoc.md`, ADRs, handoffs, JIRA/tickets) — 70 files, ~3,770 lines of C#/XAML reviewed line-by-line.
-**Method:** Full source pulled via `codeload.github.com` tarball at the exact commit (not GitHub UI/web_fetch, to avoid truncation). Cross-checked every finding against `docs/tasks/JIRA.md`, `docs/tasks/active-tasks.md`, `docs/tasks/tickets/*.md`, and both ADRs before writing it up, to avoid re-reporting already-tracked work.
+**Method:** Full source pulled via the public repository archive tarball at the exact commit (not the repository web UI/web_fetch, to avoid truncation). Cross-checked every finding against `docs/tasks/JIRA.md`, `docs/tasks/active-tasks.md`, `docs/tasks/tickets/*.md`, and both ADRs before writing it up, to avoid re-reporting already-tracked work.
 **Confidence values** reflect how certain I am the finding is a real, reproducible issue given only static reading (no compiler/runtime in this environment) — not how severe it is.
 
 ---

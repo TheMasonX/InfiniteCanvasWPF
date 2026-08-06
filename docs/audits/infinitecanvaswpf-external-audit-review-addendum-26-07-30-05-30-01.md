@@ -1,6 +1,6 @@
 # InfiniteCanvasWPF — External Audit Review, Addendum
 
-**Scope:** Finished reviewing the two original source reports (`Comprehensive ICW Bug Audit Request.docx` and `ICW Bug Audit Report Integration 1.docx`) that fed into the M365 Copilot synthesis reviewed previously. This addendum covers only what's genuinely new since that report: two confidence corrections backed by evidence the external auditors didn't have access to, and a cross-validation note.
+**Scope:** Finished reviewing the two original source reports (the external bug audit request document and the independent bug audit report document) that fed into an AI assistant synthesis reviewed previously. This addendum covers only what's genuinely new since that report: two confidence corrections backed by evidence the external auditors didn't have access to, and a cross-validation note.
 
 ---
 
@@ -47,7 +47,7 @@ This is a literal, confirmed inconsistency, not an inference — `Intersects` sa
 
 Both original source reports (not just the synthesis) independently rediscovered the two `DefectBitmap`-related issues I found in an earlier session:
 
-- **`ICW-BUG-009`** (in `ICW Bug Audit Report Integration 1.docx`): `DrawDefectPatch` locks a `Bitmap`, reads a value from it, and never uses that value — matches my own finding exactly, including having identified the same discarded local.
+- **`ICW-BUG-009`** (in the independent bug audit report document): `DrawDefectPatch` locks a `Bitmap`, reads a value from it, and never uses that value — matches my own finding exactly, including having identified the same discarded local.
 - **`ICW-BUG-010`**: old defect-template bitmaps can be disposed while old render work may still be executing, since `RegenerateSceneAsync` cancels tile work and disposes the template pool without waiting for in-flight work to actually stop — matches the dispose-vs-render race I found independently in an earlier session, down to the same two method calls (`CancelAll()` immediately followed by `DisposeDefectTemplatePools`).
 
 Three independent audit efforts (two external, one mine, using different methods — mine via live commit-history archaeology, theirs via static source review) converged on the same two findings without any of us referencing each other's work beforehand. That level of independent convergence is itself useful signal: this cluster (dead GDI+ sampling path + the disposal race it enables) is a safe bet for high real-world priority regardless of any single report's stated confidence number, and is a good candidate for a "fix once, closes three tickets across three reports" task if/when the backlog gets reconciled.
