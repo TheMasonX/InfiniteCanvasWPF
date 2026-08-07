@@ -32,4 +32,36 @@ public class SampleImageGeneratorConcurrencyTests
 
         await Task.WhenAll(jobs);
     }
+
+    [Test]
+    public async Task ConcurrentGdiPlusGeneration_CancellationStormStopsQueuedAndRunningWork()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var jobs = Enumerable.Range(0, 32)
+            .Select(worker => Task.Run(async () =>
+            {
+                try
+                {
+                    var pixels = await Task.Run(() => SampleImageGenerator.GenerateMonochromeMipPixels(
+                        512,
+                        256,
+                        targetValue: 128,
+                        noise: 0,
+                        mipLevel: 0,
+                        seed: worker,
+                        circleCount: 8,
+                        tileLabel: $"TILE-{worker:D2}"), cancellation.Token);
+
+                    Assert.That(pixels, Has.Length.EqualTo(512 * 256));
+                }
+                catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+                {
+                }
+            }))
+            .ToArray();
+
+        await Task.Delay(1);
+        cancellation.Cancel();
+        await Task.WhenAll(jobs);
+    }
 }

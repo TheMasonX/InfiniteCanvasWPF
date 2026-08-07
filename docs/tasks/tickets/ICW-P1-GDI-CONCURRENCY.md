@@ -3,7 +3,7 @@ id: ICW-P1-GDI-CONCURRENCY
 author: External Audit (Integration-1)
 key: ICW-P1-GDI-CONCURRENCY
 title: Add explicit GDI+ concurrency management for tile generation factories
-status: In Review
+status: Done
 type: Bug
 priority: P1
 tags:
@@ -115,7 +115,18 @@ dotnet test tests/InfiniteCanvas.Windows.Tests --configuration Release --filter 
 
 ## Review Status
 
-The implementation serializes the complete GDI+ bitmap and pixel-readback section with a private `SemaphoreSlim`. The wait observes cancellation before native work starts. The task remains In Review because the stress test did not reproduce a native failure and does not yet combine long-running native work with cancellation storms.
+The implementation serializes the complete GDI+ bitmap and pixel-readback section with a private `SemaphoreSlim`. The wait observes cancellation before native work starts. Wave M adds a 32-worker cancellation-storm test. The test passes without native or unexpected exceptions. Review confirmed that transparent bitmap initialization remains present.
+
+## Final Validation
+
+- Focused Windows GDI+ tests pass 2/2.
+- The 1,000-generation stress case passes.
+- The 32-worker cancellation storm passes.
+- The existing core, Windows, and App Release validation commands remain the required full gates.
+
+## Final Status
+
+Done. The serialization policy is accepted for the current renderer. Rerun the Windows stress tests on target hardware when native runtime evidence is available.
 
 ## Related Tasks
 
