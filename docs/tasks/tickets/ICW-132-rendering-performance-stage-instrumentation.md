@@ -3,7 +3,7 @@ id: ICW-132
 author: Copilot
 key: ICW-132
 title: Add stage-level rendering performance instrumentation
-status: To Do
+status: Done
 type: Improvement
 priority: P1
 tags:
@@ -23,7 +23,7 @@ links:
   - src/InfiniteCanvas.Rendering/ZeroCopyBitmapFactory.Windows.cs
   - docs/requirements/functional-requirements-and-invariants.md
 created: 2026-07-26
-updated: 2026-07-26
+updated: 2026-08-06
 ---
 
 ## Summary
@@ -33,7 +33,7 @@ Make profiling actionable by attributing rendering cost to native noise generati
 ## Scope
 
 - Add low-overhead stage timing and counters around `GenUniformGrid2D`, normalization, circle application, tile materialization, and raster composition.
-- Record width, height, mip level, sample count, source/tile identity, cache state, resident payload bytes, and generation outcome in a structured snapshot or benchmark-only diagnostics surface.
+- Record mip level, sample count, resident payload bytes, and generation outcome in a structured diagnostics surface.
 - Keep instrumentation disabled or sampling-controlled in normal production rendering; do not add per-pixel logging.
 - Make cold generation, warm cache hits, mip fallback, reservation rejection, and reset/regeneration distinguishable.
 
@@ -43,6 +43,12 @@ Make profiling actionable by attributing rendering cost to native noise generati
 - Counters distinguish requested, generated, reused, rejected, failed, and evicted payloads by mip level.
 - The diagnostic surface reports actual sample count and payload bytes, not only tile dimensions or a formatted total.
 - Deterministic output and the current non-blocking render path remain unchanged.
+
+## Findings
+
+`RenderingDiagnostics` uses an `AsyncLocal` scope. Production rendering performs no diagnostic work unless a scope is active. Stage timings cover native noise, Gray8 normalization, circle rasterization, tile composition, and sparse composition. Mip counters cover requested, generated, reused, rejected, failed, and evicted outcomes.
+
+The diagnostics surface does not yet export a BenchmarkDotNet report. ICW-133 remains responsible for repeated benchmark runs and archived hardware metadata.
 
 ## Validation
 

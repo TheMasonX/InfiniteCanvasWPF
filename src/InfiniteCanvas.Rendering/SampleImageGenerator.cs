@@ -292,15 +292,21 @@ public static class SampleImageGenerator
         {
             var mipScale = 1 << mipLevel;
             var stepSize = mipScale * (float)(noiseSettings?.Scale ?? NoiseSettings.Default.Scale);
-            GenerateNoisePixelsCore(pixels, width, height, targetValue, noise, seed, noiseSettings ?? NoiseSettings.Default, worldOriginX, worldOriginY, stepSize, cancellationToken);
+            GenerateNoisePixelsCore(pixels, width, height, targetValue, noise, seed, noiseSettings ?? NoiseSettings.Default, worldOriginX, worldOriginY, stepSize, cancellationToken, mipLevel);
         }
 
         if (circleCount > 0 || !string.IsNullOrWhiteSpace(tileLabel))
         {
+            using var measurement = RenderingDiagnostics.MeasureCurrent(RenderingStage.CircleRasterization, mipLevel);
             ApplyMipDetails(pixels, width, height, nativeWidth, nativeHeight, targetValue, circleCount, seed, tileLabel, cancellationToken);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+        RenderingDiagnostics.RecordCurrent(
+            RenderingDiagnosticOutcome.Generated,
+            mipLevel,
+            sampleCount: pixels.LongLength,
+            residentPayloadBytes: pixels.LongLength);
         return pixels;
     }
 
@@ -542,7 +548,8 @@ public static class SampleImageGenerator
         float worldOriginX,
         float worldOriginY,
         float stepSize,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        int mipLevel)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (noise == 0)
@@ -558,17 +565,22 @@ public static class SampleImageGenerator
         {
             using var fastNoise = CreateFastNoise(noiseSettings);
             cancellationToken.ThrowIfCancellationRequested();
-            var outputMinMax = fastNoise.GenUniformGrid2D(
-                noiseBuffer.AsSpan(0, pixelCount),
-                worldOriginX,
-                worldOriginY,
-                width,
-                height,
-                stepSize,
-                stepSize,
-                seed);
-            var noiseMin = outputMinMax.min;
-            var noiseMax = outputMinMax.max;
+            float noiseMin;
+            float noiseMax;
+            using (RenderingDiagnostics.MeasureCurrent(RenderingStage.NativeNoiseGeneration, mipLevel))
+            {
+                var outputMinMax = fastNoise.GenUniformGrid2D(
+                    noiseBuffer.AsSpan(0, pixelCount),
+                    worldOriginX,
+                    worldOriginY,
+                    width,
+                    height,
+                    stepSize,
+                    stepSize,
+                    seed);
+                noiseMin = outputMinMax.min;
+                noiseMax = outputMinMax.max;
+            }
 
             var range = noiseMax - noiseMin;
             if (range <= 0.0f)
@@ -580,17 +592,20 @@ public static class SampleImageGenerator
             var jitterScale = noiseSpread * (float)Math.Max(0.0, noiseSettings.Amplitude);
             var noiseToJitterScale = (2.0f * jitterScale) / range;
             var noiseToJitterOffset = (-noiseMin * noiseToJitterScale) - jitterScale;
-            for (var index = 0; index < pixelCount; index++)
+            using (RenderingDiagnostics.MeasureCurrent(RenderingStage.Gray8Normalization, mipLevel))
             {
-                if ((index & 0x3FFF) == 0)
+                for (var index = 0; index < pixelCount; index++)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
+                    if ((index & 0x3FFF) == 0)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                    }
+                    var scaledJitter = (noiseBuffer[index] * noiseToJitterScale) + noiseToJitterOffset;
+                    var jitter = scaledJitter >= 0.0f
+                        ? (int)(scaledJitter + 0.5f)
+                        : (int)(scaledJitter - 0.5f);
+                    pixels[index] = ToByteClamped(targetValue + jitter);
                 }
-                var scaledJitter = (noiseBuffer[index] * noiseToJitterScale) + noiseToJitterOffset;
-                var jitter = scaledJitter >= 0.0f
-                    ? (int)(scaledJitter + 0.5f)
-                    : (int)(scaledJitter - 0.5f);
-                pixels[index] = ToByteClamped(targetValue + jitter);
             }
         }
         finally

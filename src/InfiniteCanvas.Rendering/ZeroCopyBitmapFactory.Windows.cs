@@ -182,6 +182,9 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
         Func<SampleImageTile, BackgroundTileCacheKey, long, ICacheReservation?>? tryReserveCacheEntry,
         double minimumSparseTilePixelSize)
     {
+        using var measurement = RenderingDiagnostics.MeasureCurrent(
+            RenderingStage.TileComposition,
+            BackgroundTileMipPolicy.SelectMipLevel(camera));
         var topLeft = camera.WorldToScreen(tile.Bounds.X, tile.Bounds.Y);
         var bottomRight = camera.WorldToScreen(tile.Bounds.Right, tile.Bounds.Bottom);
         var left = Math.Clamp((int)Math.Floor(topLeft.X), 0, _layout.Width);
@@ -342,6 +345,7 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
 
     private unsafe void DrawDefectPatch(byte* destination, SampleAnnotation annotation, CameraSnapshot camera)
     {
+        using var measurement = RenderingDiagnostics.MeasureCurrent(RenderingStage.SparseComposition, 0);
         // Patch geometry uses the pixel-payload dimensions. The GDI+ LockBits
         // source read was dead: its value was discarded because the display
         // value comes from DefectPixels via DefectOverlaySampler (ICW-321

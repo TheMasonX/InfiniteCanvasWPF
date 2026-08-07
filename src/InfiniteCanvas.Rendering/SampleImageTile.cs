@@ -201,6 +201,7 @@ public sealed class SampleImageTile
         if (cached is not null)
         {
             pixels = cached;
+            RenderingDiagnostics.RecordCurrent(RenderingDiagnosticOutcome.Reused, 0, residentPayloadBytes: cached.LongLength);
             return true;
         }
 
@@ -240,6 +241,7 @@ public sealed class SampleImageTile
             if (_mipPixels.TryGetValue(mipLevel, out pixels!))
             {
                 residentMipLevel = mipLevel;
+                RenderingDiagnostics.RecordCurrent(RenderingDiagnosticOutcome.Reused, mipLevel, residentPayloadBytes: pixels.LongLength);
                 return true;
             }
         }
@@ -282,6 +284,7 @@ public sealed class SampleImageTile
             if (_mipPixels.TryGetValue(mipLevel, out pixels!))
             {
                 residentMipLevel = mipLevel;
+                RenderingDiagnostics.RecordCurrent(RenderingDiagnosticOutcome.Reused, mipLevel, residentPayloadBytes: pixels.LongLength);
                 return true;
             }
         }
@@ -542,6 +545,7 @@ public sealed class SampleImageTile
 
         var key = new BackgroundTileCacheKey("synthetic", Id, Volatile.Read(ref _generationEpoch), 0);
         var reservationBytes = GetByteCostForMip(PixelWidth, PixelHeight, 0);
+        RenderingDiagnostics.RecordCurrent(RenderingDiagnosticOutcome.Requested, 0, residentPayloadBytes: reservationBytes);
 
         if (_coordinator is not null)
         {
@@ -582,6 +586,7 @@ public sealed class SampleImageTile
         if (tryReserveCacheEntry is not null && reservation is null)
         {
             Interlocked.Exchange(ref _generationQueued, 0);
+            RenderingDiagnostics.RecordCurrent(RenderingDiagnosticOutcome.Rejected, 0);
             return;
         }
 
@@ -619,6 +624,7 @@ public sealed class SampleImageTile
             {
                 Interlocked.Exchange(ref _generationQueued, 0);
                 reservation?.Dispose();
+                RenderingDiagnostics.RecordCurrent(RenderingDiagnosticOutcome.Failed, 0);
                 try
                 {
                     Serilog.Log.Error(ex, "Pixel generation failed for tile {TileId}", Id);
@@ -690,6 +696,7 @@ public sealed class SampleImageTile
 
         Log.Warning(ex, "TileGen FAIL {TileId} mip{MipLevel} rev{Rev}: {Reason}",
             Id, key.MipLevel, key.ContentRevision, ex.Message);
+        RenderingDiagnostics.RecordCurrent(RenderingDiagnosticOutcome.Failed, key.MipLevel);
         PixelsGenerationFailed?.Invoke(this, EventArgs.Empty);
     }
 
@@ -741,6 +748,7 @@ public sealed class SampleImageTile
 
         var key = new BackgroundTileCacheKey("synthetic", Id, Volatile.Read(ref _generationEpoch), mipLevel);
         var reservationBytes = GetByteCostForMip(PixelWidth, PixelHeight, mipLevel);
+        RenderingDiagnostics.RecordCurrent(RenderingDiagnosticOutcome.Requested, mipLevel, residentPayloadBytes: reservationBytes);
 
         if (_coordinator is not null)
         {
@@ -785,6 +793,7 @@ public sealed class SampleImageTile
                 _mipGenerationQueued.Remove(mipLevel);
             }
 
+            RenderingDiagnostics.RecordCurrent(RenderingDiagnosticOutcome.Rejected, mipLevel);
             return;
         }
 
@@ -822,6 +831,7 @@ public sealed class SampleImageTile
                     _mipGenerationQueued.Remove(mipLevel);
                 }
                 reservation?.Dispose();
+                RenderingDiagnostics.RecordCurrent(RenderingDiagnosticOutcome.Failed, mipLevel);
                 try
                 {
                     Serilog.Log.Error(ex, "Mip generation failed for tile {TileId} mip {MipLevel}", Id, mipLevel);
@@ -1108,6 +1118,10 @@ public sealed class TileCacheBudget
 
                 _trackedEntries.Remove(evictedEntry.Key);
                 Interlocked.Add(ref _usedBytes, -evictedEntry.ByteCost);
+                RenderingDiagnostics.RecordCurrent(
+                    RenderingDiagnosticOutcome.Evicted,
+                    evictedEntry.Key.MipLevel,
+                    residentPayloadBytes: evictedEntry.ByteCost);
                 Log.Debug("Cache EVICT {EvictedTileId} mip{EvictedMip} cost={EvictedCost} generated={WasGenerated} (to admit {NewTileId} mip{NewMip} cost={NewCost}) used={UsedBytes} max={MaxBytes} evictions={EvictionCount}",
                     evictedEntry.Tile.Id,
                     evictedEntry.Key.MipLevel,
