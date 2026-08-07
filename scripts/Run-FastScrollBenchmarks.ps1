@@ -31,12 +31,19 @@ $arguments = @(
   '--framework', 'net10.0-windows'
   '--'
   '--filter', $Filter
-  '--exporters', 'csv,json,html,github'
+  '--exporters', 'csv', 'json', 'html', 'github'
+  '--artifacts', $outputDirectory
 )
 
 dotnet @arguments 2>&1 | Tee-Object -FilePath (Join-Path $outputDirectory 'benchmark-output.txt')
 if ($LASTEXITCODE -ne 0) {
   throw "Fast-scroll benchmark command failed with exit code $LASTEXITCODE."
+}
+
+$resultFiles = Get-ChildItem -Path $outputDirectory -Recurse -File |
+  Where-Object { $_.Name -ne 'run-metadata.json' -and $_.Extension -in '.csv', '.json', '.html', '.md' }
+if ($resultFiles.Count -eq 0) {
+  throw "Fast-scroll benchmark command produced no result files in $outputDirectory."
 }
 
 Write-Output "Benchmark evidence written to $outputDirectory"

@@ -1,0 +1,12 @@
+{
+  "TimestampUtc": "2026-08-07T21:09:53.2876124Z",
+  "GitRevision": "2a7df467ed24381f4c2e6bf9c3ef0ea38ad8b26e",
+  "OperatingSystem": "Microsoft Windows NT 10.0.19045.0",
+  "Processor": "Intel(R) Core(TM) i5-6600K CPU @ 3.50GHz",
+  "DotNet": "10.0.302",
+  "Configuration": "Release",
+  "Framework": "net10.0-windows",
+  "Filter": "*TileWorkCoordinatorBenchmarks*",
+  "BenchmarkJob": "Throughput, warmupCount=3, iterationCount=10",
+  "SmokeRun": false
+}

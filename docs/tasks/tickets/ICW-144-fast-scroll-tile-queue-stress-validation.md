@@ -3,7 +3,7 @@ id: ICW-144
 author: Copilot
 key: ICW-144
 title: Add fast-scroll tile queue stress telemetry and benchmarks
-status: In Review
+status: Done
 type: Spike
 priority: P1
 tags:
@@ -26,7 +26,7 @@ links:
   - docs/requirements/functional-requirements-and-invariants.md
   - docs/ADR/0006-viewport-aware-tile-work-scheduling.md
 created: 2026-07-26
-updated: 2026-08-03
+updated: 2026-08-07
 ---
 
 ## Summary
@@ -69,11 +69,20 @@ The diagnostics boundary now reports `ResidentFallback`, `Useful`, and `Stale` p
 
 ## Wave AA Update, 2026-08-07
 
-The fast-scroll benchmark now uses an explicit throughput job with three warmup
-iterations and ten measured iterations. The repeat-run script records the
-benchmark output, git revision, runtime, operating system, processor, and UTC
-timestamp. ICW-144 remains In Review until target hardware produces archived
-results.
+The fast-scroll benchmark now enforces three warmups and ten measured iterations.
+The repeat-run script records the benchmark output, git revision, runtime,
+operating system, processor, and UTC timestamp, and archives BenchmarkDotNet
+output per run.
+
+## Wave AB Update, 2026-08-07
+
+Wave AB archived a corrected Release run at `docs/benchmarks/runs/20260807-160953`.
+The initial script passed an invalid comma-packed exporter value, so the script
+now passes each exporter separately, sets an artifact directory, and fails when
+no result files exist. The archived run contains machine metadata and four
+BenchmarkDotNet reports from the 3-warmup, 10-iteration Release run. ICW-144 is
+Done. Keep the benchmark scenario shape stable and repeat on additional target
+hardware before making cross-machine performance claims.
 
 ## Council Update, 2026-08-03
 

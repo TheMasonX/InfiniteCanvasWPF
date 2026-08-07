@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks-20260807-161029</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.15.8, Windows 10 (10.0.19045.6466/22H2/2022Update)
+Intel Core i5-6600K CPU 3.50GHz (Skylake), 1 CPU, 4 logical and 4 physical cores
+.NET SDK 10.0.302
+  [Host]     : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+  Job-EGSULU : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+</code></pre>
+<pre><code>InvocationCount=1  IterationCount=10  RunStrategy=Throughput
+UnrollFactor=1  WarmupCount=3
+</code></pre>
+
+<table>
+<thead><tr><th>Method                         </th><th>QueueDepth</th><th>Mean  </th><th>Error</th><th>StdDev</th><th>Allocated</th>
+</tr>
+</thead><tbody><tr><td>PublishInterestSet_EmptyQueue</td><td>10</td><td>7.990 &mu;s</td><td>1.646 &mu;s</td><td>1.089 &mu;s</td><td>1.26 KB</td>
+</tr><tr><td>PublishInterestSet_AllVisible</td><td>10</td><td>54.589 &mu;s</td><td>10.938 &mu;s</td><td>6.509 &mu;s</td><td>25.91 KB</td>
+</tr><tr><td>PublishInterestSet_NoneVisible</td><td>10</td><td>102.300 &mu;s</td><td>34.649 &mu;s</td><td>20.619 &mu;s</td><td>50.8 KB</td>
+</tr><tr><td>PublishInterestSet_MixedVisibility</td><td>10</td><td>144.110 &mu;s</td><td>28.433 &mu;s</td><td>18.807 &mu;s</td><td>77.6 KB</td>
+</tr><tr><td>DrainQueue_FifoFallback</td><td>10</td><td>80.700 &mu;s</td><td>23.492 &mu;s</td><td>13.979 &mu;s</td><td>37.98 KB</td>
+</tr><tr><td>DrainQueue_VisiblePromoted</td><td>10</td><td>50.122 &mu;s</td><td>16.158 &mu;s</td><td>9.615 &mu;s</td><td>16.55 KB</td>
+</tr><tr><td>FastScrollStress_ThreeCycles</td><td>10</td><td>238.850 &mu;s</td><td>16.908 &mu;s</td><td>8.843 &mu;s</td><td>124.55 KB</td>
+</tr><tr><td>DrainQueue_PriorityDistanceOrdered</td><td>10</td><td>2,681.012 &mu;s</td><td>485.934 &mu;s</td><td>254.153 &mu;s</td><td>1251.66 KB</td>
+</tr><tr><td>FastScrollStress_PriorityCenterChange</td><td>10</td><td>6,028.837 &mu;s</td><td>791.267 &mu;s</td><td>413.848 &mu;s</td><td>2377.65 KB</td>
+</tr><tr><td>PublishInterestSet_EmptyQueue</td><td>50</td><td>7.330 &mu;s</td><td>2.215 &mu;s</td><td>1.465 &mu;s</td><td>1.26 KB</td>
+</tr><tr><td>PublishInterestSet_AllVisible</td><td>50</td><td>53.580 &mu;s</td><td>10.825 &mu;s</td><td>7.160 &mu;s</td><td>26.71 KB</td>
+</tr><tr><td>PublishInterestSet_NoneVisible</td><td>50</td><td>114.206 &mu;s</td><td>34.654 &mu;s</td><td>20.622 &mu;s</td><td>50.66 KB</td>
+</tr><tr><td>PublishInterestSet_MixedVisibility</td><td>50</td><td>131.583 &mu;s</td><td>27.433 &mu;s</td><td>16.325 &mu;s</td><td>77.6 KB</td>
+</tr><tr><td>DrainQueue_FifoFallback</td><td>50</td><td>84.322 &mu;s</td><td>16.935 &mu;s</td><td>10.078 &mu;s</td><td>38.63 KB</td>
+</tr><tr><td>DrainQueue_VisiblePromoted</td><td>50</td><td>148.489 &mu;s</td><td>27.915 &mu;s</td><td>16.612 &mu;s</td><td>72.54 KB</td>
+</tr><tr><td>FastScrollStress_ThreeCycles</td><td>50</td><td>277.111 &mu;s</td><td>74.197 &mu;s</td><td>44.153 &mu;s</td><td>126.27 KB</td>
+</tr><tr><td>DrainQueue_PriorityDistanceOrdered</td><td>50</td><td>2,641.325 &mu;s</td><td>206.633 &mu;s</td><td>108.073 &mu;s</td><td>1235.2 KB</td>
+</tr><tr><td>FastScrollStress_PriorityCenterChange</td><td>50</td><td>6,146.770 &mu;s</td><td>768.293 &mu;s</td><td>508.178 &mu;s</td><td>2316.02 KB</td>
+</tr></tbody></table>
+</body>
+</html>

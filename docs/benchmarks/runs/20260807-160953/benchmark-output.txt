@@ -1,0 +1,1900 @@
+// Validating benchmarks:
+// ***** BenchmarkRunner: Start   *****
+// ***** Found 18 benchmark(s) in total *****
+// ***** Building 1 exe(s) in Parallel: Start   *****
+// start dotnet  restore --nodeReuse:false /p:UseSharedCompilation=false /p:Deterministic=true /p:Optimize=true /p:ArtifactsPath="D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1/" /p:OutDir="D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0/" /p:OutputPath="D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0/" /p:PublishDir="D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\publish/" in D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1
+// command took 4.67 sec and exited with 0
+// start dotnet  build -c Release --no-restore --nodeReuse:false /p:UseSharedCompilation=false /p:Deterministic=true /p:Optimize=true /p:ArtifactsPath="D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1/" /p:OutDir="D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0/" /p:OutputPath="D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0/" /p:PublishDir="D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\publish/" --output "D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0/" in D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1
+// command took 20.61 sec and exited with 0
+// ***** Done, took 00:00:25 (25.57 sec)   *****
+// Found 18 benchmarks:
+//   TileWorkCoordinatorBenchmarks.PublishInterestSet_EmptyQueue: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+//   TileWorkCoordinatorBenchmarks.PublishInterestSet_AllVisible: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+//   TileWorkCoordinatorBenchmarks.PublishInterestSet_NoneVisible: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+//   TileWorkCoordinatorBenchmarks.PublishInterestSet_MixedVisibility: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+//   TileWorkCoordinatorBenchmarks.DrainQueue_FifoFallback: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+//   TileWorkCoordinatorBenchmarks.DrainQueue_VisiblePromoted: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+//   TileWorkCoordinatorBenchmarks.FastScrollStress_ThreeCycles: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+//   TileWorkCoordinatorBenchmarks.DrainQueue_PriorityDistanceOrdered: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+//   TileWorkCoordinatorBenchmarks.FastScrollStress_PriorityCenterChange: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+//   TileWorkCoordinatorBenchmarks.PublishInterestSet_EmptyQueue: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+//   TileWorkCoordinatorBenchmarks.PublishInterestSet_AllVisible: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+//   TileWorkCoordinatorBenchmarks.PublishInterestSet_NoneVisible: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+//   TileWorkCoordinatorBenchmarks.PublishInterestSet_MixedVisibility: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+//   TileWorkCoordinatorBenchmarks.DrainQueue_FifoFallback: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+//   TileWorkCoordinatorBenchmarks.DrainQueue_VisiblePromoted: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+//   TileWorkCoordinatorBenchmarks.FastScrollStress_ThreeCycles: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+//   TileWorkCoordinatorBenchmarks.DrainQueue_PriorityDistanceOrdered: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+//   TileWorkCoordinatorBenchmarks.FastScrollStress_PriorityCenterChange: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: TileWorkCoordinatorBenchmarks.PublishInterestSet_EmptyQueue: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet InfiniteCanvas.Benchmarks-1.dll --anonymousPipes 2116 1436 --benchmarkName "InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks.PublishInterestSet_EmptyQueue(QueueDepth: 10)" --job "InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3" --benchmarkId 0 in D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL VectorSize=256
+// Job: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 155000.00 ns, 155.0000 us/op
+WorkloadJitting  1: 1 op, 5358100.00 ns, 5.3581 ms/op
+
+OverheadWarmup   1: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadWarmup   2: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   3: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   4: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   5: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   6: 1 op, 200.00 ns, 200.0000 ns/op
+
+OverheadActual   1: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   2: 1 op, 500.00 ns, 500.0000 ns/op
+OverheadActual   3: 1 op, 500.00 ns, 500.0000 ns/op
+OverheadActual   4: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   5: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   6: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   7: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   8: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   9: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  10: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  11: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  12: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  13: 1 op, 800.00 ns, 800.0000 ns/op
+OverheadActual  14: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  15: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  16: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  17: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  18: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  19: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  20: 1 op, 200.00 ns, 200.0000 ns/op
+
+WorkloadWarmup   1: 1 op, 36400.00 ns, 36.4000 us/op
+WorkloadWarmup   2: 1 op, 11600.00 ns, 11.6000 us/op
+WorkloadWarmup   3: 1 op, 10600.00 ns, 10.6000 us/op
+
+// BeforeActualRun
+WorkloadActual   1: 1 op, 10200.00 ns, 10.2000 us/op
+WorkloadActual   2: 1 op, 9200.00 ns, 9.2000 us/op
+WorkloadActual   3: 1 op, 8400.00 ns, 8.4000 us/op
+WorkloadActual   4: 1 op, 7500.00 ns, 7.5000 us/op
+WorkloadActual   5: 1 op, 7000.00 ns, 7.0000 us/op
+WorkloadActual   6: 1 op, 7300.00 ns, 7.3000 us/op
+WorkloadActual   7: 1 op, 7800.00 ns, 7.8000 us/op
+WorkloadActual   8: 1 op, 8900.00 ns, 8.9000 us/op
+WorkloadActual   9: 1 op, 7000.00 ns, 7.0000 us/op
+WorkloadActual  10: 1 op, 9100.00 ns, 9.1000 us/op
+
+// AfterActualRun
+WorkloadResult   1: 1 op, 9950.00 ns, 9.9500 us/op
+WorkloadResult   2: 1 op, 8950.00 ns, 8.9500 us/op
+WorkloadResult   3: 1 op, 8150.00 ns, 8.1500 us/op
+WorkloadResult   4: 1 op, 7250.00 ns, 7.2500 us/op
+WorkloadResult   5: 1 op, 6750.00 ns, 6.7500 us/op
+WorkloadResult   6: 1 op, 7050.00 ns, 7.0500 us/op
+WorkloadResult   7: 1 op, 7550.00 ns, 7.5500 us/op
+WorkloadResult   8: 1 op, 8650.00 ns, 8.6500 us/op
+WorkloadResult   9: 1 op, 6750.00 ns, 6.7500 us/op
+WorkloadResult  10: 1 op, 8850.00 ns, 8.8500 us/op
+// GC:  0 0 0 1288 1
+// Threading:  0 0 1
+
+// AfterAll
+// Benchmark Process 41832 has exited with code 0.
+
+Mean = 7.990 us, StdErr = 0.344 us (4.31%), N = 10, StdDev = 1.089 us
+Min = 6.750 us, Q1 = 7.100 us, Median = 7.850 us, Q3 = 8.800 us, Max = 9.950 us
+IQR = 1.700 us, LowerFence = 4.550 us, UpperFence = 11.350 us
+ConfidenceInterval = [6.344 us; 9.636 us] (CI 99.9%), Margin = 1.646 us (20.60% of Mean)
+Skewness = 0.33, Kurtosis = 1.58, MValue = 2
+
+// ** Remained 17 (94.4%) benchmark(s) to run. Estimated finish 2026-08-07 16:10 (0h 0m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: TileWorkCoordinatorBenchmarks.PublishInterestSet_AllVisible: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet InfiniteCanvas.Benchmarks-1.dll --anonymousPipes 2116 1436 --benchmarkName "InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks.PublishInterestSet_AllVisible(QueueDepth: 10)" --job "InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3" --benchmarkId 1 in D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL VectorSize=256
+// Job: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 170100.00 ns, 170.1000 us/op
+WorkloadJitting  1: 1 op, 25778000.00 ns, 25.7780 ms/op
+
+OverheadWarmup   1: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   2: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   3: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   4: 1 op, 700.00 ns, 700.0000 ns/op
+OverheadWarmup   5: 1 op, 300.00 ns, 300.0000 ns/op
+
+OverheadActual   1: 1 op, 900.00 ns, 900.0000 ns/op
+OverheadActual   2: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   3: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   4: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   5: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   6: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   7: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   8: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   9: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  10: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  11: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  12: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  13: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  14: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  15: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  16: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  17: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  18: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  19: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  20: 1 op, 300.00 ns, 300.0000 ns/op
+
+WorkloadWarmup   1: 1 op, 114400.00 ns, 114.4000 us/op
+WorkloadWarmup   2: 1 op, 104300.00 ns, 104.3000 us/op
+WorkloadWarmup   3: 1 op, 58400.00 ns, 58.4000 us/op
+
+// BeforeActualRun
+WorkloadActual   1: 1 op, 58500.00 ns, 58.5000 us/op
+WorkloadActual   2: 1 op, 48800.00 ns, 48.8000 us/op
+WorkloadActual   3: 1 op, 52600.00 ns, 52.6000 us/op
+WorkloadActual   4: 1 op, 79800.00 ns, 79.8000 us/op
+WorkloadActual   5: 1 op, 69300.00 ns, 69.3000 us/op
+WorkloadActual   6: 1 op, 56800.00 ns, 56.8000 us/op
+WorkloadActual   7: 1 op, 52200.00 ns, 52.2000 us/op
+WorkloadActual   8: 1 op, 57000.00 ns, 57.0000 us/op
+WorkloadActual   9: 1 op, 49800.00 ns, 49.8000 us/op
+WorkloadActual  10: 1 op, 49000.00 ns, 49.0000 us/op
+
+// AfterActualRun
+WorkloadResult   1: 1 op, 58200.00 ns, 58.2000 us/op
+WorkloadResult   2: 1 op, 48500.00 ns, 48.5000 us/op
+WorkloadResult   3: 1 op, 52300.00 ns, 52.3000 us/op
+WorkloadResult   4: 1 op, 69000.00 ns, 69.0000 us/op
+WorkloadResult   5: 1 op, 56500.00 ns, 56.5000 us/op
+WorkloadResult   6: 1 op, 51900.00 ns, 51.9000 us/op
+WorkloadResult   7: 1 op, 56700.00 ns, 56.7000 us/op
+WorkloadResult   8: 1 op, 49500.00 ns, 49.5000 us/op
+WorkloadResult   9: 1 op, 48700.00 ns, 48.7000 us/op
+// GC:  0 0 0 26536 1
+// Threading:  4 0 1
+
+// AfterAll
+// Benchmark Process 18760 has exited with code 0.
+
+Mean = 54.589 us, StdErr = 2.170 us (3.97%), N = 9, StdDev = 6.509 us
+Min = 48.500 us, Q1 = 49.500 us, Median = 52.300 us, Q3 = 56.700 us, Max = 69.000 us
+IQR = 7.200 us, LowerFence = 38.700 us, UpperFence = 67.500 us
+ConfidenceInterval = [43.651 us; 65.527 us] (CI 99.9%), Margin = 10.938 us (20.04% of Mean)
+Skewness = 0.99, Kurtosis = 2.89, MValue = 3.2
+
+// ** Remained 16 (88.9%) benchmark(s) to run. Estimated finish 2026-08-07 16:10 (0h 0m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: TileWorkCoordinatorBenchmarks.PublishInterestSet_NoneVisible: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet InfiniteCanvas.Benchmarks-1.dll --anonymousPipes 2104 2100 --benchmarkName "InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks.PublishInterestSet_NoneVisible(QueueDepth: 10)" --job "InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3" --benchmarkId 2 in D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL VectorSize=256
+// Job: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 158700.00 ns, 158.7000 us/op
+WorkloadJitting  1: 1 op, 31788600.00 ns, 31.7886 ms/op
+
+OverheadWarmup   1: 1 op, 900.00 ns, 900.0000 ns/op
+OverheadWarmup   2: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   3: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadWarmup   4: 1 op, 800.00 ns, 800.0000 ns/op
+OverheadWarmup   5: 1 op, 500.00 ns, 500.0000 ns/op
+OverheadWarmup   6: 1 op, 500.00 ns, 500.0000 ns/op
+OverheadWarmup   7: 1 op, 1000.00 ns, 1.0000 us/op
+
+OverheadActual   1: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   2: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   3: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   4: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   5: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   6: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual   7: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual   8: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   9: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  10: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  11: 1 op, 1000.00 ns, 1.0000 us/op
+OverheadActual  12: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  13: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  14: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  15: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  16: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  17: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual  18: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  19: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  20: 1 op, 100.00 ns, 100.0000 ns/op
+
+WorkloadWarmup   1: 1 op, 139400.00 ns, 139.4000 us/op
+WorkloadWarmup   2: 1 op, 97500.00 ns, 97.5000 us/op
+WorkloadWarmup   3: 1 op, 97600.00 ns, 97.6000 us/op
+
+// BeforeActualRun
+WorkloadActual   1: 1 op, 141400.00 ns, 141.4000 us/op
+WorkloadActual   2: 1 op, 102600.00 ns, 102.6000 us/op
+WorkloadActual   3: 1 op, 100200.00 ns, 100.2000 us/op
+WorkloadActual   4: 1 op, 75400.00 ns, 75.4000 us/op
+WorkloadActual   5: 1 op, 122200.00 ns, 122.2000 us/op
+WorkloadActual   6: 1 op, 112500.00 ns, 112.5000 us/op
+WorkloadActual   7: 1 op, 84700.00 ns, 84.7000 us/op
+WorkloadActual   8: 1 op, 225100.00 ns, 225.1000 us/op
+WorkloadActual   9: 1 op, 100300.00 ns, 100.3000 us/op
+WorkloadActual  10: 1 op, 84100.00 ns, 84.1000 us/op
+
+// AfterActualRun
+WorkloadResult   1: 1 op, 141100.00 ns, 141.1000 us/op
+WorkloadResult   2: 1 op, 102300.00 ns, 102.3000 us/op
+WorkloadResult   3: 1 op, 99900.00 ns, 99.9000 us/op
+WorkloadResult   4: 1 op, 75100.00 ns, 75.1000 us/op
+WorkloadResult   5: 1 op, 121900.00 ns, 121.9000 us/op
+WorkloadResult   6: 1 op, 112200.00 ns, 112.2000 us/op
+WorkloadResult   7: 1 op, 84400.00 ns, 84.4000 us/op
+WorkloadResult   8: 1 op, 100000.00 ns, 100.0000 us/op
+WorkloadResult   9: 1 op, 83800.00 ns, 83.8000 us/op
+// GC:  0 0 0 52016 1
+// Threading:  1 0 1
+
+// AfterAll
+// Benchmark Process 19236 has exited with code 0.
+
+Mean = 102.300 us, StdErr = 6.873 us (6.72%), N = 9, StdDev = 20.619 us
+Min = 75.100 us, Q1 = 84.400 us, Median = 100.000 us, Q3 = 112.200 us, Max = 141.100 us
+IQR = 27.800 us, LowerFence = 42.700 us, UpperFence = 153.900 us
+ConfidenceInterval = [67.651 us; 136.949 us] (CI 99.9%), Margin = 34.649 us (33.87% of Mean)
+Skewness = 0.44, Kurtosis = 1.96, MValue = 2
+
+// ** Remained 15 (83.3%) benchmark(s) to run. Estimated finish 2026-08-07 16:10 (0h 0m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: TileWorkCoordinatorBenchmarks.PublishInterestSet_MixedVisibility: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet InfiniteCanvas.Benchmarks-1.dll --anonymousPipes 2480 2484 --benchmarkName "InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks.PublishInterestSet_MixedVisibility(QueueDepth: 10)" --job "InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3" --benchmarkId 3 in D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL VectorSize=256
+// Job: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 175200.00 ns, 175.2000 us/op
+WorkloadJitting  1: 1 op, 28956800.00 ns, 28.9568 ms/op
+
+OverheadWarmup   1: 1 op, 1100.00 ns, 1.1000 us/op
+OverheadWarmup   2: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   3: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   4: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   5: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   6: 1 op, 200.00 ns, 200.0000 ns/op
+
+OverheadActual   1: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   2: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   3: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   4: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual   5: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   6: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   7: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   8: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   9: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  10: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  11: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual  12: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  13: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  14: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  15: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual  16: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  17: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  18: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  19: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  20: 1 op, 200.00 ns, 200.0000 ns/op
+
+WorkloadWarmup   1: 1 op, 227200.00 ns, 227.2000 us/op
+WorkloadWarmup   2: 1 op, 155600.00 ns, 155.6000 us/op
+WorkloadWarmup   3: 1 op, 162300.00 ns, 162.3000 us/op
+
+// BeforeActualRun
+WorkloadActual   1: 1 op, 160400.00 ns, 160.4000 us/op
+WorkloadActual   2: 1 op, 163100.00 ns, 163.1000 us/op
+WorkloadActual   3: 1 op, 168200.00 ns, 168.2000 us/op
+WorkloadActual   4: 1 op, 127000.00 ns, 127.0000 us/op
+WorkloadActual   5: 1 op, 126500.00 ns, 126.5000 us/op
+WorkloadActual   6: 1 op, 162600.00 ns, 162.6000 us/op
+WorkloadActual   7: 1 op, 154900.00 ns, 154.9000 us/op
+WorkloadActual   8: 1 op, 130100.00 ns, 130.1000 us/op
+WorkloadActual   9: 1 op, 125800.00 ns, 125.8000 us/op
+WorkloadActual  10: 1 op, 124500.00 ns, 124.5000 us/op
+
+// AfterActualRun
+WorkloadResult   1: 1 op, 160200.00 ns, 160.2000 us/op
+WorkloadResult   2: 1 op, 162900.00 ns, 162.9000 us/op
+WorkloadResult   3: 1 op, 168000.00 ns, 168.0000 us/op
+WorkloadResult   4: 1 op, 126800.00 ns, 126.8000 us/op
+WorkloadResult   5: 1 op, 126300.00 ns, 126.3000 us/op
+WorkloadResult   6: 1 op, 162400.00 ns, 162.4000 us/op
+WorkloadResult   7: 1 op, 154700.00 ns, 154.7000 us/op
+WorkloadResult   8: 1 op, 129900.00 ns, 129.9000 us/op
+WorkloadResult   9: 1 op, 125600.00 ns, 125.6000 us/op
+WorkloadResult  10: 1 op, 124300.00 ns, 124.3000 us/op
+// GC:  0 0 0 79464 1
+// Threading:  8 1 1
+
+// AfterAll
+// Benchmark Process 25988 has exited with code 0.
+
+Mean = 144.110 us, StdErr = 5.947 us (4.13%), N = 10, StdDev = 18.807 us
+Min = 124.300 us, Q1 = 126.425 us, Median = 142.300 us, Q3 = 161.850 us, Max = 168.000 us
+IQR = 35.425 us, LowerFence = 73.287 us, UpperFence = 214.988 us
+ConfidenceInterval = [115.677 us; 172.543 us] (CI 99.9%), Margin = 28.433 us (19.73% of Mean)
+Skewness = 0.06, Kurtosis = 0.91, MValue = 4
+
+// ** Remained 14 (77.8%) benchmark(s) to run. Estimated finish 2026-08-07 16:10 (0h 0m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: TileWorkCoordinatorBenchmarks.DrainQueue_FifoFallback: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet InfiniteCanvas.Benchmarks-1.dll --anonymousPipes 2504 1128 --benchmarkName "InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks.DrainQueue_FifoFallback(QueueDepth: 10)" --job "InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3" --benchmarkId 4 in D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL VectorSize=256
+// Job: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 255500.00 ns, 255.5000 us/op
+WorkloadJitting  1: 1 op, 20959600.00 ns, 20.9596 ms/op
+
+OverheadWarmup   1: 1 op, 600.00 ns, 600.0000 ns/op
+OverheadWarmup   2: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   3: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   4: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   5: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   6: 1 op, 300.00 ns, 300.0000 ns/op
+
+OverheadActual   1: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   2: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   3: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   4: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   5: 1 op, 500.00 ns, 500.0000 ns/op
+OverheadActual   6: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   7: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   8: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   9: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  10: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  11: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  12: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  13: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual  14: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  15: 1 op, 800.00 ns, 800.0000 ns/op
+OverheadActual  16: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  17: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  18: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  19: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  20: 1 op, 200.00 ns, 200.0000 ns/op
+
+WorkloadWarmup   1: 1 op, 3591600.00 ns, 3.5916 ms/op
+WorkloadWarmup   2: 1 op, 99100.00 ns, 99.1000 us/op
+WorkloadWarmup   3: 1 op, 114300.00 ns, 114.3000 us/op
+
+// BeforeActualRun
+WorkloadActual   1: 1 op, 144400.00 ns, 144.4000 us/op
+WorkloadActual   2: 1 op, 88400.00 ns, 88.4000 us/op
+WorkloadActual   3: 1 op, 86700.00 ns, 86.7000 us/op
+WorkloadActual   4: 1 op, 66800.00 ns, 66.8000 us/op
+WorkloadActual   5: 1 op, 70400.00 ns, 70.4000 us/op
+WorkloadActual   6: 1 op, 65900.00 ns, 65.9000 us/op
+WorkloadActual   7: 1 op, 104900.00 ns, 104.9000 us/op
+WorkloadActual   8: 1 op, 80400.00 ns, 80.4000 us/op
+WorkloadActual   9: 1 op, 96100.00 ns, 96.1000 us/op
+WorkloadActual  10: 1 op, 69400.00 ns, 69.4000 us/op
+
+// AfterActualRun
+WorkloadResult   1: 1 op, 88100.00 ns, 88.1000 us/op
+WorkloadResult   2: 1 op, 86400.00 ns, 86.4000 us/op
+WorkloadResult   3: 1 op, 66500.00 ns, 66.5000 us/op
+WorkloadResult   4: 1 op, 70100.00 ns, 70.1000 us/op
+WorkloadResult   5: 1 op, 65600.00 ns, 65.6000 us/op
+WorkloadResult   6: 1 op, 104600.00 ns, 104.6000 us/op
+WorkloadResult   7: 1 op, 80100.00 ns, 80.1000 us/op
+WorkloadResult   8: 1 op, 95800.00 ns, 95.8000 us/op
+WorkloadResult   9: 1 op, 69100.00 ns, 69.1000 us/op
+// GC:  0 0 0 38896 1
+// Threading:  1 0 1
+
+// AfterAll
+// Benchmark Process 18828 has exited with code 0.
+
+Mean = 80.700 us, StdErr = 4.660 us (5.77%), N = 9, StdDev = 13.979 us
+Min = 65.600 us, Q1 = 69.100 us, Median = 80.100 us, Q3 = 88.100 us, Max = 104.600 us
+IQR = 19.000 us, LowerFence = 40.600 us, UpperFence = 116.600 us
+ConfidenceInterval = [57.208 us; 104.192 us] (CI 99.9%), Margin = 23.492 us (29.11% of Mean)
+Skewness = 0.35, Kurtosis = 1.47, MValue = 2
+
+// ** Remained 13 (72.2%) benchmark(s) to run. Estimated finish 2026-08-07 16:10 (0h 0m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: TileWorkCoordinatorBenchmarks.DrainQueue_VisiblePromoted: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet InfiniteCanvas.Benchmarks-1.dll --anonymousPipes 2172 2164 --benchmarkName "InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks.DrainQueue_VisiblePromoted(QueueDepth: 10)" --job "InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3" --benchmarkId 5 in D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL VectorSize=256
+// Job: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 188300.00 ns, 188.3000 us/op
+WorkloadJitting  1: 1 op, 25427200.00 ns, 25.4272 ms/op
+
+OverheadWarmup   1: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   2: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   3: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   4: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   5: 1 op, 300.00 ns, 300.0000 ns/op
+
+OverheadActual   1: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   2: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   3: 1 op, 900.00 ns, 900.0000 ns/op
+OverheadActual   4: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   5: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   6: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   7: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   8: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual   9: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  10: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  11: 1 op, 800.00 ns, 800.0000 ns/op
+OverheadActual  12: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  13: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  14: 1 op, 800.00 ns, 800.0000 ns/op
+OverheadActual  15: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  16: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  17: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  18: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  19: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  20: 1 op, 200.00 ns, 200.0000 ns/op
+
+WorkloadWarmup   1: 1 op, 17615700.00 ns, 17.6157 ms/op
+WorkloadWarmup   2: 1 op, 89900.00 ns, 89.9000 us/op
+WorkloadWarmup   3: 1 op, 90800.00 ns, 90.8000 us/op
+
+// BeforeActualRun
+WorkloadActual   1: 1 op, 61300.00 ns, 61.3000 us/op
+WorkloadActual   2: 1 op, 68900.00 ns, 68.9000 us/op
+WorkloadActual   3: 1 op, 48100.00 ns, 48.1000 us/op
+WorkloadActual   4: 1 op, 44600.00 ns, 44.6000 us/op
+WorkloadActual   5: 1 op, 48700.00 ns, 48.7000 us/op
+WorkloadActual   6: 1 op, 44000.00 ns, 44.0000 us/op
+WorkloadActual   7: 1 op, 55400.00 ns, 55.4000 us/op
+WorkloadActual   8: 1 op, 43500.00 ns, 43.5000 us/op
+WorkloadActual   9: 1 op, 39300.00 ns, 39.3000 us/op
+WorkloadActual  10: 1 op, 174700.00 ns, 174.7000 us/op
+
+// AfterActualRun
+WorkloadResult   1: 1 op, 61000.00 ns, 61.0000 us/op
+WorkloadResult   2: 1 op, 68600.00 ns, 68.6000 us/op
+WorkloadResult   3: 1 op, 47800.00 ns, 47.8000 us/op
+WorkloadResult   4: 1 op, 44300.00 ns, 44.3000 us/op
+WorkloadResult   5: 1 op, 48400.00 ns, 48.4000 us/op
+WorkloadResult   6: 1 op, 43700.00 ns, 43.7000 us/op
+WorkloadResult   7: 1 op, 55100.00 ns, 55.1000 us/op
+WorkloadResult   8: 1 op, 43200.00 ns, 43.2000 us/op
+WorkloadResult   9: 1 op, 39000.00 ns, 39.0000 us/op
+// GC:  0 0 0 16944 1
+// Threading:  6 0 1
+
+// AfterAll
+// Benchmark Process 37176 has exited with code 0.
+
+Mean = 50.122 us, StdErr = 3.205 us (6.39%), N = 9, StdDev = 9.615 us
+Min = 39.000 us, Q1 = 43.700 us, Median = 47.800 us, Q3 = 55.100 us, Max = 68.600 us
+IQR = 11.400 us, LowerFence = 26.600 us, UpperFence = 72.200 us
+ConfidenceInterval = [33.964 us; 66.280 us] (CI 99.9%), Margin = 16.158 us (32.24% of Mean)
+Skewness = 0.69, Kurtosis = 1.97, MValue = 2
+
+// ** Remained 12 (66.7%) benchmark(s) to run. Estimated finish 2026-08-07 16:10 (0h 0m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: TileWorkCoordinatorBenchmarks.FastScrollStress_ThreeCycles: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet InfiniteCanvas.Benchmarks-1.dll --anonymousPipes 1484 2388 --benchmarkName "InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks.FastScrollStress_ThreeCycles(QueueDepth: 10)" --job "InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3" --benchmarkId 6 in D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL VectorSize=256
+// Job: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 187800.00 ns, 187.8000 us/op
+WorkloadJitting  1: 1 op, 24979800.00 ns, 24.9798 ms/op
+
+OverheadWarmup   1: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadWarmup   2: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   3: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadWarmup   4: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   5: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   6: 1 op, 600.00 ns, 600.0000 ns/op
+
+OverheadActual   1: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   2: 1 op, 500.00 ns, 500.0000 ns/op
+OverheadActual   3: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   4: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   5: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   6: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   7: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   8: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   9: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  10: 1 op, 500.00 ns, 500.0000 ns/op
+OverheadActual  11: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  12: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  13: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  14: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  15: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  16: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  17: 1 op, 1200.00 ns, 1.2000 us/op
+OverheadActual  18: 1 op, 500.00 ns, 500.0000 ns/op
+OverheadActual  19: 1 op, 500.00 ns, 500.0000 ns/op
+OverheadActual  20: 1 op, 300.00 ns, 300.0000 ns/op
+
+WorkloadWarmup   1: 1 op, 331500.00 ns, 331.5000 us/op
+WorkloadWarmup   2: 1 op, 260500.00 ns, 260.5000 us/op
+WorkloadWarmup   3: 1 op, 367800.00 ns, 367.8000 us/op
+
+// BeforeActualRun
+WorkloadActual   1: 1 op, 312700.00 ns, 312.7000 us/op
+WorkloadActual   2: 1 op, 240200.00 ns, 240.2000 us/op
+WorkloadActual   3: 1 op, 240300.00 ns, 240.3000 us/op
+WorkloadActual   4: 1 op, 237000.00 ns, 237.0000 us/op
+WorkloadActual   5: 1 op, 221700.00 ns, 221.7000 us/op
+WorkloadActual   6: 1 op, 249900.00 ns, 249.9000 us/op
+WorkloadActual   7: 1 op, 244400.00 ns, 244.4000 us/op
+WorkloadActual   8: 1 op, 233300.00 ns, 233.3000 us/op
+WorkloadActual   9: 1 op, 336700.00 ns, 336.7000 us/op
+WorkloadActual  10: 1 op, 246800.00 ns, 246.8000 us/op
+
+// AfterActualRun
+WorkloadResult   1: 1 op, 239850.00 ns, 239.8500 us/op
+WorkloadResult   2: 1 op, 239950.00 ns, 239.9500 us/op
+WorkloadResult   3: 1 op, 236650.00 ns, 236.6500 us/op
+WorkloadResult   4: 1 op, 221350.00 ns, 221.3500 us/op
+WorkloadResult   5: 1 op, 249550.00 ns, 249.5500 us/op
+WorkloadResult   6: 1 op, 244050.00 ns, 244.0500 us/op
+WorkloadResult   7: 1 op, 232950.00 ns, 232.9500 us/op
+WorkloadResult   8: 1 op, 246450.00 ns, 246.4500 us/op
+// GC:  0 0 0 127544 1
+// Threading:  12 4 1
+
+// AfterAll
+// Benchmark Process 16980 has exited with code 0.
+
+Mean = 238.850 us, StdErr = 3.126 us (1.31%), N = 8, StdDev = 8.843 us
+Min = 221.350 us, Q1 = 235.725 us, Median = 239.900 us, Q3 = 244.650 us, Max = 249.550 us
+IQR = 8.925 us, LowerFence = 222.338 us, UpperFence = 258.038 us
+ConfidenceInterval = [221.942 us; 255.758 us] (CI 99.9%), Margin = 16.908 us (7.08% of Mean)
+Skewness = -0.68, Kurtosis = 2.29, MValue = 2
+
+// ** Remained 11 (61.1%) benchmark(s) to run. Estimated finish 2026-08-07 16:10 (0h 0m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: TileWorkCoordinatorBenchmarks.DrainQueue_PriorityDistanceOrdered: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet InfiniteCanvas.Benchmarks-1.dll --anonymousPipes 2484 2308 --benchmarkName "InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks.DrainQueue_PriorityDistanceOrdered(QueueDepth: 10)" --job "InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3" --benchmarkId 7 in D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL VectorSize=256
+// Job: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 204700.00 ns, 204.7000 us/op
+WorkloadJitting  1: 1 op, 25798100.00 ns, 25.7981 ms/op
+
+OverheadWarmup   1: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadWarmup   2: 1 op, 500.00 ns, 500.0000 ns/op
+OverheadWarmup   3: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   4: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   5: 1 op, 200.00 ns, 200.0000 ns/op
+
+OverheadActual   1: 1 op, 500.00 ns, 500.0000 ns/op
+OverheadActual   2: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   3: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   4: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   5: 1 op, 500.00 ns, 500.0000 ns/op
+OverheadActual   6: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   7: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   8: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   9: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  10: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  11: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  12: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  13: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  14: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  15: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  16: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  17: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  18: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  19: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  20: 1 op, 300.00 ns, 300.0000 ns/op
+
+WorkloadWarmup   1: 1 op, 2758100.00 ns, 2.7581 ms/op
+WorkloadWarmup   2: 1 op, 2721300.00 ns, 2.7213 ms/op
+WorkloadWarmup   3: 1 op, 2766400.00 ns, 2.7664 ms/op
+
+// BeforeActualRun
+WorkloadActual   1: 1 op, 2791800.00 ns, 2.7918 ms/op
+WorkloadActual   2: 1 op, 2922700.00 ns, 2.9227 ms/op
+WorkloadActual   3: 1 op, 2767700.00 ns, 2.7677 ms/op
+WorkloadActual   4: 1 op, 2665000.00 ns, 2.6650 ms/op
+WorkloadActual   5: 1 op, 2211300.00 ns, 2.2113 ms/op
+WorkloadActual   6: 1 op, 10481800.00 ns, 10.4818 ms/op
+WorkloadActual   7: 1 op, 3015900.00 ns, 3.0159 ms/op
+WorkloadActual   8: 1 op, 6031500.00 ns, 6.0315 ms/op
+WorkloadActual   9: 1 op, 2533400.00 ns, 2.5334 ms/op
+WorkloadActual  10: 1 op, 2542700.00 ns, 2.5427 ms/op
+
+// AfterActualRun
+WorkloadResult   1: 1 op, 2791500.00 ns, 2.7915 ms/op
+WorkloadResult   2: 1 op, 2922400.00 ns, 2.9224 ms/op
+WorkloadResult   3: 1 op, 2767400.00 ns, 2.7674 ms/op
+WorkloadResult   4: 1 op, 2664700.00 ns, 2.6647 ms/op
+WorkloadResult   5: 1 op, 2211000.00 ns, 2.2110 ms/op
+WorkloadResult   6: 1 op, 3015600.00 ns, 3.0156 ms/op
+WorkloadResult   7: 1 op, 2533100.00 ns, 2.5331 ms/op
+WorkloadResult   8: 1 op, 2542400.00 ns, 2.5424 ms/op
+// GC:  0 0 0 1281704 1
+// Threading:  140 31 1
+
+// AfterAll
+// Benchmark Process 40576 has exited with code 0.
+
+Mean = 2.681 ms, StdErr = 0.090 ms (3.35%), N = 8, StdDev = 0.254 ms
+Min = 2.211 ms, Q1 = 2.540 ms, Median = 2.716 ms, Q3 = 2.824 ms, Max = 3.016 ms
+IQR = 0.284 ms, LowerFence = 2.114 ms, UpperFence = 3.250 ms
+ConfidenceInterval = [2.195 ms; 3.167 ms] (CI 99.9%), Margin = 0.486 ms (18.13% of Mean)
+Skewness = -0.43, Kurtosis = 1.97, MValue = 2.4
+
+// ** Remained 10 (55.6%) benchmark(s) to run. Estimated finish 2026-08-07 16:10 (0h 0m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: TileWorkCoordinatorBenchmarks.FastScrollStress_PriorityCenterChange: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet InfiniteCanvas.Benchmarks-1.dll --anonymousPipes 1236 1472 --benchmarkName "InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks.FastScrollStress_PriorityCenterChange(QueueDepth: 10)" --job "InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3" --benchmarkId 8 in D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL VectorSize=256
+// Job: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 221800.00 ns, 221.8000 us/op
+WorkloadJitting  1: 1 op, 26370900.00 ns, 26.3709 ms/op
+
+OverheadWarmup   1: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   2: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   3: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   4: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   5: 1 op, 300.00 ns, 300.0000 ns/op
+
+OverheadActual   1: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   2: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   3: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   4: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   5: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   6: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   7: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   8: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   9: 1 op, 800.00 ns, 800.0000 ns/op
+OverheadActual  10: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  11: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  12: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  13: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  14: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  15: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  16: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  17: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  18: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  19: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  20: 1 op, 900.00 ns, 900.0000 ns/op
+
+WorkloadWarmup   1: 1 op, 6945600.00 ns, 6.9456 ms/op
+WorkloadWarmup   2: 1 op, 6537000.00 ns, 6.5370 ms/op
+WorkloadWarmup   3: 1 op, 22782400.00 ns, 22.7824 ms/op
+
+// BeforeActualRun
+WorkloadActual   1: 1 op, 5153100.00 ns, 5.1531 ms/op
+WorkloadActual   2: 1 op, 5655800.00 ns, 5.6558 ms/op
+WorkloadActual   3: 1 op, 6768500.00 ns, 6.7685 ms/op
+WorkloadActual   4: 1 op, 6321100.00 ns, 6.3211 ms/op
+WorkloadActual   5: 1 op, 6650300.00 ns, 6.6503 ms/op
+WorkloadActual   6: 1 op, 6309400.00 ns, 6.3094 ms/op
+WorkloadActual   7: 1 op, 6295800.00 ns, 6.2958 ms/op
+WorkloadActual   8: 1 op, 6142300.00 ns, 6.1423 ms/op
+WorkloadActual   9: 1 op, 6186800.00 ns, 6.1868 ms/op
+WorkloadActual  10: 1 op, 6168800.00 ns, 6.1688 ms/op
+
+// AfterActualRun
+WorkloadResult   1: 1 op, 5152800.00 ns, 5.1528 ms/op
+WorkloadResult   2: 1 op, 5655500.00 ns, 5.6555 ms/op
+WorkloadResult   3: 1 op, 6320800.00 ns, 6.3208 ms/op
+WorkloadResult   4: 1 op, 6309100.00 ns, 6.3091 ms/op
+WorkloadResult   5: 1 op, 6295500.00 ns, 6.2955 ms/op
+WorkloadResult   6: 1 op, 6142000.00 ns, 6.1420 ms/op
+WorkloadResult   7: 1 op, 6186500.00 ns, 6.1865 ms/op
+WorkloadResult   8: 1 op, 6168500.00 ns, 6.1685 ms/op
+// GC:  0 0 0 2434712 1
+// Threading:  339 25 1
+
+// AfterAll
+// Benchmark Process 32228 has exited with code 0.
+
+Mean = 6.029 ms, StdErr = 0.146 ms (2.43%), N = 8, StdDev = 0.414 ms
+Min = 5.153 ms, Q1 = 6.020 ms, Median = 6.178 ms, Q3 = 6.299 ms, Max = 6.321 ms
+IQR = 0.279 ms, LowerFence = 5.603 ms, UpperFence = 6.717 ms
+ConfidenceInterval = [5.238 ms; 6.820 ms] (CI 99.9%), Margin = 0.791 ms (13.12% of Mean)
+Skewness = -1.15, Kurtosis = 2.68, MValue = 2.33
+
+// ** Remained 9 (50.0%) benchmark(s) to run. Estimated finish 2026-08-07 16:10 (0h 0m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: TileWorkCoordinatorBenchmarks.PublishInterestSet_EmptyQueue: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet InfiniteCanvas.Benchmarks-1.dll --anonymousPipes 2456 1244 --benchmarkName "InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks.PublishInterestSet_EmptyQueue(QueueDepth: 50)" --job "InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3" --benchmarkId 9 in D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL VectorSize=256
+// Job: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 198700.00 ns, 198.7000 us/op
+WorkloadJitting  1: 1 op, 4929000.00 ns, 4.9290 ms/op
+
+OverheadWarmup   1: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   2: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   3: 1 op, 800.00 ns, 800.0000 ns/op
+OverheadWarmup   4: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   5: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   6: 1 op, 300.00 ns, 300.0000 ns/op
+
+OverheadActual   1: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   2: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   3: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   4: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual   5: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   6: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   7: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   8: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   9: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  10: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  11: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  12: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  13: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  14: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  15: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  16: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  17: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  18: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  19: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  20: 1 op, 600.00 ns, 600.0000 ns/op
+
+WorkloadWarmup   1: 1 op, 31300.00 ns, 31.3000 us/op
+WorkloadWarmup   2: 1 op, 10300.00 ns, 10.3000 us/op
+WorkloadWarmup   3: 1 op, 7600.00 ns, 7.6000 us/op
+
+// BeforeActualRun
+WorkloadActual   1: 1 op, 10900.00 ns, 10.9000 us/op
+WorkloadActual   2: 1 op, 8400.00 ns, 8.4000 us/op
+WorkloadActual   3: 1 op, 8500.00 ns, 8.5000 us/op
+WorkloadActual   4: 1 op, 8500.00 ns, 8.5000 us/op
+WorkloadActual   5: 1 op, 7200.00 ns, 7.2000 us/op
+WorkloadActual   6: 1 op, 7100.00 ns, 7.1000 us/op
+WorkloadActual   7: 1 op, 6600.00 ns, 6.6000 us/op
+WorkloadActual   8: 1 op, 6600.00 ns, 6.6000 us/op
+WorkloadActual   9: 1 op, 6500.00 ns, 6.5000 us/op
+WorkloadActual  10: 1 op, 6000.00 ns, 6.0000 us/op
+
+// AfterActualRun
+WorkloadResult   1: 1 op, 10600.00 ns, 10.6000 us/op
+WorkloadResult   2: 1 op, 8100.00 ns, 8.1000 us/op
+WorkloadResult   3: 1 op, 8200.00 ns, 8.2000 us/op
+WorkloadResult   4: 1 op, 8200.00 ns, 8.2000 us/op
+WorkloadResult   5: 1 op, 6900.00 ns, 6.9000 us/op
+WorkloadResult   6: 1 op, 6800.00 ns, 6.8000 us/op
+WorkloadResult   7: 1 op, 6300.00 ns, 6.3000 us/op
+WorkloadResult   8: 1 op, 6300.00 ns, 6.3000 us/op
+WorkloadResult   9: 1 op, 6200.00 ns, 6.2000 us/op
+WorkloadResult  10: 1 op, 5700.00 ns, 5.7000 us/op
+// GC:  0 0 0 1288 1
+// Threading:  0 0 1
+
+// AfterAll
+// Benchmark Process 2600 has exited with code 0.
+
+Mean = 7.330 us, StdErr = 0.463 us (6.32%), N = 10, StdDev = 1.465 us
+Min = 5.700 us, Q1 = 6.300 us, Median = 6.850 us, Q3 = 8.175 us, Max = 10.600 us
+IQR = 1.875 us, LowerFence = 3.487 us, UpperFence = 10.988 us
+ConfidenceInterval = [5.115 us; 9.545 us] (CI 99.9%), Margin = 2.215 us (30.22% of Mean)
+Skewness = 0.91, Kurtosis = 2.75, MValue = 2.33
+
+// ** Remained 8 (44.4%) benchmark(s) to run. Estimated finish 2026-08-07 16:10 (0h 0m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: TileWorkCoordinatorBenchmarks.PublishInterestSet_AllVisible: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet InfiniteCanvas.Benchmarks-1.dll --anonymousPipes 1440 1220 --benchmarkName "InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks.PublishInterestSet_AllVisible(QueueDepth: 50)" --job "InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3" --benchmarkId 10 in D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL VectorSize=256
+// Job: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 152000.00 ns, 152.0000 us/op
+WorkloadJitting  1: 1 op, 18053300.00 ns, 18.0533 ms/op
+
+OverheadWarmup   1: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   2: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadWarmup   3: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   4: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   5: 1 op, 300.00 ns, 300.0000 ns/op
+
+OverheadActual   1: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   2: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   3: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   4: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   5: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   6: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   7: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   8: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   9: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  10: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  11: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  12: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  13: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  14: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  15: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  16: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  17: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  18: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  19: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual  20: 1 op, 200.00 ns, 200.0000 ns/op
+
+WorkloadWarmup   1: 1 op, 92400.00 ns, 92.4000 us/op
+WorkloadWarmup   2: 1 op, 70000.00 ns, 70.0000 us/op
+WorkloadWarmup   3: 1 op, 110100.00 ns, 110.1000 us/op
+
+// BeforeActualRun
+WorkloadActual   1: 1 op, 63100.00 ns, 63.1000 us/op
+WorkloadActual   2: 1 op, 66500.00 ns, 66.5000 us/op
+WorkloadActual   3: 1 op, 61900.00 ns, 61.9000 us/op
+WorkloadActual   4: 1 op, 48300.00 ns, 48.3000 us/op
+WorkloadActual   5: 1 op, 47500.00 ns, 47.5000 us/op
+WorkloadActual   6: 1 op, 48100.00 ns, 48.1000 us/op
+WorkloadActual   7: 1 op, 51400.00 ns, 51.4000 us/op
+WorkloadActual   8: 1 op, 48200.00 ns, 48.2000 us/op
+WorkloadActual   9: 1 op, 52700.00 ns, 52.7000 us/op
+WorkloadActual  10: 1 op, 51100.00 ns, 51.1000 us/op
+
+// AfterActualRun
+WorkloadResult   1: 1 op, 62800.00 ns, 62.8000 us/op
+WorkloadResult   2: 1 op, 66200.00 ns, 66.2000 us/op
+WorkloadResult   3: 1 op, 61600.00 ns, 61.6000 us/op
+WorkloadResult   4: 1 op, 48000.00 ns, 48.0000 us/op
+WorkloadResult   5: 1 op, 47200.00 ns, 47.2000 us/op
+WorkloadResult   6: 1 op, 47800.00 ns, 47.8000 us/op
+WorkloadResult   7: 1 op, 51100.00 ns, 51.1000 us/op
+WorkloadResult   8: 1 op, 47900.00 ns, 47.9000 us/op
+WorkloadResult   9: 1 op, 52400.00 ns, 52.4000 us/op
+WorkloadResult  10: 1 op, 50800.00 ns, 50.8000 us/op
+// GC:  0 0 0 27352 1
+// Threading:  20 0 1
+
+// AfterAll
+// Benchmark Process 39408 has exited with code 0.
+
+Mean = 53.580 us, StdErr = 2.264 us (4.23%), N = 10, StdDev = 7.160 us
+Min = 47.200 us, Q1 = 47.925 us, Median = 50.950 us, Q3 = 59.300 us, Max = 66.200 us
+IQR = 11.375 us, LowerFence = 30.863 us, UpperFence = 76.362 us
+ConfidenceInterval = [42.755 us; 64.405 us] (CI 99.9%), Margin = 10.825 us (20.20% of Mean)
+Skewness = 0.67, Kurtosis = 1.58, MValue = 2.86
+
+// ** Remained 7 (38.9%) benchmark(s) to run. Estimated finish 2026-08-07 16:10 (0h 0m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: TileWorkCoordinatorBenchmarks.PublishInterestSet_NoneVisible: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet InfiniteCanvas.Benchmarks-1.dll --anonymousPipes 1464 2460 --benchmarkName "InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks.PublishInterestSet_NoneVisible(QueueDepth: 50)" --job "InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3" --benchmarkId 11 in D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL VectorSize=256
+// Job: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 155900.00 ns, 155.9000 us/op
+WorkloadJitting  1: 1 op, 84458000.00 ns, 84.4580 ms/op
+
+OverheadWarmup   1: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   2: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   3: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadWarmup   4: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadWarmup   5: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadWarmup   6: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   7: 1 op, 200.00 ns, 200.0000 ns/op
+
+OverheadActual   1: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   2: 1 op, 1000.00 ns, 1.0000 us/op
+OverheadActual   3: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   4: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual   5: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   6: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual   7: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual   8: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   9: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual  10: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual  11: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  12: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual  13: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual  14: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual  15: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual  16: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual  17: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  18: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  19: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  20: 1 op, 300.00 ns, 300.0000 ns/op
+
+WorkloadWarmup   1: 1 op, 343700.00 ns, 343.7000 us/op
+WorkloadWarmup   2: 1 op, 105500.00 ns, 105.5000 us/op
+WorkloadWarmup   3: 1 op, 87600.00 ns, 87.6000 us/op
+
+// BeforeActualRun
+WorkloadActual   1: 1 op, 279300.00 ns, 279.3000 us/op
+WorkloadActual   2: 1 op, 112700.00 ns, 112.7000 us/op
+WorkloadActual   3: 1 op, 149100.00 ns, 149.1000 us/op
+WorkloadActual   4: 1 op, 88000.00 ns, 88.0000 us/op
+WorkloadActual   5: 1 op, 116500.00 ns, 116.5000 us/op
+WorkloadActual   6: 1 op, 107500.00 ns, 107.5000 us/op
+WorkloadActual   7: 1 op, 122500.00 ns, 122.5000 us/op
+WorkloadActual   8: 1 op, 117800.00 ns, 117.8000 us/op
+WorkloadActual   9: 1 op, 132800.00 ns, 132.8000 us/op
+WorkloadActual  10: 1 op, 82300.00 ns, 82.3000 us/op
+
+// AfterActualRun
+WorkloadResult   1: 1 op, 112550.00 ns, 112.5500 us/op
+WorkloadResult   2: 1 op, 148950.00 ns, 148.9500 us/op
+WorkloadResult   3: 1 op, 87850.00 ns, 87.8500 us/op
+WorkloadResult   4: 1 op, 116350.00 ns, 116.3500 us/op
+WorkloadResult   5: 1 op, 107350.00 ns, 107.3500 us/op
+WorkloadResult   6: 1 op, 122350.00 ns, 122.3500 us/op
+WorkloadResult   7: 1 op, 117650.00 ns, 117.6500 us/op
+WorkloadResult   8: 1 op, 132650.00 ns, 132.6500 us/op
+WorkloadResult   9: 1 op, 82150.00 ns, 82.1500 us/op
+// GC:  0 0 0 51872 1
+// Threading:  2 1 1
+
+// AfterAll
+// Benchmark Process 21760 has exited with code 0.
+
+Mean = 114.206 us, StdErr = 6.874 us (6.02%), N = 9, StdDev = 20.622 us
+Min = 82.150 us, Q1 = 107.350 us, Median = 116.350 us, Q3 = 122.350 us, Max = 148.950 us
+IQR = 15.000 us, LowerFence = 84.850 us, UpperFence = 144.850 us
+ConfidenceInterval = [79.552 us; 148.859 us] (CI 99.9%), Margin = 34.654 us (30.34% of Mean)
+Skewness = -0.04, Kurtosis = 1.92, MValue = 2.4
+
+// ** Remained 6 (33.3%) benchmark(s) to run. Estimated finish 2026-08-07 16:10 (0h 0m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: TileWorkCoordinatorBenchmarks.PublishInterestSet_MixedVisibility: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet InfiniteCanvas.Benchmarks-1.dll --anonymousPipes 2324 2456 --benchmarkName "InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks.PublishInterestSet_MixedVisibility(QueueDepth: 50)" --job "InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3" --benchmarkId 12 in D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL VectorSize=256
+// Job: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 157500.00 ns, 157.5000 us/op
+WorkloadJitting  1: 1 op, 21933800.00 ns, 21.9338 ms/op
+
+OverheadWarmup   1: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   2: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   3: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadWarmup   4: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   5: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadWarmup   6: 1 op, 300.00 ns, 300.0000 ns/op
+
+OverheadActual   1: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   2: 1 op, 500.00 ns, 500.0000 ns/op
+OverheadActual   3: 1 op, 1000.00 ns, 1.0000 us/op
+OverheadActual   4: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   5: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   6: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   7: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   8: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   9: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  10: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  11: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  12: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  13: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  14: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  15: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  16: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  17: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual  18: 1 op, 800.00 ns, 800.0000 ns/op
+OverheadActual  19: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  20: 1 op, 200.00 ns, 200.0000 ns/op
+
+WorkloadWarmup   1: 1 op, 178800.00 ns, 178.8000 us/op
+WorkloadWarmup   2: 1 op, 161200.00 ns, 161.2000 us/op
+WorkloadWarmup   3: 1 op, 156900.00 ns, 156.9000 us/op
+
+// BeforeActualRun
+WorkloadActual   1: 1 op, 123500.00 ns, 123.5000 us/op
+WorkloadActual   2: 1 op, 152100.00 ns, 152.1000 us/op
+WorkloadActual   3: 1 op, 134500.00 ns, 134.5000 us/op
+WorkloadActual   4: 1 op, 110800.00 ns, 110.8000 us/op
+WorkloadActual   5: 1 op, 141300.00 ns, 141.3000 us/op
+WorkloadActual   6: 1 op, 109900.00 ns, 109.9000 us/op
+WorkloadActual   7: 1 op, 225500.00 ns, 225.5000 us/op
+WorkloadActual   8: 1 op, 129800.00 ns, 129.8000 us/op
+WorkloadActual   9: 1 op, 156700.00 ns, 156.7000 us/op
+WorkloadActual  10: 1 op, 128800.00 ns, 128.8000 us/op
+
+// AfterActualRun
+WorkloadResult   1: 1 op, 123150.00 ns, 123.1500 us/op
+WorkloadResult   2: 1 op, 151750.00 ns, 151.7500 us/op
+WorkloadResult   3: 1 op, 134150.00 ns, 134.1500 us/op
+WorkloadResult   4: 1 op, 110450.00 ns, 110.4500 us/op
+WorkloadResult   5: 1 op, 140950.00 ns, 140.9500 us/op
+WorkloadResult   6: 1 op, 109550.00 ns, 109.5500 us/op
+WorkloadResult   7: 1 op, 129450.00 ns, 129.4500 us/op
+WorkloadResult   8: 1 op, 156350.00 ns, 156.3500 us/op
+WorkloadResult   9: 1 op, 128450.00 ns, 128.4500 us/op
+// GC:  0 0 0 79464 1
+// Threading:  20 1 1
+
+// AfterAll
+// Benchmark Process 27408 has exited with code 0.
+
+Mean = 131.583 us, StdErr = 5.442 us (4.14%), N = 9, StdDev = 16.325 us
+Min = 109.550 us, Q1 = 123.150 us, Median = 129.450 us, Q3 = 140.950 us, Max = 156.350 us
+IQR = 17.800 us, LowerFence = 96.450 us, UpperFence = 167.650 us
+ConfidenceInterval = [104.151 us; 159.016 us] (CI 99.9%), Margin = 27.433 us (20.85% of Mean)
+Skewness = 0.09, Kurtosis = 1.55, MValue = 2
+
+// ** Remained 5 (27.8%) benchmark(s) to run. Estimated finish 2026-08-07 16:10 (0h 0m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: TileWorkCoordinatorBenchmarks.DrainQueue_FifoFallback: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet InfiniteCanvas.Benchmarks-1.dll --anonymousPipes 1476 1432 --benchmarkName "InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks.DrainQueue_FifoFallback(QueueDepth: 50)" --job "InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3" --benchmarkId 13 in D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL VectorSize=256
+// Job: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 212500.00 ns, 212.5000 us/op
+WorkloadJitting  1: 1 op, 18791100.00 ns, 18.7911 ms/op
+
+OverheadWarmup   1: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadWarmup   2: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   3: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   4: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   5: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   6: 1 op, 200.00 ns, 200.0000 ns/op
+
+OverheadActual   1: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   2: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   3: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   4: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   5: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   6: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   7: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   8: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   9: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  10: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  11: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  12: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  13: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  14: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  15: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  16: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  17: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  18: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  19: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  20: 1 op, 200.00 ns, 200.0000 ns/op
+
+WorkloadWarmup   1: 1 op, 145800.00 ns, 145.8000 us/op
+WorkloadWarmup   2: 1 op, 104100.00 ns, 104.1000 us/op
+WorkloadWarmup   3: 1 op, 69100.00 ns, 69.1000 us/op
+
+// BeforeActualRun
+WorkloadActual   1: 1 op, 80600.00 ns, 80.6000 us/op
+WorkloadActual   2: 1 op, 87800.00 ns, 87.8000 us/op
+WorkloadActual   3: 1 op, 1513000.00 ns, 1.5130 ms/op
+WorkloadActual   4: 1 op, 102800.00 ns, 102.8000 us/op
+WorkloadActual   5: 1 op, 93900.00 ns, 93.9000 us/op
+WorkloadActual   6: 1 op, 85900.00 ns, 85.9000 us/op
+WorkloadActual   7: 1 op, 87600.00 ns, 87.6000 us/op
+WorkloadActual   8: 1 op, 75500.00 ns, 75.5000 us/op
+WorkloadActual   9: 1 op, 78200.00 ns, 78.2000 us/op
+WorkloadActual  10: 1 op, 69300.00 ns, 69.3000 us/op
+
+// AfterActualRun
+WorkloadResult   1: 1 op, 80300.00 ns, 80.3000 us/op
+WorkloadResult   2: 1 op, 87500.00 ns, 87.5000 us/op
+WorkloadResult   3: 1 op, 102500.00 ns, 102.5000 us/op
+WorkloadResult   4: 1 op, 93600.00 ns, 93.6000 us/op
+WorkloadResult   5: 1 op, 85600.00 ns, 85.6000 us/op
+WorkloadResult   6: 1 op, 87300.00 ns, 87.3000 us/op
+WorkloadResult   7: 1 op, 75200.00 ns, 75.2000 us/op
+WorkloadResult   8: 1 op, 77900.00 ns, 77.9000 us/op
+WorkloadResult   9: 1 op, 69000.00 ns, 69.0000 us/op
+// GC:  0 0 0 39560 1
+// Threading:  2 0 1
+
+// AfterAll
+// Benchmark Process 26012 has exited with code 0.
+
+Mean = 84.322 us, StdErr = 3.359 us (3.98%), N = 9, StdDev = 10.078 us
+Min = 69.000 us, Q1 = 77.900 us, Median = 85.600 us, Q3 = 87.500 us, Max = 102.500 us
+IQR = 9.600 us, LowerFence = 63.500 us, UpperFence = 101.900 us
+ConfidenceInterval = [67.387 us; 101.258 us] (CI 99.9%), Margin = 16.935 us (20.08% of Mean)
+Skewness = 0.24, Kurtosis = 1.95, MValue = 2
+
+// ** Remained 4 (22.2%) benchmark(s) to run. Estimated finish 2026-08-07 16:10 (0h 0m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: TileWorkCoordinatorBenchmarks.DrainQueue_VisiblePromoted: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet InfiniteCanvas.Benchmarks-1.dll --anonymousPipes 2456 2304 --benchmarkName "InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks.DrainQueue_VisiblePromoted(QueueDepth: 50)" --job "InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3" --benchmarkId 14 in D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL VectorSize=256
+// Job: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 184900.00 ns, 184.9000 us/op
+WorkloadJitting  1: 1 op, 28456900.00 ns, 28.4569 ms/op
+
+OverheadWarmup   1: 1 op, 900.00 ns, 900.0000 ns/op
+OverheadWarmup   2: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   3: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   4: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   5: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadWarmup   6: 1 op, 200.00 ns, 200.0000 ns/op
+
+OverheadActual   1: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   2: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   3: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   4: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   5: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   6: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   7: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   8: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   9: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  10: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  11: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  12: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  13: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  14: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  15: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  16: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  17: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  18: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  19: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  20: 1 op, 200.00 ns, 200.0000 ns/op
+
+WorkloadWarmup   1: 1 op, 181400.00 ns, 181.4000 us/op
+WorkloadWarmup   2: 1 op, 160900.00 ns, 160.9000 us/op
+WorkloadWarmup   3: 1 op, 139300.00 ns, 139.3000 us/op
+
+// BeforeActualRun
+WorkloadActual   1: 1 op, 273900.00 ns, 273.9000 us/op
+WorkloadActual   2: 1 op, 169700.00 ns, 169.7000 us/op
+WorkloadActual   3: 1 op, 143300.00 ns, 143.3000 us/op
+WorkloadActual   4: 1 op, 163700.00 ns, 163.7000 us/op
+WorkloadActual   5: 1 op, 161100.00 ns, 161.1000 us/op
+WorkloadActual   6: 1 op, 142700.00 ns, 142.7000 us/op
+WorkloadActual   7: 1 op, 143100.00 ns, 143.1000 us/op
+WorkloadActual   8: 1 op, 113100.00 ns, 113.1000 us/op
+WorkloadActual   9: 1 op, 153600.00 ns, 153.6000 us/op
+WorkloadActual  10: 1 op, 148800.00 ns, 148.8000 us/op
+
+// AfterActualRun
+WorkloadResult   1: 1 op, 169400.00 ns, 169.4000 us/op
+WorkloadResult   2: 1 op, 143000.00 ns, 143.0000 us/op
+WorkloadResult   3: 1 op, 163400.00 ns, 163.4000 us/op
+WorkloadResult   4: 1 op, 160800.00 ns, 160.8000 us/op
+WorkloadResult   5: 1 op, 142400.00 ns, 142.4000 us/op
+WorkloadResult   6: 1 op, 142800.00 ns, 142.8000 us/op
+WorkloadResult   7: 1 op, 112800.00 ns, 112.8000 us/op
+WorkloadResult   8: 1 op, 153300.00 ns, 153.3000 us/op
+WorkloadResult   9: 1 op, 148500.00 ns, 148.5000 us/op
+// GC:  0 0 0 74280 1
+// Threading:  22 1 1
+
+// AfterAll
+// Benchmark Process 14252 has exited with code 0.
+
+Mean = 148.489 us, StdErr = 5.537 us (3.73%), N = 9, StdDev = 16.612 us
+Min = 112.800 us, Q1 = 142.800 us, Median = 148.500 us, Q3 = 160.800 us, Max = 169.400 us
+IQR = 18.000 us, LowerFence = 115.800 us, UpperFence = 187.800 us
+ConfidenceInterval = [120.574 us; 176.404 us] (CI 99.9%), Margin = 27.915 us (18.80% of Mean)
+Skewness = -0.77, Kurtosis = 2.76, MValue = 2
+
+// ** Remained 3 (16.7%) benchmark(s) to run. Estimated finish 2026-08-07 16:10 (0h 0m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: TileWorkCoordinatorBenchmarks.FastScrollStress_ThreeCycles: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet InfiniteCanvas.Benchmarks-1.dll --anonymousPipes 2508 1200 --benchmarkName "InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks.FastScrollStress_ThreeCycles(QueueDepth: 50)" --job "InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3" --benchmarkId 15 in D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL VectorSize=256
+// Job: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 182100.00 ns, 182.1000 us/op
+WorkloadJitting  1: 1 op, 24268100.00 ns, 24.2681 ms/op
+
+OverheadWarmup   1: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadWarmup   2: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   3: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   4: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   5: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   6: 1 op, 300.00 ns, 300.0000 ns/op
+
+OverheadActual   1: 1 op, 500.00 ns, 500.0000 ns/op
+OverheadActual   2: 1 op, 500.00 ns, 500.0000 ns/op
+OverheadActual   3: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   4: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   5: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   6: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   7: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   8: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   9: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  10: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  11: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  12: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual  13: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  14: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  15: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  16: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  17: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  18: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  19: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  20: 1 op, 500.00 ns, 500.0000 ns/op
+
+WorkloadWarmup   1: 1 op, 357600.00 ns, 357.6000 us/op
+WorkloadWarmup   2: 1 op, 329200.00 ns, 329.2000 us/op
+WorkloadWarmup   3: 1 op, 302500.00 ns, 302.5000 us/op
+
+// BeforeActualRun
+WorkloadActual   1: 1 op, 271200.00 ns, 271.2000 us/op
+WorkloadActual   2: 1 op, 234600.00 ns, 234.6000 us/op
+WorkloadActual   3: 1 op, 274300.00 ns, 274.3000 us/op
+WorkloadActual   4: 1 op, 2358300.00 ns, 2.3583 ms/op
+WorkloadActual   5: 1 op, 250600.00 ns, 250.6000 us/op
+WorkloadActual   6: 1 op, 224600.00 ns, 224.6000 us/op
+WorkloadActual   7: 1 op, 347200.00 ns, 347.2000 us/op
+WorkloadActual   8: 1 op, 278200.00 ns, 278.2000 us/op
+WorkloadActual   9: 1 op, 349500.00 ns, 349.5000 us/op
+WorkloadActual  10: 1 op, 265600.00 ns, 265.6000 us/op
+
+// AfterActualRun
+WorkloadResult   1: 1 op, 271000.00 ns, 271.0000 us/op
+WorkloadResult   2: 1 op, 234400.00 ns, 234.4000 us/op
+WorkloadResult   3: 1 op, 274100.00 ns, 274.1000 us/op
+WorkloadResult   4: 1 op, 250400.00 ns, 250.4000 us/op
+WorkloadResult   5: 1 op, 224400.00 ns, 224.4000 us/op
+WorkloadResult   6: 1 op, 347000.00 ns, 347.0000 us/op
+WorkloadResult   7: 1 op, 278000.00 ns, 278.0000 us/op
+WorkloadResult   8: 1 op, 349300.00 ns, 349.3000 us/op
+WorkloadResult   9: 1 op, 265400.00 ns, 265.4000 us/op
+// GC:  0 0 0 129304 1
+// Threading:  12 1 1
+
+// AfterAll
+// Benchmark Process 10672 has exited with code 0.
+
+Mean = 277.111 us, StdErr = 14.718 us (5.31%), N = 9, StdDev = 44.153 us
+Min = 224.400 us, Q1 = 250.400 us, Median = 271.000 us, Q3 = 278.000 us, Max = 349.300 us
+IQR = 27.600 us, LowerFence = 209.000 us, UpperFence = 319.400 us
+ConfidenceInterval = [202.914 us; 351.308 us] (CI 99.9%), Margin = 74.197 us (26.78% of Mean)
+Skewness = 0.61, Kurtosis = 1.83, MValue = 2
+
+// ** Remained 2 (11.1%) benchmark(s) to run. Estimated finish 2026-08-07 16:10 (0h 0m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: TileWorkCoordinatorBenchmarks.DrainQueue_PriorityDistanceOrdered: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet InfiniteCanvas.Benchmarks-1.dll --anonymousPipes 2304 2124 --benchmarkName "InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks.DrainQueue_PriorityDistanceOrdered(QueueDepth: 50)" --job "InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3" --benchmarkId 16 in D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL VectorSize=256
+// Job: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 170800.00 ns, 170.8000 us/op
+WorkloadJitting  1: 1 op, 22571800.00 ns, 22.5718 ms/op
+
+OverheadWarmup   1: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   2: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   3: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   4: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   5: 1 op, 300.00 ns, 300.0000 ns/op
+
+OverheadActual   1: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   2: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   3: 1 op, 600.00 ns, 600.0000 ns/op
+OverheadActual   4: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   5: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   6: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   7: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   8: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   9: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  10: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  11: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  12: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  13: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  14: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  15: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  16: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  17: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  18: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  19: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  20: 1 op, 200.00 ns, 200.0000 ns/op
+
+WorkloadWarmup   1: 1 op, 3038900.00 ns, 3.0389 ms/op
+WorkloadWarmup   2: 1 op, 2814300.00 ns, 2.8143 ms/op
+WorkloadWarmup   3: 1 op, 2581500.00 ns, 2.5815 ms/op
+
+// BeforeActualRun
+WorkloadActual   1: 1 op, 2846200.00 ns, 2.8462 ms/op
+WorkloadActual   2: 1 op, 2714100.00 ns, 2.7141 ms/op
+WorkloadActual   3: 1 op, 2565100.00 ns, 2.5651 ms/op
+WorkloadActual   4: 1 op, 2561000.00 ns, 2.5610 ms/op
+WorkloadActual   5: 1 op, 2702500.00 ns, 2.7025 ms/op
+WorkloadActual   6: 1 op, 11356000.00 ns, 11.3560 ms/op
+WorkloadActual   7: 1 op, 5844600.00 ns, 5.8446 ms/op
+WorkloadActual   8: 1 op, 2652500.00 ns, 2.6525 ms/op
+WorkloadActual   9: 1 op, 2553200.00 ns, 2.5532 ms/op
+WorkloadActual  10: 1 op, 2538400.00 ns, 2.5384 ms/op
+
+// AfterActualRun
+WorkloadResult   1: 1 op, 2845900.00 ns, 2.8459 ms/op
+WorkloadResult   2: 1 op, 2713800.00 ns, 2.7138 ms/op
+WorkloadResult   3: 1 op, 2564800.00 ns, 2.5648 ms/op
+WorkloadResult   4: 1 op, 2560700.00 ns, 2.5607 ms/op
+WorkloadResult   5: 1 op, 2702200.00 ns, 2.7022 ms/op
+WorkloadResult   6: 1 op, 2652200.00 ns, 2.6522 ms/op
+WorkloadResult   7: 1 op, 2552900.00 ns, 2.5529 ms/op
+WorkloadResult   8: 1 op, 2538100.00 ns, 2.5381 ms/op
+// GC:  0 0 0 1264848 1
+// Threading:  155 22 1
+
+// AfterAll
+// Benchmark Process 33276 has exited with code 0.
+
+Mean = 2.641 ms, StdErr = 0.038 ms (1.45%), N = 8, StdDev = 0.108 ms
+Min = 2.538 ms, Q1 = 2.559 ms, Median = 2.608 ms, Q3 = 2.705 ms, Max = 2.846 ms
+IQR = 0.146 ms, LowerFence = 2.339 ms, UpperFence = 2.925 ms
+ConfidenceInterval = [2.435 ms; 2.848 ms] (CI 99.9%), Margin = 0.207 ms (7.82% of Mean)
+Skewness = 0.63, Kurtosis = 1.87, MValue = 2
+
+// ** Remained 1 (5.6%) benchmark(s) to run. Estimated finish 2026-08-07 16:10 (0h 0m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: TileWorkCoordinatorBenchmarks.FastScrollStress_PriorityCenterChange: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet InfiniteCanvas.Benchmarks-1.dll --anonymousPipes 1280 2368 --benchmarkName "InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks.FastScrollStress_PriorityCenterChange(QueueDepth: 50)" --job "InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3" --benchmarkId 17 in D:\@Repos\InfiniteCanvasWPF\benchmarks\InfiniteCanvas.Benchmarks\bin\Release\net10.0-windows\InfiniteCanvas.Benchmarks-1\bin\Release\net10.0-Windows7.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL VectorSize=256
+// Job: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 165200.00 ns, 165.2000 us/op
+WorkloadJitting  1: 1 op, 26344900.00 ns, 26.3449 ms/op
+
+OverheadWarmup   1: 1 op, 500.00 ns, 500.0000 ns/op
+OverheadWarmup   2: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   3: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   4: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   5: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   6: 1 op, 200.00 ns, 200.0000 ns/op
+
+OverheadActual   1: 1 op, 600.00 ns, 600.0000 ns/op
+OverheadActual   2: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   3: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   4: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   5: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   6: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual   7: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   8: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual   9: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  10: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  11: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  12: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  13: 1 op, 800.00 ns, 800.0000 ns/op
+OverheadActual  14: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  15: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  16: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  17: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  18: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  19: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  20: 1 op, 200.00 ns, 200.0000 ns/op
+
+WorkloadWarmup   1: 1 op, 6913200.00 ns, 6.9132 ms/op
+WorkloadWarmup   2: 1 op, 7125400.00 ns, 7.1254 ms/op
+WorkloadWarmup   3: 1 op, 20406000.00 ns, 20.4060 ms/op
+
+// BeforeActualRun
+WorkloadActual   1: 1 op, 4890500.00 ns, 4.8905 ms/op
+WorkloadActual   2: 1 op, 6225200.00 ns, 6.2252 ms/op
+WorkloadActual   3: 1 op, 6437400.00 ns, 6.4374 ms/op
+WorkloadActual   4: 1 op, 6287100.00 ns, 6.2871 ms/op
+WorkloadActual   5: 1 op, 5952300.00 ns, 5.9523 ms/op
+WorkloadActual   6: 1 op, 6496500.00 ns, 6.4965 ms/op
+WorkloadActual   7: 1 op, 6158400.00 ns, 6.1584 ms/op
+WorkloadActual   8: 1 op, 6365400.00 ns, 6.3654 ms/op
+WorkloadActual   9: 1 op, 5903600.00 ns, 5.9036 ms/op
+WorkloadActual  10: 1 op, 6753800.00 ns, 6.7538 ms/op
+
+// AfterActualRun
+WorkloadResult   1: 1 op, 4890250.00 ns, 4.8903 ms/op
+WorkloadResult   2: 1 op, 6224950.00 ns, 6.2250 ms/op
+WorkloadResult   3: 1 op, 6437150.00 ns, 6.4372 ms/op
+WorkloadResult   4: 1 op, 6286850.00 ns, 6.2869 ms/op
+WorkloadResult   5: 1 op, 5952050.00 ns, 5.9521 ms/op
+WorkloadResult   6: 1 op, 6496250.00 ns, 6.4963 ms/op
+WorkloadResult   7: 1 op, 6158150.00 ns, 6.1582 ms/op
+WorkloadResult   8: 1 op, 6365150.00 ns, 6.3652 ms/op
+WorkloadResult   9: 1 op, 5903350.00 ns, 5.9034 ms/op
+WorkloadResult  10: 1 op, 6753550.00 ns, 6.7536 ms/op
+// GC:  0 0 0 2371608 1
+// Threading:  244 49 1
+
+// AfterAll
+// Benchmark Process 21720 has exited with code 0.
+
+Mean = 6.147 ms, StdErr = 0.161 ms (2.61%), N = 10, StdDev = 0.508 ms
+Min = 4.890 ms, Q1 = 6.004 ms, Median = 6.256 ms, Q3 = 6.419 ms, Max = 6.754 ms
+IQR = 0.416 ms, LowerFence = 5.380 ms, UpperFence = 7.043 ms
+ConfidenceInterval = [5.378 ms; 6.915 ms] (CI 99.9%), Margin = 0.768 ms (12.50% of Mean)
+Skewness = -1.3, Kurtosis = 3.99, MValue = 2
+
+// ** Remained 0 (0.0%) benchmark(s) to run. Estimated finish 2026-08-07 16:10 (0h 0m from now) **
+Successfully reverted power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// ***** BenchmarkRunner: Finish  *****
+
+// * Export *
+  docs\benchmarks\runs\20260807-160953\results\InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks-report.csv
+  docs\benchmarks\runs\20260807-160953\results\InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks-report-github.md
+  docs\benchmarks\runs\20260807-160953\results\InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks-report.html
+  docs\benchmarks\runs\20260807-160953\results\InfiniteCanvas.Benchmarks.TileWorkCoordinatorBenchmarks-report-full-compressed.json
+
+// * Detailed results *
+TileWorkCoordinatorBenchmarks.PublishInterestSet_EmptyQueue: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+Runtime = .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3; GC = Concurrent Workstation
+Mean = 7.990 us, StdErr = 0.344 us (4.31%), N = 10, StdDev = 1.089 us
+Min = 6.750 us, Q1 = 7.100 us, Median = 7.850 us, Q3 = 8.800 us, Max = 9.950 us
+IQR = 1.700 us, LowerFence = 4.550 us, UpperFence = 11.350 us
+ConfidenceInterval = [6.344 us; 9.636 us] (CI 99.9%), Margin = 1.646 us (20.60% of Mean)
+Skewness = 0.33, Kurtosis = 1.58, MValue = 2
+-------------------- Histogram --------------------
+[6.487 us ;  7.813 us) | @@@@@
+[7.813 us ;  9.213 us) | @@@@
+[9.213 us ; 10.613 us) | @
+---------------------------------------------------
+
+TileWorkCoordinatorBenchmarks.PublishInterestSet_AllVisible: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+Runtime = .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3; GC = Concurrent Workstation
+Mean = 54.589 us, StdErr = 2.170 us (3.97%), N = 9, StdDev = 6.509 us
+Min = 48.500 us, Q1 = 49.500 us, Median = 52.300 us, Q3 = 56.700 us, Max = 69.000 us
+IQR = 7.200 us, LowerFence = 38.700 us, UpperFence = 67.500 us
+ConfidenceInterval = [43.651 us; 65.527 us] (CI 99.9%), Margin = 10.938 us (20.04% of Mean)
+Skewness = 0.99, Kurtosis = 2.89, MValue = 3.2
+-------------------- Histogram --------------------
+[48.493 us ; 56.707 us) | @@@@@@@
+[56.707 us ; 64.893 us) | @
+[64.893 us ; 73.107 us) | @
+---------------------------------------------------
+
+TileWorkCoordinatorBenchmarks.PublishInterestSet_NoneVisible: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+Runtime = .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3; GC = Concurrent Workstation
+Mean = 102.300 us, StdErr = 6.873 us (6.72%), N = 9, StdDev = 20.619 us
+Min = 75.100 us, Q1 = 84.400 us, Median = 100.000 us, Q3 = 112.200 us, Max = 141.100 us
+IQR = 27.800 us, LowerFence = 42.700 us, UpperFence = 153.900 us
+ConfidenceInterval = [67.651 us; 136.949 us] (CI 99.9%), Margin = 34.649 us (33.87% of Mean)
+Skewness = 0.44, Kurtosis = 1.96, MValue = 2
+-------------------- Histogram --------------------
+[ 62.090 us ;  80.040 us) | @
+[ 80.040 us ; 106.060 us) | @@@@@
+[106.060 us ; 130.060 us) | @@
+[130.060 us ; 154.110 us) | @
+---------------------------------------------------
+
+TileWorkCoordinatorBenchmarks.PublishInterestSet_MixedVisibility: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+Runtime = .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3; GC = Concurrent Workstation
+Mean = 144.110 us, StdErr = 5.947 us (4.13%), N = 10, StdDev = 18.807 us
+Min = 124.300 us, Q1 = 126.425 us, Median = 142.300 us, Q3 = 161.850 us, Max = 168.000 us
+IQR = 35.425 us, LowerFence = 73.287 us, UpperFence = 214.988 us
+ConfidenceInterval = [115.677 us; 172.543 us] (CI 99.9%), Margin = 28.433 us (19.73% of Mean)
+Skewness = 0.06, Kurtosis = 0.91, MValue = 4
+-------------------- Histogram --------------------
+[115.643 us ; 138.557 us) | @@@@@
+[138.557 us ; 149.893 us) |
+[149.893 us ; 172.807 us) | @@@@@
+---------------------------------------------------
+
+TileWorkCoordinatorBenchmarks.DrainQueue_FifoFallback: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+Runtime = .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3; GC = Concurrent Workstation
+Mean = 80.700 us, StdErr = 4.660 us (5.77%), N = 9, StdDev = 13.979 us
+Min = 65.600 us, Q1 = 69.100 us, Median = 80.100 us, Q3 = 88.100 us, Max = 104.600 us
+IQR = 19.000 us, LowerFence = 40.600 us, UpperFence = 116.600 us
+ConfidenceInterval = [57.208 us; 104.192 us] (CI 99.9%), Margin = 23.492 us (29.11% of Mean)
+Skewness = 0.35, Kurtosis = 1.47, MValue = 2
+-------------------- Histogram --------------------
+[64.029 us ;  81.671 us) | @@@@@
+[81.671 us ;  99.921 us) | @@@
+[99.921 us ; 113.421 us) | @
+---------------------------------------------------
+
+TileWorkCoordinatorBenchmarks.DrainQueue_VisiblePromoted: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+Runtime = .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3; GC = Concurrent Workstation
+Mean = 50.122 us, StdErr = 3.205 us (6.39%), N = 9, StdDev = 9.615 us
+Min = 39.000 us, Q1 = 43.700 us, Median = 47.800 us, Q3 = 55.100 us, Max = 68.600 us
+IQR = 11.400 us, LowerFence = 26.600 us, UpperFence = 72.200 us
+ConfidenceInterval = [33.964 us; 66.280 us] (CI 99.9%), Margin = 16.158 us (32.24% of Mean)
+Skewness = 0.69, Kurtosis = 1.97, MValue = 2
+-------------------- Histogram --------------------
+[37.633 us ; 51.983 us) | @@@@@@
+[51.983 us ; 64.117 us) | @@
+[64.117 us ; 74.667 us) | @
+---------------------------------------------------
+
+TileWorkCoordinatorBenchmarks.FastScrollStress_ThreeCycles: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+Runtime = .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3; GC = Concurrent Workstation
+Mean = 238.850 us, StdErr = 3.126 us (1.31%), N = 8, StdDev = 8.843 us
+Min = 221.350 us, Q1 = 235.725 us, Median = 239.900 us, Q3 = 244.650 us, Max = 249.550 us
+IQR = 8.925 us, LowerFence = 222.338 us, UpperFence = 258.038 us
+ConfidenceInterval = [221.942 us; 255.758 us] (CI 99.9%), Margin = 16.908 us (7.08% of Mean)
+Skewness = -0.68, Kurtosis = 2.29, MValue = 2
+-------------------- Histogram --------------------
+[215.547 us ; 228.997 us) | @
+[228.997 us ; 238.897 us) | @@
+[238.897 us ; 250.503 us) | @@@@@
+---------------------------------------------------
+
+TileWorkCoordinatorBenchmarks.DrainQueue_PriorityDistanceOrdered: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+Runtime = .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3; GC = Concurrent Workstation
+Mean = 2.681 ms, StdErr = 0.090 ms (3.35%), N = 8, StdDev = 0.254 ms
+Min = 2.211 ms, Q1 = 2.540 ms, Median = 2.716 ms, Q3 = 2.824 ms, Max = 3.016 ms
+IQR = 0.284 ms, LowerFence = 2.114 ms, UpperFence = 3.250 ms
+ConfidenceInterval = [2.195 ms; 3.167 ms] (CI 99.9%), Margin = 0.486 ms (18.13% of Mean)
+Skewness = -0.43, Kurtosis = 1.97, MValue = 2.4
+-------------------- Histogram --------------------
+[2.044 ms ; 2.378 ms) | @
+[2.378 ms ; 2.496 ms) |
+[2.496 ms ; 2.829 ms) | @@@@@
+[2.829 ms ; 3.182 ms) | @@
+---------------------------------------------------
+
+TileWorkCoordinatorBenchmarks.FastScrollStress_PriorityCenterChange: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=10]
+Runtime = .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3; GC = Concurrent Workstation
+Mean = 6.029 ms, StdErr = 0.146 ms (2.43%), N = 8, StdDev = 0.414 ms
+Min = 5.153 ms, Q1 = 6.020 ms, Median = 6.178 ms, Q3 = 6.299 ms, Max = 6.321 ms
+IQR = 0.279 ms, LowerFence = 5.603 ms, UpperFence = 6.717 ms
+ConfidenceInterval = [5.238 ms; 6.820 ms] (CI 99.9%), Margin = 0.791 ms (13.12% of Mean)
+Skewness = -1.15, Kurtosis = 2.68, MValue = 2.33
+-------------------- Histogram --------------------
+[5.133 ms ; 5.676 ms) | @@
+[5.676 ms ; 5.960 ms) |
+[5.960 ms ; 6.592 ms) | @@@@@@
+---------------------------------------------------
+
+TileWorkCoordinatorBenchmarks.PublishInterestSet_EmptyQueue: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+Runtime = .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3; GC = Concurrent Workstation
+Mean = 7.330 us, StdErr = 0.463 us (6.32%), N = 10, StdDev = 1.465 us
+Min = 5.700 us, Q1 = 6.300 us, Median = 6.850 us, Q3 = 8.175 us, Max = 10.600 us
+IQR = 1.875 us, LowerFence = 3.487 us, UpperFence = 10.988 us
+ConfidenceInterval = [5.115 us; 9.545 us] (CI 99.9%), Margin = 2.215 us (30.22% of Mean)
+Skewness = 0.91, Kurtosis = 2.75, MValue = 2.33
+-------------------- Histogram --------------------
+[5.407 us ;  7.193 us) | @@@@@@
+[7.193 us ;  9.043 us) | @@@
+[9.043 us ;  9.707 us) |
+[9.707 us ; 11.493 us) | @
+---------------------------------------------------
+
+TileWorkCoordinatorBenchmarks.PublishInterestSet_AllVisible: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+Runtime = .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3; GC = Concurrent Workstation
+Mean = 53.580 us, StdErr = 2.264 us (4.23%), N = 10, StdDev = 7.160 us
+Min = 47.200 us, Q1 = 47.925 us, Median = 50.950 us, Q3 = 59.300 us, Max = 66.200 us
+IQR = 11.375 us, LowerFence = 30.863 us, UpperFence = 76.362 us
+ConfidenceInterval = [42.755 us; 64.405 us] (CI 99.9%), Margin = 10.825 us (20.20% of Mean)
+Skewness = 0.67, Kurtosis = 1.58, MValue = 2.86
+-------------------- Histogram --------------------
+[45.438 us ; 54.162 us) | @@@@@@@
+[54.162 us ; 59.538 us) |
+[59.538 us ; 68.262 us) | @@@
+---------------------------------------------------
+
+TileWorkCoordinatorBenchmarks.PublishInterestSet_NoneVisible: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+Runtime = .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3; GC = Concurrent Workstation
+Mean = 114.206 us, StdErr = 6.874 us (6.02%), N = 9, StdDev = 20.622 us
+Min = 82.150 us, Q1 = 107.350 us, Median = 116.350 us, Q3 = 122.350 us, Max = 148.950 us
+IQR = 15.000 us, LowerFence = 84.850 us, UpperFence = 144.850 us
+ConfidenceInterval = [79.552 us; 148.859 us] (CI 99.9%), Margin = 34.654 us (30.34% of Mean)
+Skewness = -0.04, Kurtosis = 1.92, MValue = 2.4
+-------------------- Histogram --------------------
+[ 71.988 us ;  98.012 us) | @@
+[ 98.012 us ; 106.988 us) |
+[106.988 us ; 133.012 us) | @@@@@@
+[133.012 us ; 161.962 us) | @
+---------------------------------------------------
+
+TileWorkCoordinatorBenchmarks.PublishInterestSet_MixedVisibility: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+Runtime = .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3; GC = Concurrent Workstation
+Mean = 131.583 us, StdErr = 5.442 us (4.14%), N = 9, StdDev = 16.325 us
+Min = 109.550 us, Q1 = 123.150 us, Median = 129.450 us, Q3 = 140.950 us, Max = 156.350 us
+IQR = 17.800 us, LowerFence = 96.450 us, UpperFence = 167.650 us
+ConfidenceInterval = [104.151 us; 159.016 us] (CI 99.9%), Margin = 27.433 us (20.85% of Mean)
+Skewness = 0.09, Kurtosis = 1.55, MValue = 2
+-------------------- Histogram --------------------
+[ 99.249 us ; 121.749 us) | @@
+[121.749 us ; 142.351 us) | @@@@@
+[142.351 us ; 166.651 us) | @@
+---------------------------------------------------
+
+TileWorkCoordinatorBenchmarks.DrainQueue_FifoFallback: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+Runtime = .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3; GC = Concurrent Workstation
+Mean = 84.322 us, StdErr = 3.359 us (3.98%), N = 9, StdDev = 10.078 us
+Min = 69.000 us, Q1 = 77.900 us, Median = 85.600 us, Q3 = 87.500 us, Max = 102.500 us
+IQR = 9.600 us, LowerFence = 63.500 us, UpperFence = 101.900 us
+ConfidenceInterval = [67.387 us; 101.258 us] (CI 99.9%), Margin = 16.935 us (20.08% of Mean)
+Skewness = 0.24, Kurtosis = 1.95, MValue = 2
+-------------------- Histogram --------------------
+[62.641 us ;  74.991 us) | @
+[74.991 us ;  91.691 us) | @@@@@@
+[91.691 us ; 104.409 us) | @@
+---------------------------------------------------
+
+TileWorkCoordinatorBenchmarks.DrainQueue_VisiblePromoted: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+Runtime = .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3; GC = Concurrent Workstation
+Mean = 148.489 us, StdErr = 5.537 us (3.73%), N = 9, StdDev = 16.612 us
+Min = 112.800 us, Q1 = 142.800 us, Median = 148.500 us, Q3 = 160.800 us, Max = 169.400 us
+IQR = 18.000 us, LowerFence = 115.800 us, UpperFence = 187.800 us
+ConfidenceInterval = [120.574 us; 176.404 us] (CI 99.9%), Margin = 27.915 us (18.80% of Mean)
+Skewness = -0.77, Kurtosis = 2.76, MValue = 2
+-------------------- Histogram --------------------
+[102.318 us ; 123.282 us) | @
+[123.282 us ; 141.118 us) |
+[141.118 us ; 162.082 us) | @@@@@@
+[162.082 us ; 179.882 us) | @@
+---------------------------------------------------
+
+TileWorkCoordinatorBenchmarks.FastScrollStress_ThreeCycles: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+Runtime = .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3; GC = Concurrent Workstation
+Mean = 277.111 us, StdErr = 14.718 us (5.31%), N = 9, StdDev = 44.153 us
+Min = 224.400 us, Q1 = 250.400 us, Median = 271.000 us, Q3 = 278.000 us, Max = 349.300 us
+IQR = 27.600 us, LowerFence = 209.000 us, UpperFence = 319.400 us
+ConfidenceInterval = [202.914 us; 351.308 us] (CI 99.9%), Margin = 74.197 us (26.78% of Mean)
+Skewness = 0.61, Kurtosis = 1.83, MValue = 2
+-------------------- Histogram --------------------
+[223.340 us ; 279.060 us) | @@@@@@@
+[279.060 us ; 320.290 us) |
+[320.290 us ; 377.160 us) | @@
+---------------------------------------------------
+
+TileWorkCoordinatorBenchmarks.DrainQueue_PriorityDistanceOrdered: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+Runtime = .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3; GC = Concurrent Workstation
+Mean = 2.641 ms, StdErr = 0.038 ms (1.45%), N = 8, StdDev = 0.108 ms
+Min = 2.538 ms, Q1 = 2.559 ms, Median = 2.608 ms, Q3 = 2.705 ms, Max = 2.846 ms
+IQR = 0.146 ms, LowerFence = 2.339 ms, UpperFence = 2.925 ms
+ConfidenceInterval = [2.435 ms; 2.848 ms] (CI 99.9%), Margin = 0.207 ms (7.82% of Mean)
+Skewness = 0.63, Kurtosis = 1.87, MValue = 2
+-------------------- Histogram --------------------
+[2.524 ms ; 2.666 ms) | @@@@@
+[2.666 ms ; 2.779 ms) | @@
+[2.779 ms ; 2.917 ms) | @
+---------------------------------------------------
+
+TileWorkCoordinatorBenchmarks.FastScrollStress_PriorityCenterChange: Job-EGSULU(InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3) [QueueDepth=50]
+Runtime = .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3; GC = Concurrent Workstation
+Mean = 6.147 ms, StdErr = 0.161 ms (2.61%), N = 10, StdDev = 0.508 ms
+Min = 4.890 ms, Q1 = 6.004 ms, Median = 6.256 ms, Q3 = 6.419 ms, Max = 6.754 ms
+IQR = 0.416 ms, LowerFence = 5.380 ms, UpperFence = 7.043 ms
+ConfidenceInterval = [5.378 ms; 6.915 ms] (CI 99.9%), Margin = 0.768 ms (12.50% of Mean)
+Skewness = -1.3, Kurtosis = 3.99, MValue = 2
+-------------------- Histogram --------------------
+[4.581 ms ; 5.200 ms) | @
+[5.200 ms ; 5.890 ms) |
+[5.890 ms ; 6.509 ms) | @@@@@@@@
+[6.509 ms ; 7.063 ms) | @
+---------------------------------------------------
+
+// * Summary *
+
+BenchmarkDotNet v0.15.8, Windows 10 (10.0.19045.6466/22H2/2022Update)
+Intel Core i5-6600K CPU 3.50GHz (Skylake), 1 CPU, 4 logical and 4 physical cores
+.NET SDK 10.0.302
+  [Host]     : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+  Job-EGSULU : .NET 10.0.10 (10.0.10, 10.0.1026.32716), X64 RyuJIT x86-64-v3
+
+InvocationCount=1  IterationCount=10  RunStrategy=Throughput
+UnrollFactor=1  WarmupCount=3
+
+| Method                                | QueueDepth | Mean         | Error      | StdDev     | Allocated  |
+|-------------------------------------- |----------- |-------------:|-----------:|-----------:|-----------:|
+| PublishInterestSet_EmptyQueue         | 10         |     7.990 us |   1.646 us |   1.089 us |    1.26 KB |
+| PublishInterestSet_AllVisible         | 10         |    54.589 us |  10.938 us |   6.509 us |   25.91 KB |
+| PublishInterestSet_NoneVisible        | 10         |   102.300 us |  34.649 us |  20.619 us |    50.8 KB |
+| PublishInterestSet_MixedVisibility    | 10         |   144.110 us |  28.433 us |  18.807 us |    77.6 KB |
+| DrainQueue_FifoFallback               | 10         |    80.700 us |  23.492 us |  13.979 us |   37.98 KB |
+| DrainQueue_VisiblePromoted            | 10         |    50.122 us |  16.158 us |   9.615 us |   16.55 KB |
+| FastScrollStress_ThreeCycles          | 10         |   238.850 us |  16.908 us |   8.843 us |  124.55 KB |
+| DrainQueue_PriorityDistanceOrdered    | 10         | 2,681.012 us | 485.934 us | 254.153 us | 1251.66 KB |
+| FastScrollStress_PriorityCenterChange | 10         | 6,028.837 us | 791.267 us | 413.848 us | 2377.65 KB |
+| PublishInterestSet_EmptyQueue         | 50         |     7.330 us |   2.215 us |   1.465 us |    1.26 KB |
+| PublishInterestSet_AllVisible         | 50         |    53.580 us |  10.825 us |   7.160 us |   26.71 KB |
+| PublishInterestSet_NoneVisible        | 50         |   114.206 us |  34.654 us |  20.622 us |   50.66 KB |
+| PublishInterestSet_MixedVisibility    | 50         |   131.583 us |  27.433 us |  16.325 us |    77.6 KB |
+| DrainQueue_FifoFallback               | 50         |    84.322 us |  16.935 us |  10.078 us |   38.63 KB |
+| DrainQueue_VisiblePromoted            | 50         |   148.489 us |  27.915 us |  16.612 us |   72.54 KB |
+| FastScrollStress_ThreeCycles          | 50         |   277.111 us |  74.197 us |  44.153 us |  126.27 KB |
+| DrainQueue_PriorityDistanceOrdered    | 50         | 2,641.325 us | 206.633 us | 108.073 us |  1235.2 KB |
+| FastScrollStress_PriorityCenterChange | 50         | 6,146.770 us | 768.293 us | 508.178 us | 2316.02 KB |
+
+// * Warnings *
+MinIterationTime
+  TileWorkCoordinatorBenchmarks.PublishInterestSet_EmptyQueue: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3         -> The minimum observed iteration time is 7us which is very small. It's recommended to increase it to at least 100ms using more operations.
+  TileWorkCoordinatorBenchmarks.PublishInterestSet_AllVisible: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3         -> The minimum observed iteration time is 48.8us which is very small. It's recommended to increase it to at least 100ms using more operations.
+  TileWorkCoordinatorBenchmarks.PublishInterestSet_NoneVisible: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3        -> The minimum observed iteration time is 75.4us which is very small. It's recommended to increase it to at least 100ms using more operations.
+  TileWorkCoordinatorBenchmarks.PublishInterestSet_MixedVisibility: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3    -> The minimum observed iteration time is 124.5us which is very small. It's recommended to increase it to at least 100ms using more operations.
+  TileWorkCoordinatorBenchmarks.DrainQueue_FifoFallback: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3               -> The minimum observed iteration time is 65.9us which is very small. It's recommended to increase it to at least 100ms using more operations.
+  TileWorkCoordinatorBenchmarks.DrainQueue_VisiblePromoted: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3            -> The minimum observed iteration time is 39.3us which is very small. It's recommended to increase it to at least 100ms using more operations.
+  TileWorkCoordinatorBenchmarks.FastScrollStress_ThreeCycles: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3          -> The minimum observed iteration time is 221.7us which is very small. It's recommended to increase it to at least 100ms using more operations.
+  TileWorkCoordinatorBenchmarks.DrainQueue_PriorityDistanceOrdered: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3    -> The minimum observed iteration time is 2.211ms which is very small. It's recommended to increase it to at least 100ms using more operations.
+  TileWorkCoordinatorBenchmarks.FastScrollStress_PriorityCenterChange: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3 -> The minimum observed iteration time is 5.153ms which is very small. It's recommended to increase it to at least 100ms using more operations.
+  TileWorkCoordinatorBenchmarks.PublishInterestSet_EmptyQueue: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3         -> The minimum observed iteration time is 6us which is very small. It's recommended to increase it to at least 100ms using more operations.
+  TileWorkCoordinatorBenchmarks.PublishInterestSet_AllVisible: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3         -> The minimum observed iteration time is 47.5us which is very small. It's recommended to increase it to at least 100ms using more operations.
+  TileWorkCoordinatorBenchmarks.PublishInterestSet_NoneVisible: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3        -> The minimum observed iteration time is 82.3us which is very small. It's recommended to increase it to at least 100ms using more operations.
+  TileWorkCoordinatorBenchmarks.PublishInterestSet_MixedVisibility: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3    -> The minimum observed iteration time is 109.9us which is very small. It's recommended to increase it to at least 100ms using more operations.
+  TileWorkCoordinatorBenchmarks.DrainQueue_FifoFallback: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3               -> The minimum observed iteration time is 69.3us which is very small. It's recommended to increase it to at least 100ms using more operations.
+  TileWorkCoordinatorBenchmarks.DrainQueue_VisiblePromoted: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3            -> The minimum observed iteration time is 113.1us which is very small. It's recommended to increase it to at least 100ms using more operations.
+  TileWorkCoordinatorBenchmarks.FastScrollStress_ThreeCycles: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3          -> The minimum observed iteration time is 224.6us which is very small. It's recommended to increase it to at least 100ms using more operations.
+  TileWorkCoordinatorBenchmarks.DrainQueue_PriorityDistanceOrdered: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3    -> The minimum observed iteration time is 2.538ms which is very small. It's recommended to increase it to at least 100ms using more operations.
+  TileWorkCoordinatorBenchmarks.FastScrollStress_PriorityCenterChange: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3 -> The minimum observed iteration time is 4.891ms which is very small. It's recommended to increase it to at least 100ms using more operations.
+
+// * Hints *
+Outliers
+  TileWorkCoordinatorBenchmarks.PublishInterestSet_AllVisible: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3         -> 1 outlier  was  removed (79.80 us)
+  TileWorkCoordinatorBenchmarks.PublishInterestSet_NoneVisible: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3        -> 1 outlier  was  removed (225.10 us)
+  TileWorkCoordinatorBenchmarks.DrainQueue_FifoFallback: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3               -> 1 outlier  was  removed (144.40 us)
+  TileWorkCoordinatorBenchmarks.DrainQueue_VisiblePromoted: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3            -> 1 outlier  was  removed (174.70 us)
+  TileWorkCoordinatorBenchmarks.FastScrollStress_ThreeCycles: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3          -> 2 outliers were removed (312.70 us, 336.70 us)
+  TileWorkCoordinatorBenchmarks.DrainQueue_PriorityDistanceOrdered: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3    -> 2 outliers were removed (6.03 ms, 10.48 ms)
+  TileWorkCoordinatorBenchmarks.FastScrollStress_PriorityCenterChange: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3 -> 2 outliers were removed, 4 outliers were detected (5.15 ms, 5.66 ms, 6.65 ms, 6.77 ms)
+  TileWorkCoordinatorBenchmarks.PublishInterestSet_NoneVisible: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3        -> 1 outlier  was  removed (279.30 us)
+  TileWorkCoordinatorBenchmarks.PublishInterestSet_MixedVisibility: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3    -> 1 outlier  was  removed (225.50 us)
+  TileWorkCoordinatorBenchmarks.DrainQueue_FifoFallback: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3               -> 1 outlier  was  removed (1.51 ms)
+  TileWorkCoordinatorBenchmarks.DrainQueue_VisiblePromoted: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3            -> 1 outlier  was  removed, 2 outliers were detected (113.10 us, 273.90 us)
+  TileWorkCoordinatorBenchmarks.FastScrollStress_ThreeCycles: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3          -> 1 outlier  was  removed (2.36 ms)
+  TileWorkCoordinatorBenchmarks.DrainQueue_PriorityDistanceOrdered: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3    -> 2 outliers were removed (5.84 ms, 11.36 ms)
+  TileWorkCoordinatorBenchmarks.FastScrollStress_PriorityCenterChange: InvocationCount=1, IterationCount=10, RunStrategy=Throughput, UnrollFactor=1, WarmupCount=3 -> 1 outlier  was  detected (4.89 ms)
+// * Config Issues *
+
+// * Warnings *
+Configuration
+  Summary -> The exporter CsvExporter is already present in configuration. There may be unexpected results.
+  Summary -> The exporter HtmlExporter is already present in configuration. There may be unexpected results.
+  Summary -> The exporter MarkdownExporter-github is already present in configuration. There may be unexpected results.
+
+// * Legends *
+  QueueDepth : Value of the 'QueueDepth' parameter
+  Mean       : Arithmetic mean of all measurements
+  Error      : Half of 99.9% confidence interval
+  StdDev     : Standard deviation of all measurements
+  Allocated  : Allocated memory per single operation (managed only, inclusive, 1KB = 1024B)
+  1 us       : 1 Microsecond (0.000001 sec)
+
+// * Diagnostic Output - MemoryDiagnoser *
+
+
+// ***** BenchmarkRunner: End *****
+Run time: 00:00:07 (7.89 sec), executed benchmarks: 18
+
+Global total time: 00:00:35 (35.28 sec), executed benchmarks: 18
+// * Artifacts cleanup *
+Artifacts cleanup is finished
