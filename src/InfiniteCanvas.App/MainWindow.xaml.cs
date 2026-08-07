@@ -46,7 +46,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
     private int _tileColumns = 2;
     private int _tileRows = 32;
     private int _objectsPerTile = 16;
-    private double _minimumSparseTilePixelSize = 96;
+    private double _minimumSparseTilePixelSize = CanvasUserSettings.DefaultMinimumSparseTilePixelSize;
     private int _generationSeed = 1729;
     private int _busyOperationCount;
     private TileCacheBudget _tileCacheBudget = new(TileCacheBudget.DefaultMaxBytes);

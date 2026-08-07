@@ -121,4 +121,16 @@ public class CanvasUserSettingsTests
             Assert.That(CanvasUserSettings.ValidateMinimumSparseTilePixelSize(4096), Is.True);
         }
     }
+
+    [Test]
+    public void DefaultMinimumSparseTilePixelSize_AllowsBackgroundTilesAtAnyProjectedSize()
+    {
+        var settings = new CanvasUserSettings();
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(CanvasUserSettings.DefaultMinimumSparseTilePixelSize, Is.EqualTo(0));
+            Assert.That(settings.MinimumSparseTilePixelSize, Is.EqualTo(CanvasUserSettings.DefaultMinimumSparseTilePixelSize));
+        }
+    }
 }

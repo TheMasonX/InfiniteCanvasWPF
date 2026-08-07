@@ -13,6 +13,8 @@ public sealed record CanvasUserSettings
     /// </summary>
     public const int MaxObjectsPerTile = 256;
 
+    public const double DefaultMinimumSparseTilePixelSize = 0;
+
     public int Version { get; init; } = CurrentVersion;
 
     public int TileColumns { get; init; } = 2;
@@ -57,7 +59,7 @@ public sealed record CanvasUserSettings
 
     public double BackgroundNoiseAmplitude { get; init; } = 1;
 
-    public double MinimumSparseTilePixelSize { get; init; } = 96;
+    public double MinimumSparseTilePixelSize { get; init; } = DefaultMinimumSparseTilePixelSize;
 
     public static bool ValidateObjectsPerTile(int value) => value is >= 0 and <= MaxObjectsPerTile;
 
