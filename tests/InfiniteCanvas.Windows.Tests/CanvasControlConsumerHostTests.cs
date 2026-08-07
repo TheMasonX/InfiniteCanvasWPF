@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using InfiniteCanvas.Controls;
@@ -97,6 +98,25 @@ public sealed class CanvasControlConsumerHostTests
     }
 
     [Test]
+    public void ConsumerHost_ControlOwnsTooltipRegistrationAndClearsItOnNextFrame()
+    {
+        var control = new CanvasControl();
+        var visual = new Border();
+
+        control.RegisterItemVisual(visual, "tooltip text");
+        var firstTooltip = visual.ToolTip;
+
+        control.PublishFrame(CreateFrame(new HostItem("plain", new SpatialBounds(0, 0, 10, 10)), 1));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstTooltip, Is.Not.Null);
+            Assert.That(firstTooltip!.ToString(), Is.EqualTo("tooltip text"));
+            Assert.That(visual.ToolTip, Is.Null);
+        });
+    }
+
+    [Test]
     public void ConsumerHost_SceneSourceDependencyProperty_AcceptsHostImplementation()
     {
         var control = new CanvasControl
@@ -158,6 +178,16 @@ public sealed class CanvasControlConsumerHostTests
         bitmap.Freeze();
         return bitmap;
     }
+
+    private static CanvasFrame CreateFrame(ICanvasItem item, int revision) => new(
+        CreateFrozenRaster(64, 48),
+        [item],
+        new SpatialBounds(0, 0, 100, 100),
+        visibleItemCount: 1,
+        totalItemCount: 1,
+        width: 64,
+        height: 48,
+        revision: revision);
 
     private sealed class HostItem : ICanvasItem
     {

@@ -3,7 +3,7 @@ id: ICW-314-canvas-selection-and-tooltip-ownership
 author: Copilot
 key: ICW-314
 title: Move selection and tooltip hover into the canvas control
-status: Proposed
+status: In Progress
 type: Story
 priority: P2
 tags:
@@ -23,7 +23,7 @@ links:
   - docs/ADR/0007-canvas-reusable-component-boundary.md
   - docs/audits/canvas-data-source-abstraction-council-review-26-08-04.md
 created: 2026-08-04
-updated: 2026-08-06
+updated: 2026-08-07
 ---
 
 # ICW-314-canvas-selection-and-tooltip-ownership
@@ -52,14 +52,17 @@ Verified at HEAD c552830 (Wave H landed). This ticket is the next functional sli
 
 ## Scope
 
-- Define an item contract such as `ICanvasItem` with world bounds, hit testing, tooltip payload, and a visual template.
-- Move selection state and hit testing into the canvas control.
-- Move tooltip display into the canvas control.
-- Expose selection changes to the host through an event or an observable property.
+- Define a host-neutral tooltip registration value at the control boundary.
+- Keep selection state and hit testing in the canvas control.
+- Attach lazy tooltips through the canvas control and clear them at frame boundaries.
+- Keep visual creation in the host because item colors and labels remain application-specific.
+- Expose selection changes to the host through the existing event.
 
 ## Acceptance Criteria
 
 - Selection and tooltip logic do not reference `SampleAnnotation`.
+- The control owns tooltip attachment and removes stale tooltip registrations before a new frame.
+- A host visual with no tooltip payload remains valid and has no tooltip.
 - The host receives selection notifications and supplies item visuals.
 - The app builds and the full core test suite passes.
 
@@ -71,9 +74,9 @@ Verified at HEAD c552830 (Wave H landed). This ticket is the next functional sli
 ## Notes
 
 - Depends on the data source abstraction (ICW-312), which defines how the canvas receives items.
-- Council decision (2026-08-04): depends on ICW-031 (typed annotation metrics) for the tooltip payload. The tooltip half of this task waits for ICW-031.
-- The item contract starts as `ICanvasItem` (Id + Bounds) in ICW-312 and is extended here with hit-test, tooltip payload, and visual template.
-- The view model stores the visible item list as `IReadOnlyList<ICanvasItem>` so the control can hit-test.
+- Wave V completed ICW-031 typed metrics. The host passes formatted tooltip text through the control registration API.
+- `ICanvasItem` remains the stable Id and Bounds contract. The control does not depend on `SampleAnnotation` or rendering types.
+- The view model stores the visible item list as `IReadOnlyList<ICanvasItem>` so the control can hit-test; the control owns tooltip attachment for host-created visuals.
 - Full council report: docs/audits/canvas-data-source-abstraction-council-review-26-08-04.md.
 
 ## Related Tasks

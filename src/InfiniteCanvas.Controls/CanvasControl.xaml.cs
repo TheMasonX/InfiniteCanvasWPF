@@ -93,9 +93,27 @@ public partial class CanvasControl : UserControl
     /// <summary>Clears the host-composed overlays and resets the readouts.</summary>
     public void ClearFrame()
     {
+        ClearRegisteredItemVisuals();
         _tileGridLayer?.Children.Clear();
         _annotationLayer?.Children.Clear();
         SetPixelometerReadout("WORLD X --  Y --", "TILE --", "PIXEL --");
+    }
+
+    public void RegisterItemVisual(FrameworkElement visual, string? tooltipContent)
+    {
+        ArgumentNullException.ThrowIfNull(visual);
+        visual.ToolTip = tooltipContent is null ? null : new DeferredCanvasToolTip(tooltipContent);
+        _registeredItemVisuals.Add(visual);
+    }
+
+    private void ClearRegisteredItemVisuals()
+    {
+        foreach (var visual in _registeredItemVisuals)
+        {
+            visual.ToolTip = null;
+        }
+
+        _registeredItemVisuals.Clear();
     }
 
     /// <summary>Applies a viewport size to the camera view model.</summary>
@@ -125,6 +143,7 @@ public partial class CanvasControl : UserControl
     private Image? _frameImage;
     private Canvas? _tileGridLayer;
     private Canvas? _annotationLayer;
+    private readonly List<FrameworkElement> _registeredItemVisuals = [];
     private bool _rasterVisible = true;
     private bool _loadingVisible;
 
@@ -182,6 +201,7 @@ public partial class CanvasControl : UserControl
         }
 
         _lastPublishedRevision = frame.Revision;
+        ClearRegisteredItemVisuals();
         EnsureFrameShell();
         _frameShell!.Width = frame.Width;
         _frameShell.Height = frame.Height;

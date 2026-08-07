@@ -12,7 +12,9 @@ public class AnnotationTooltipWiringTests
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(codeBehind, Does.Contain("ToolTip = new DeferredAnnotationToolTip(annotation)"));
+            Assert.That(codeBehind, Does.Contain("CanvasSurface.RegisterItemVisual("));
+            Assert.That(codeBehind, Does.Contain("AnnotationFeaturePresenter.BuildTooltipContent(annotation)"));
+            Assert.That(codeBehind, Does.Not.Contain("ToolTip = new DeferredAnnotationToolTip(annotation)"));
             Assert.That(codeBehind, Does.Not.Contain("ToolTip = CreateAnnotationToolTip(annotation)"));
             Assert.That(codeBehind, Does.Not.Contain("annotation.Features[\"Confidence\"]"));
             Assert.That(codeBehind, Does.Not.Contain("annotation.Features[\"Severity\"]"));

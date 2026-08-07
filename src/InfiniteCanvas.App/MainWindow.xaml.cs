@@ -814,9 +814,11 @@ public partial class MainWindow : Window, ICanvasSceneSource
                 Height = height,
                 Background = Brushes.Transparent,
                 Child = annotationVisual,
-                Tag = annotation,
-                ToolTip = new DeferredAnnotationToolTip(annotation)
+                Tag = annotation
             };
+            CanvasSurface.RegisterItemVisual(
+                annotationElement,
+                AnnotationFeaturePresenter.BuildTooltipContent(annotation));
             Canvas.SetLeft(annotationElement, topLeft.X);
             Canvas.SetTop(annotationElement, topLeft.Y);
             annotationLayer.Children.Add(annotationElement);
