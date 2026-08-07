@@ -22,6 +22,6 @@ public class SnapshotBuildBenchmarks
     [Benchmark]
     public ISpatialIndexService<BenchmarkEntity> BuildSnapshot()
     {
-        return _builder.Build(_entities);
+        return _builder!.Build(_entities!);
     }
 }

@@ -27,6 +27,6 @@ public class StrTreeQueryBenchmarks
     [Benchmark]
     public IReadOnlyList<BenchmarkEntity> Query()
     {
-        return _index.Query(_viewport);
+        return _index!.Query(_viewport);
     }
 }

@@ -2,7 +2,7 @@
 id: ICW-036-ci-and-nullability-enforcement-baseline
 key: ICW-036
 title: Icw 036 Ci And Nullability Enforcement Baseline
-status: Proposed
+status: Done
 type: Task
 priority: P2
 tags:
@@ -13,12 +13,12 @@ related: []
 links:
   - docs/tasks/README.md
 created: 2026-07-25
-updated: 2026-07-25
+updated: 2026-08-07
 ---
 
 ## Summary
 
-Establish a repository-wide Roslyn analyzer and CI baseline before adding specialized scanners. All eight projects target .NET 10 (with WPF-specific `net10.0-windows` targets where required), so the .NET SDK already supplies the primary analyzer engine; the current gap is centralized configuration and automated enforcement.
+Establish a repository-wide Roslyn analyzer and CI baseline before adding specialized scanners. All eight projects target .NET 10 (with WPF-specific `net10.0-windows` targets where required), so the .NET SDK supplies the primary analyzer engine. The baseline pins analysis level 10.0 and stages broader rule enforcement after legacy findings are triaged.
 
 ## Scope
 
@@ -26,6 +26,8 @@ Establish a repository-wide Roslyn analyzer and CI baseline before adding specia
 - Add Windows GitHub Actions coverage for the solution build, cross-platform tests, and Windows/WPF tests.
 - Measure the initial diagnostic set before elevating broad categories to errors; preserve explicit suppressions for intentional interop and performance exceptions.
 - Keep specialized tools as opt-in audit lanes rather than unconditional build dependencies.
+- Build the benchmark project in CI so benchmark-only nullable warnings remain visible.
+- Validate task metadata and whitespace in CI.
 
 ## Acceptance Criteria
 
@@ -33,6 +35,7 @@ Establish a repository-wide Roslyn analyzer and CI baseline before adding specia
 - CI runs `dotnet build InfiniteCanvasWPF.slnx --configuration Release`, the cross-platform NUnit project, and the Windows NUnit project on a Windows runner.
 - The baseline records analyzer findings and has no unexplained new warnings before enforcement is broadened.
 - The selected tool policy is documented: Roslyn first; SonarQube/SonarAnalyzer as an optional periodic structural audit; Security Code Scan, Semgrep, and StyleCop are not default dependencies.
+- Nullable warnings fail the build through the root `Directory.Build.props` baseline. Other analyzer categories remain visible but do not fail this wave.
 
 ## Validation
 
@@ -56,3 +59,11 @@ Establish a repository-wide Roslyn analyzer and CI baseline before adding specia
 - ICW-014
 - ICW-021
 - ICW-034
+
+## Findings
+
+Wave S found seven nullable warnings in benchmark setup and execution paths. The warnings came from fields initialized by BenchmarkDotNet lifecycle methods. The implementation adds narrow null guards and keeps benchmark setup behavior unchanged. The pinned analyzer baseline also reports existing CA findings, including vendor and benchmark naming rules. Wave S does not broaden enforcement to those findings.
+
+## Next Step
+
+Review future analyzer warnings as separate tasks. Do not enable broad warnings-as-errors categories until the baseline remains clean across all projects.

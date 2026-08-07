@@ -32,3 +32,15 @@ jobs:
 
       - name: Test Windows projects
         run: dotnet test tests/InfiniteCanvas.Windows.Tests/InfiniteCanvas.Windows.Tests.csproj --configuration Release --no-build --no-restore
+
+      - name: Build benchmark projects
+        run: dotnet build benchmarks/InfiniteCanvas.Benchmarks/InfiniteCanvas.Benchmarks.csproj --configuration Release --no-restore
+
+      - name: Validate task tracker
+        shell: pwsh
+        run: ./scripts/Validate-TaskTracker.ps1 -Path docs/tasks
+
+      - name: Check whitespace
+        shell: pwsh
+        run: |
+          git diff --check

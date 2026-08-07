@@ -42,19 +42,19 @@ public class LiveSpatialQueryBenchmarks
     [GlobalCleanup]
     public async Task CleanupAsync()
     {
-        _builder.ReleaseBuild();
+        _builder?.ReleaseBuild();
         if (_publicationTask is not null)
         {
             await _publicationTask;
         }
 
-        _builder.Dispose();
+        _builder?.Dispose();
     }
 
     [Benchmark]
     public IReadOnlyList<BenchmarkEntity> Query()
     {
-        return _service.Query(_viewport);
+        return _service!.Query(_viewport);
     }
 
     private sealed class BlockingSpatialIndexBuilder : ISpatialIndexBuilder<BenchmarkEntity>, IDisposable

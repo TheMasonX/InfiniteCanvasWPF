@@ -43,13 +43,13 @@ public class ProjectionAndBitmapBenchmarks
     [GlobalCleanup]
     public void Cleanup()
     {
-        _bitmapFactory.Dispose();
+        _bitmapFactory?.Dispose();
     }
 
     [Benchmark]
     public object ComposeShippedTilePath()
     {
-        return _bitmapFactory.GenerateFrozenBitmap(
+        return _bitmapFactory!.GenerateFrozenBitmap(
             _tiles!,
             IncludeSparseAnnotations ? _annotations! : Array.Empty<SampleAnnotation>(),
             _camera!.Capture(),
