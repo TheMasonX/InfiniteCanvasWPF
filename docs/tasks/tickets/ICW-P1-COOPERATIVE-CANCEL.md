@@ -3,7 +3,7 @@ id: ICW-P1-COOPERATIVE-CANCEL
 author: External Audit (Integration-1)
 key: ICW-P1-COOPERATIVE-CANCEL
 title: Add cancellation checks in tile generation factories around each expensive sub-phase
-status: Proposed
+status: Done
 type: Bug
 priority: P1
 tags:
@@ -21,32 +21,31 @@ links:
   - docs/audits/infinitecanvaswpf-icw-implementation-audit-26-07-30-16-40-49.md
   - docs/audits/infinitecanvaswpf-icw-followup-audit-26-07-30-22-04-25.md
 created: 2026-07-30
-updated: 2026-07-30
+updated: 2026-08-06
 ---
 
 # ICW-P1-COOPERATIVE-CANCEL — Add cancellation checks in tile generation factories around each expensive sub-phase
 
 ## Summary
 
-**Critical gap:** The tile generation factories in `SampleImageGenerator.cs` have no `CancellationToken.ThrowIfCancellationRequested()` calls anywhere in the hot path. The factory delegates in `SampleImageTile.cs:420-431` (native path) and `:546-551` (mip path) receive a `token` parameter, but:
+The tile generation factories now observe their live `CancellationToken` throughout the hot path. The factory delegates in `SampleImageTile.cs` pass the coordinator work token into the generator, and the generator checks it before and during each expensive phase.
 - The native path does not touch `token` at all.
 - The mip path only checks cancellation **after** the expensive GDI+ work completes (line 549: post-hoc `token.ThrowIfCancellationRequested()`).
 
 During fast scroll, GDI+ operations and noise generation continue to completion even after the tile is no longer visible. This wastes CPU and, critically, keeps GDI+ objects alive longer than necessary (compounding the ICW-P1-GDI-CONCURRENCY risk).
 
-**Confidence:** 90% (mechanism fully traced; no cancellation checks found anywhere in generation code).
+**Confidence:** 90% (the original mechanism was fully traced; the implementation and integration regression now verify the cancellation path).
 
-## Root Cause
+## Resolution
 
-Both coordinator call sites pass a real `CancellationToken` (since ICW-P1-CLAIMANT-TOKENS landed in Sprint 1 Wave B), but the factory bodies ignore it:
+Both coordinator call sites pass a real `CancellationToken` since ICW-P1-CLAIMANT-TOKENS landed in Sprint 1 Wave B. The factories now preserve that token through these stages:
 
-- `SampleImageTile.cs:420-431` (native factory): no token check at all.
-- `SampleImageTile.cs:546-551` (mip factory): `token.ThrowIfCancellationRequested()` only after `ApplyDetailsWithGdiPlus` returns.
-- `SampleImageGenerator.GenerateMonochromeMipPixels` (full file): no token parameter or check.
-- `SampleImageGenerator.ApplyDetailsWithGdiPlus` (full method): no token parameter or check.
-- `SampleImageGenerator.GenerateNoisePixelsCore` (full method): no token parameter or check.
+- `SampleImageGenerator.GenerateMonochromeMipPixels` checks before allocation, noise generation, detail rendering, and return.
+- `SampleImageGenerator.GenerateNoisePixelsCore` checks before native noise generation and during pixel mapping.
+- `SampleImageGenerator.ApplyMipDetails` checks while creating circle inputs and before rasterization.
+- `SampleImageGenerator.ApplyDetailsWithGdiPlus` checks before GDI+ work, between drawing operations, and while copying pixels.
 
-The causal chain is now working (claimant token fires → `WorkToken` gets canceled → factory's `token` observes cancellation), but the factories never look at the token, so the chain ends at a no-op.
+The causal chain now works. A claimant token fires, the coordinator cancels `WorkToken`, and the factory observes cancellation at its checkpoints.
 
 ## Scope
 
@@ -87,13 +86,14 @@ The causal chain is now working (claimant token fires → `WorkToken` gets cance
    - `WorkToken` is linked to `_disposeCts` and canceled when the last claimant leaves.
    - With ICW-P1-CLAIMANT-TOKENS, this now fires on frame supersession. The token is real and cancelable.
 
-### Test Requirements
+### Test Evidence
 
-5. **Injection test:** Create a factory that observes cancellation and throws, registered with the coordinator. Cancel the work item mid-execution (simulating frame supersession). Assert the factory stops within a bounded time (e.g., 100ms of cancellation request). Use `ManualResetEventSlim` to gate the factory at a known point.
+- `SampleImageGeneratorTests` verifies pre-canceled and mid-generation cancellation.
+- `SampleImageTileTests.ClaimantTokenFire_CancelsRunningFactoryThroughTile` verifies claimant cancellation reaches a running coordinator-backed factory and releases the active slot within two seconds.
 
 ### Acceptance Criteria
 
-- During fast scroll, tile generation stops within a bounded time after the tile leaves the viewport (instead of continuing to completion).
+- During fast scroll, cooperative tile generation stops at the next cancellation checkpoint after the tile leaves the viewport.
 - CPU/wall-clock time for stale frame generation approaches zero (instead of full generation time per discarded tile).
 - All existing tests continue to pass (cancellation checks are no-ops when token is not canceled).
 - Injection test verifies cancellation is responsive.
@@ -108,9 +108,7 @@ The causal chain is now working (claimant token fires → `WorkToken` gets cance
 
 ## Validation
 
-```
-dotnet test tests/InfiniteCanvas.Tests --configuration Release --filter "Cancellation|CooperativeCancel"
-```
+`dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~ClaimantTokenFire_CancelsRunningFactoryThroughTile"`
 
 ## Notes
 
@@ -119,4 +117,4 @@ This ticket was previously blocked on ICW-P1-CLAIMANT-TOKENS (tokens were `Cance
 ## Related Tasks
 
 - ICW-P1-CLAIMANT-TOKENS: prerequisite (real tokens now flowing)
-- ICW-P1-GDI-CONCURRENCY: cooperative cancel reduces peak GDI+ overlap during cancel storms
+- ICW-P1-GDI-CONCURRENCY: the remaining GDI+ concurrency risk needs separate focused validation

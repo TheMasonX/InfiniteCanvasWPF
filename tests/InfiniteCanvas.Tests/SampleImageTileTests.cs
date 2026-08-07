@@ -352,6 +352,50 @@ public class SampleImageTileTests
     }
 
     [Test]
+    public void ClaimantTokenFire_CancelsRunningFactoryThroughTile()
+    {
+        using var coordinator = new TileWorkCoordinator(maxConcurrency: 1);
+        using var frame = new CancellationTokenSource();
+        using var factoryStarted = new ManualResetEventSlim(false);
+        using var factoryCanceled = new ManualResetEventSlim(false);
+        var tile = new SampleImageTile(
+            "tile-cooperative-cancel",
+            new SpatialBounds(0, 0, 8, 8),
+            8,
+            8,
+            () => Enumerable.Repeat((byte)7, 64).ToArray(),
+            [],
+            cancellablePixelFactory: token =>
+            {
+                factoryStarted.Set();
+                try
+                {
+                    token.WaitHandle.WaitOne();
+                    token.ThrowIfCancellationRequested();
+                    return Enumerable.Repeat((byte)7, 64).ToArray();
+                }
+                catch (OperationCanceledException)
+                {
+                    factoryCanceled.Set();
+                    throw;
+                }
+            });
+
+        tile.Coordinator = coordinator;
+        tile.ClaimantTokenProvider = () => frame.Token;
+
+        Assert.That(tile.TryGetPixelsNonBlocking(out _), Is.False);
+        Assert.That(factoryStarted.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+        frame.Cancel();
+
+        Assert.That(factoryCanceled.Wait(TimeSpan.FromSeconds(2)), Is.True);
+        Assert.That(
+            SpinWait.SpinUntil(() => coordinator.GetCounters().ActiveCount == 0, TimeSpan.FromSeconds(2)),
+            Is.True);
+    }
+
+    [Test]
     public void MipFactoryFailure_ClearsQueuedFlagAndAllowsRetry()
     {
         // Regression test for ICW-204: OnCoordinatorPixelsGenerationFailed only
