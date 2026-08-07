@@ -260,6 +260,7 @@ public partial class CanvasControl : UserControl
     /// <summary>Detaches the frame shell, for example on host shutdown.</summary>
     public void DetachFrameShell()
     {
+        ClearRegisteredItemVisuals();
         FramePresenter.Child = null;
         _frameShell = null;
         _frameImage = null;

@@ -3,7 +3,7 @@ id: ICW-314-canvas-selection-and-tooltip-ownership
 author: Copilot
 key: ICW-314
 title: Move selection and tooltip hover into the canvas control
-status: In Progress
+status: Done
 type: Story
 priority: P2
 tags:
@@ -77,6 +77,8 @@ Verified at HEAD c552830 (Wave H landed). This ticket is the next functional sli
 - Wave V completed ICW-031 typed metrics. The host passes formatted tooltip text through the control registration API.
 - `ICanvasItem` remains the stable Id and Bounds contract. The control does not depend on `SampleAnnotation` or rendering types.
 - The view model stores the visible item list as `IReadOnlyList<ICanvasItem>` so the control can hit-test; the control owns tooltip attachment for host-created visuals.
+- Wave W moved tooltip creation and frame cleanup into CanvasControl.
+- Wave X closes the direct-detach cleanup gap in DetachFrameShell and adds consumer-host coverage.
 - Full council report: docs/audits/canvas-data-source-abstraction-council-review-26-08-04.md.
 
 ## Related Tasks

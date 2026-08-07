@@ -117,6 +117,20 @@ public sealed class CanvasControlConsumerHostTests
     }
 
     [Test]
+    public void ConsumerHost_DetachingFrameShell_ClearsRegisteredTooltips()
+    {
+        var control = new CanvasControl();
+        var visual = new Border();
+
+        control.PublishFrame(CreateFrame(new HostItem("plain", new SpatialBounds(0, 0, 10, 10)), 1));
+        control.RegisterItemVisual(visual, "tooltip text");
+
+        control.DetachFrameShell();
+
+        Assert.That(visual.ToolTip, Is.Null);
+    }
+
+    [Test]
     public void ConsumerHost_SceneSourceDependencyProperty_AcceptsHostImplementation()
     {
         var control = new CanvasControl
