@@ -42,10 +42,11 @@ Introduce source-neutral background-tile contracts in `InfiniteCanvas.Rendering`
 
 Keep mip choice a deterministic pure policy that maps the captured camera snapshot and descriptor
 dimensions to the coarsest mip whose canonical texel density remains at or above one texel per
-screen pixel on both axes. The policy clamps to levels zero through seven and is evaluated once per
-visible tile before rasterization. The materializer/cache receives that request; the renderer only
-receives an already-resident payload or the descriptor placeholder and samples using the payload's
-validated dimensions. It neither selects a mip nor invokes an asynchronous source.
+screen pixel on both axes. For non-uniform scale, the larger camera scale is the binding axis because
+it has the highest texel density. The policy clamps to levels zero through seven and is evaluated
+once per visible tile before rasterization. The materializer/cache receives that request; the
+renderer only receives an already-resident payload or the descriptor placeholder and samples using
+the payload's validated dimensions. It neither selects a mip nor invokes an asynchronous source.
 
 The synthetic source derives every mip from the same deterministic native image definition using a
 deterministic low-pass reduction rule. It must aggregate the covered native texel footprint (box

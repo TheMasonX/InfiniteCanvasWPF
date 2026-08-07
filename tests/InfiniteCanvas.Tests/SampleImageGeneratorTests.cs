@@ -27,6 +27,24 @@ public class SampleImageGeneratorTests
     }
 
     [Test]
+    public void GenerateSet_CanDisableTileLabelsForNativeAndMipPayloads()
+    {
+        var tile = SampleImageGenerator.GenerateSet(
+            1,
+            64,
+            32,
+            targetValue: 128,
+            noise: 0,
+            objectsPerTile: 0,
+            circleCount: 0,
+            showTileLabels: false)[0];
+
+        Assert.That(tile.Pixels, Has.All.EqualTo((byte)128));
+        Assert.That(tile.TryGetPixelsNonBlocking(2, out var mipPixels), Is.True);
+        Assert.That(mipPixels, Has.All.EqualTo((byte)128));
+    }
+
+    [Test]
     public async Task GenerateSet_UsesIndependentDeterministicStreamsDuringParallelTileGeneration()
     {
         var serialTiles = SampleImageGenerator.GenerateSet(8, 128, 64, objectsPerTile: 0, seed: 42);
@@ -339,6 +357,14 @@ public class SampleImageGeneratorTests
             (1, 1),
             (1, 1)
         }));
+    }
+
+    [Test]
+    public void BackgroundTileMipPolicy_UsesBindingAxisForAnisotropicCamera()
+    {
+        var camera = new CameraSnapshot(0.25, 2.0, 0, 0);
+
+        Assert.That(BackgroundTileMipPolicy.SelectMipLevel(camera), Is.EqualTo(0));
     }
 
     [Test]

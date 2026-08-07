@@ -3,7 +3,7 @@ id: ICW-325-anisotropic-mip-selection
 author: InfiniteCanvas Agent
 key: ICW-325
 title: Fix anisotropic mip-level selection under non-uniform scale
-status: Proposed
+status: Done
 type: Bug
 priority: P2
 tags:
@@ -45,10 +45,26 @@ Audit synthesis finding F-011. `SelectMipLevel` uses `Math.Min(ScaleX, ScaleY)` 
 - Command: `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release --filter "Mip|BackgroundTile"`
 - Command: visual regression of an anisotropic zoom state (this changes which payload is sampled)
 
+## Validation
+
+- `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~BackgroundTileMipPolicy"` passes, 2/2.
+- `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release --no-restore` passes, 198/198.
+- `dotnet test tests/InfiniteCanvas.Windows.Tests/InfiniteCanvas.Windows.Tests.csproj --configuration Release --no-restore` passes, 28/28.
+- `dotnet build src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release --no-restore` passes with the existing `_frameClaimantId` warning.
+- `pwsh -NoProfile -File scripts/Validate-TaskTracker.ps1 -Path docs/tasks` passes.
+- `git diff --check` passes.
+
 ## Notes
 
-- Gate on an ADR-0005 alignment decision before changing behavior.
-- Independent of the ICW-316 boundary work; proceeds in parallel.
+- The policy now uses `Math.Max(camera.ScaleX, camera.ScaleY)` because the larger scale has the highest texel density.
+- A visual anisotropic zoom regression remains useful when Windows runtime review is available.
+
+## Wave Y Review
+
+ADR-0005 defines the binding axis as the larger camera scale. The current implementation uses
+the smaller scale, so an anisotropic camera can select a mip that is too coarse for the zoomed-in
+axis. This wave changes only the pure mip policy and its regression coverage. It does not touch
+the concurrent settings and property-editor work.
 
 ## Related Tasks
 

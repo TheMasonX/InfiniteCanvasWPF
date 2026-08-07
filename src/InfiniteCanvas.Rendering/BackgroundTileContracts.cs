@@ -172,8 +172,10 @@ public static class BackgroundTileMipPolicy
         }
 
         var clampedMax = Math.Clamp(maxMipLevel, 0, MaxMipLevel);
-        var minimumScale = Math.Min(camera.ScaleX, camera.ScaleY);
-        var level = (int)Math.Floor(Math.Log2(1.0 / minimumScale));
+        // The larger scale is the binding axis: it has the highest texel
+        // density and must not be under-resolved by a coarser mip.
+        var bindingScale = Math.Max(camera.ScaleX, camera.ScaleY);
+        var level = (int)Math.Floor(Math.Log2(1.0 / bindingScale));
         return Math.Clamp(level, 0, clampedMax);
     }
 }
