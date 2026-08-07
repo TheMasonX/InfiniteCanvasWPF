@@ -1,5 +1,7 @@
 #if WINDOWS
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Engines;
+using BenchmarkDotNet.Jobs;
 using InfiniteCanvas.Rendering;
 
 namespace InfiniteCanvas.Benchmarks;
@@ -16,6 +18,7 @@ namespace InfiniteCanvas.Benchmarks;
 /// ICW-132 (stage instrumentation) and benchmark structure with ICW-133 (benchmark matrix).
 /// </summary>
 [MemoryDiagnoser]
+[SimpleJob(RunStrategy.Throughput, warmupCount: 3, iterationCount: 10)]
 public class TileWorkCoordinatorBenchmarks
 {
     // Pre-built cache keys for reuse across iterations.

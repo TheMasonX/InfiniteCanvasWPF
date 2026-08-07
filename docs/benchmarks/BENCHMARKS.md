@@ -62,3 +62,7 @@ Use `--job Dry` only to verify the harness. Use the stable default job for timin
 comparisons. Record the machine CPU, Windows version, .NET runtime, build
 configuration, git revision, and parameter table with each archived run.
 
+`TileWorkCoordinatorBenchmarks` uses three warmup iterations and ten measured
+iterations. Use the repeat-run script for ICW-144 evidence. A Dry run remains a
+smoke check and does not support performance claims.
+

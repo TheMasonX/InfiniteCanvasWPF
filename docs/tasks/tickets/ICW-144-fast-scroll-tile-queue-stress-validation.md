@@ -44,14 +44,14 @@ Prove that viewport-aware scheduling reduces stale work and improves useful tile
 
 - [x] A stress trace demonstrates bounded queue depth and no unbalanced reservations after completion or cancellation.
 - [x] Diagnostics distinguish canceled, stale, failed, resident-fallback, and useful current-viewport completions.
-- [ ] Benchmarks report repeated measurements; one-iteration Dry runs are labeled smoke checks only.
+- [x] Benchmarks report repeated measurements; one-iteration Dry runs are labeled smoke checks only.
 - [ ] The result records whether debounce, priority, cancellation, or concurrency limiting is the dominant improvement and identifies remaining bottlenecks.
 
 ## Validation
 
 Commands: `dotnet build benchmarks/InfiniteCanvas.Benchmarks/InfiniteCanvas.Benchmarks.csproj --configuration Release`, `dotnet test tests/InfiniteCanvas.Tests/InfiniteCanvas.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~SampleImageTileTests|FullyQualifiedName~RenderingDiagnosticsTests"`, and `pwsh -NoProfile -File scripts/Validate-TaskTracker.ps1 -Path docs/tasks`
 
-Outcome: `TileWorkCoordinatorBenchmarks.cs` retains seven benchmark methods covering PublishInterestSet (empty, full-visible, none-visible, mixed) and DrainQueueWithLivenessCheck (FIFO fallback, visible-promoted priority, and fast-scroll stress). Rendering diagnostics now classify resident fallback, useful current completions, and stale discarded completions. Focused rendering tests pass 18/18. The method count is seven; parameterized cases are not additional methods.
+Outcome: `TileWorkCoordinatorBenchmarks.cs` retains seven benchmark methods covering PublishInterestSet (empty, full-visible, none-visible, mixed) and DrainQueueWithLivenessCheck (FIFO fallback, visible-promoted priority, and fast-scroll stress). The class uses three warmups and ten measured iterations. `scripts/Run-FastScrollBenchmarks.ps1` records the command output and machine metadata. Rendering diagnostics now classify resident fallback, useful current completions, and stale discarded completions. Focused rendering tests pass 18/18. The method count is seven; parameterized cases are not additional methods.
 
 ## Notes
 
@@ -66,6 +66,14 @@ Coordinate stage counters with ICW-132 and benchmark structure with ICW-133. Do 
 ## Wave Z Update, 2026-08-07
 
 The diagnostics boundary now reports `ResidentFallback`, `Useful`, and `Stale` per mip. Native and mip coordinator callbacks classify publication outcomes, and resident fallback scans classify non-exact payload reuse. Existing `Reused`, `Generated`, `Rejected`, `Failed`, and `Evicted` counters remain unchanged. ICW-144 stays In Review until repeated hardware benchmark evidence exists.
+
+## Wave AA Update, 2026-08-07
+
+The fast-scroll benchmark now uses an explicit throughput job with three warmup
+iterations and ten measured iterations. The repeat-run script records the
+benchmark output, git revision, runtime, operating system, processor, and UTC
+timestamp. ICW-144 remains In Review until target hardware produces archived
+results.
 
 ## Council Update, 2026-08-03
 
