@@ -47,3 +47,18 @@ dotnet run -c Release --project benchmarks/InfiniteCanvas.Benchmarks -f net10.0-
 - Do not use benchmark results as CI pass/fail checks without a documented baseline policy.
 - Capture CSV/HTML outputs under `BenchmarkDotNet.Artifacts/results` and archive them alongside a short description of the machine.
 
+## Rendering matrix policy
+
+`TileMaterializationBenchmarks` uses five warmup and iteration samples for each
+parameter combination. It compares noise-only, circle-only, and full Gray8
+generation at mip levels 0, 1, and 3. It also measures cold materialization,
+warm reuse, and resident mip lookup.
+
+`ProjectionAndBitmapBenchmarks` exercises the shipped tile compositor. It varies
+sparse annotation composition and resident pixel state. The benchmark does not
+use the legacy point-render overload.
+
+Use `--job Dry` only to verify the harness. Use the stable default job for timing
+comparisons. Record the machine CPU, Windows version, .NET runtime, build
+configuration, git revision, and parameter table with each archived run.
+

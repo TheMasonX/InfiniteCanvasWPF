@@ -5,21 +5,39 @@ using InfiniteCanvas.Rendering;
 
 namespace InfiniteCanvas.Benchmarks;
 
+[SimpleJob(warmupCount: 2, iterationCount: 5, invocationCount: 1)]
 [MemoryDiagnoser]
 public class ProjectionAndBitmapBenchmarks
 {
-    private readonly CameraTransform _camera = new();
-    private BenchmarkEntity[]? _entities = null;
+    private CameraTransform? _camera;
+    private IReadOnlyList<SampleImageTile>? _tiles;
+    private IReadOnlyList<SampleAnnotation>? _annotations;
     private ZeroCopyBitmapFactory? _bitmapFactory = null;
 
-    [Params(1_000, 10_000, 100_000)]
-    public int VisiblePointCount { get; set; }
+    [Params(true, false)]
+    public bool IncludeSparseAnnotations { get; set; }
+
+    [Params(true, false)]
+    public bool ResidentPixels { get; set; }
 
     [GlobalSetup]
     public void Setup()
     {
-        _entities = BenchmarkData.CreateUniformEntities(VisiblePointCount);
+        _camera = new CameraTransform();
+        _camera.Zoom(0.25, new ScreenPoint(0, 0));
+        _tiles = SampleImageGenerator.GenerateSet(
+            imageCount: 1,
+            pixelWidth: 8_192,
+            pixelHeight: 4_096,
+            objectsPerTile: 8,
+            columns: 1,
+            seed: 1729).ToArray();
+        _annotations = _tiles!.SelectMany(tile => tile.Annotations).ToArray();
         _bitmapFactory = new ZeroCopyBitmapFactory(1_920, 1_080);
+        if (ResidentPixels)
+        {
+            _ = _tiles![0].Pixels;
+        }
     }
 
     [GlobalCleanup]
@@ -29,16 +47,14 @@ public class ProjectionAndBitmapBenchmarks
     }
 
     [Benchmark]
-    public object ProjectAndRender()
+    public object ComposeShippedTilePath()
     {
-        var screenPoints = _entities.Select(entity =>
-            _camera.WorldToScreen(
-                entity.Bounds.X / BenchmarkData.WorldSize * _bitmapFactory.Width,
-                entity.Bounds.Y / BenchmarkData.WorldSize * _bitmapFactory.Height));
-
         return _bitmapFactory.GenerateFrozenBitmap(
-            screenPoints,
-            new Bgra32Color(186, 208, 53, 255));
+            _tiles!,
+            IncludeSparseAnnotations ? _annotations! : Array.Empty<SampleAnnotation>(),
+            _camera!.Capture(),
+            showBackgroundImages: true,
+            showSparseImageTiles: IncludeSparseAnnotations);
     }
 }
 #endif

@@ -33,10 +33,14 @@ public sealed record RenderingMipDiagnostics(
 
 public sealed record RenderingDiagnosticsSnapshot(
     IReadOnlyDictionary<RenderingStage, TimeSpan> StageDurations,
+    IReadOnlyDictionary<RenderingStage, long> StageSamples,
     IReadOnlyDictionary<int, RenderingMipDiagnostics> MipLevels)
 {
     public TimeSpan GetStageDuration(RenderingStage stage) =>
         StageDurations.TryGetValue(stage, out var duration) ? duration : TimeSpan.Zero;
+
+    public long GetStageSampleCount(RenderingStage stage) =>
+        StageSamples.TryGetValue(stage, out var samples) ? samples : 0;
 }
 
 public sealed class RenderingDiagnostics
@@ -80,10 +84,12 @@ public sealed class RenderingDiagnostics
     public RenderingDiagnosticsSnapshot Snapshot()
     {
         var stageDurations = new Dictionary<RenderingStage, TimeSpan>();
+        var stageSamples = new Dictionary<RenderingStage, long>();
         foreach (var stage in Enum.GetValues<RenderingStage>())
         {
             stageDurations[stage] = TimeSpan.FromSeconds(
                 Volatile.Read(ref _stageTicks[(int)stage]) / (double)Stopwatch.Frequency);
+            stageSamples[stage] = Volatile.Read(ref _stageSamples[(int)stage]);
         }
 
         lock (_mipGate)
@@ -91,7 +97,7 @@ public sealed class RenderingDiagnostics
             var mipLevels = _mipLevels.ToDictionary(
                 pair => pair.Key,
                 pair => pair.Value.ToSnapshot());
-            return new RenderingDiagnosticsSnapshot(stageDurations, mipLevels);
+            return new RenderingDiagnosticsSnapshot(stageDurations, stageSamples, mipLevels);
         }
     }
 

@@ -29,7 +29,9 @@ public sealed class RenderingDiagnosticsTests
         using (Assert.EnterMultipleScope())
         {
             Assert.That(snapshot.GetStageDuration(RenderingStage.NativeNoiseGeneration), Is.GreaterThan(TimeSpan.Zero));
+            Assert.That(snapshot.GetStageSampleCount(RenderingStage.NativeNoiseGeneration), Is.EqualTo(1));
             Assert.That(snapshot.GetStageDuration(RenderingStage.Gray8Normalization), Is.GreaterThan(TimeSpan.Zero));
+            Assert.That(snapshot.GetStageSampleCount(RenderingStage.Gray8Normalization), Is.EqualTo(1));
             Assert.That(snapshot.GetStageDuration(RenderingStage.CircleRasterization), Is.GreaterThan(TimeSpan.Zero));
             Assert.That(mip.Requested, Is.EqualTo(0));
             Assert.That(mip.Generated, Is.EqualTo(1));
