@@ -341,6 +341,8 @@ public static class SampleImageGenerator
     }
 
 #if WINDOWS
+    private static readonly SemaphoreSlim GdiPlusGate = new(1, 1);
+
     private static void ApplyDetailsWithGdiPlus(
         byte[] pixels,
         int width,
@@ -350,66 +352,74 @@ public static class SampleImageGenerator
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        using var bitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb);
-        using (var graphics = Graphics.FromImage(bitmap))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            graphics.Clear(Color.Transparent);
-            graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            foreach (var circle in circles)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                using var brush = new SolidBrush(Color.FromArgb(255, circle.Value, circle.Value, circle.Value));
-                graphics.FillEllipse(
-                    brush,
-                    circle.CenterX - circle.Radius,
-                    circle.CenterY - circle.Radius,
-                    circle.Radius * 2,
-                    circle.Radius * 2);
-            }
-
-            if (!string.IsNullOrWhiteSpace(tileLabel))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                using var font = new Font(
-                    FontFamily.GenericSansSerif,
-                    Math.Max(8f, height / 12f),
-                    FontStyle.Regular,
-                    GraphicsUnit.Pixel);
-                using var brush = new SolidBrush(Color.FromArgb(255, 16, 16, 16));
-                graphics.DrawString(tileLabel, font, brush, 0f, 0f);
-            }
-        }
-
-        var bounds = new Rectangle(0, 0, width, height);
-        var data = bitmap.LockBits(bounds, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+        GdiPlusGate.Wait(cancellationToken);
         try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            unsafe
+            using var bitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+            using (var graphics = Graphics.FromImage(bitmap))
             {
-                var source = (byte*)data.Scan0;
-                for (var y = 0; y < height; y++)
+                cancellationToken.ThrowIfCancellationRequested();
+                graphics.Clear(Color.Transparent);
+                graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                foreach (var circle in circles)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var row = source + (y * data.Stride);
-                    for (var x = 0; x < width; x++)
-                    {
-                        var sourceOffset = x * 4;
-                        if (row[sourceOffset + 3] == 0)
-                        {
-                            continue;
-                        }
+                    using var brush = new SolidBrush(Color.FromArgb(255, circle.Value, circle.Value, circle.Value));
+                    graphics.FillEllipse(
+                        brush,
+                        circle.CenterX - circle.Radius,
+                        circle.CenterY - circle.Radius,
+                        circle.Radius * 2,
+                        circle.Radius * 2);
+                }
 
-                        var offset = (y * width) + x;
-                        pixels[offset] = Math.Min(pixels[offset], row[sourceOffset + 2]);
+                if (!string.IsNullOrWhiteSpace(tileLabel))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    using var font = new Font(
+                        FontFamily.GenericSansSerif,
+                        Math.Max(8f, height / 12f),
+                        FontStyle.Regular,
+                        GraphicsUnit.Pixel);
+                    using var brush = new SolidBrush(Color.FromArgb(255, 16, 16, 16));
+                    graphics.DrawString(tileLabel, font, brush, 0f, 0f);
+                }
+            }
+
+            var bounds = new Rectangle(0, 0, width, height);
+            var data = bitmap.LockBits(bounds, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                unsafe
+                {
+                    var source = (byte*)data.Scan0;
+                    for (var y = 0; y < height; y++)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var row = source + (y * data.Stride);
+                        for (var x = 0; x < width; x++)
+                        {
+                            var sourceOffset = x * 4;
+                            if (row[sourceOffset + 3] == 0)
+                            {
+                                continue;
+                            }
+
+                            var offset = (y * width) + x;
+                            pixels[offset] = Math.Min(pixels[offset], row[sourceOffset + 2]);
+                        }
                     }
                 }
+            }
+            finally
+            {
+                bitmap.UnlockBits(data);
             }
         }
         finally
         {
-            bitmap.UnlockBits(data);
+            GdiPlusGate.Release();
         }
     }
 #endif

@@ -3,7 +3,7 @@ id: ICW-P1-GDI-CONCURRENCY
 author: External Audit (Integration-1)
 key: ICW-P1-GDI-CONCURRENCY
 title: Add explicit GDI+ concurrency management for tile generation factories
-status: Proposed
+status: In Review
 type: Bug
 priority: P1
 tags:
@@ -22,7 +22,7 @@ links:
   - docs/audits/infinitecanvaswpf-icw-implementation-audit-26-07-30-16-40-49.md
   - docs/audits/infinitecanvaswpf-icw-followup-audit-26-07-30-22-04-25.md
 created: 2026-07-30
-updated: 2026-07-30
+updated: 2026-08-06
 ---
 
 # ICW-P1-GDI-CONCURRENCY — Add explicit GDI+ concurrency management for tile generation factories
@@ -34,6 +34,8 @@ updated: 2026-07-30
 Additionally, the ICW-P0-ACTIVECOUNT residual B (duplicate concurrent admission for the same cache key during cancel races) creates a second, independent source of concurrent `ApplyDetailsWithGdiPlus` calls beyond the normal max-concurrency ceiling.
 
 **Confidence:** 65% (mechanism is real and documented in .NET ecosystem; actual crash/corruption not reproduced in this review since it requires a live repro).
+
+Wave K review confirmed that cooperative cancellation now reaches running tile factories, but the Windows GDI+ path remains unsynchronized. Core tests do not compile this path because they target `net10.0`, so this wave adds Windows-only stress coverage.
 
 ## Root Cause
 
@@ -100,6 +102,20 @@ dotnet test tests/InfiniteCanvas.Windows.Tests --configuration Release --filter 
 
 - The 65% confidence reflects that GDI+ thread-safety failures are timing-dependent and not reproducible via static review. The risk is real and well-documented in .NET ecosystem; the decision is whether to mitigate preemptively or wait for a user-reported crash.
 - ICW-P1-COOPERATIVE-CANCEL should land first — shorter GDI+ call duration reduces the window for overlap.
+
+## Current Validation
+
+- Wave K commit `2ea0b74` is pushed and local `main` matches `origin/main`.
+- The working tree contains only unrelated untracked workflow and ticket files.
+- `SampleImageGeneratorConcurrencyTests` completed 1,000 concurrent GDI+ generations without native failure.
+- Core tests pass 189/189.
+- Windows tests pass 23/23.
+- The App Release build succeeds with the existing `_frameClaimantId` warning.
+- `git diff --check` passes.
+
+## Review Status
+
+The implementation serializes the complete GDI+ bitmap and pixel-readback section with a private `SemaphoreSlim`. The wait observes cancellation before native work starts. The task remains In Review because the stress test did not reproduce a native failure and does not yet combine long-running native work with cancellation storms.
 
 ## Related Tasks
 
