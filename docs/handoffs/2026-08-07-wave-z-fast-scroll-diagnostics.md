@@ -16,7 +16,7 @@ Wave Y left the concurrent settings and property-editor changes outside its comm
 - Classified non-exact resident payload selection as resident fallback.
 - Preserved existing requested, generated, reused, rejected, failed, and evicted counters.
 - Added focused counter coverage.
-- Closed ICW-144 in the active tracker and ticket.
+- Advanced ICW-144 to In Review in the active tracker and ticket.
 
 ## Evidence
 

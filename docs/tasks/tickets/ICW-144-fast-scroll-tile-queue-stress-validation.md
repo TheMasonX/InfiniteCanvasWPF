@@ -3,7 +3,7 @@ id: ICW-144
 author: Copilot
 key: ICW-144
 title: Add fast-scroll tile queue stress telemetry and benchmarks
-status: Done
+status: In Review
 type: Spike
 priority: P1
 tags:
@@ -65,7 +65,7 @@ Coordinate stage counters with ICW-132 and benchmark structure with ICW-133. Do 
 
 ## Wave Z Update, 2026-08-07
 
-The diagnostics boundary now reports `ResidentFallback`, `Useful`, and `Stale` per mip. Native and mip coordinator callbacks classify publication outcomes, and resident fallback scans classify non-exact payload reuse. Existing `Reused`, `Generated`, `Rejected`, `Failed`, and `Evicted` counters remain unchanged.
+The diagnostics boundary now reports `ResidentFallback`, `Useful`, and `Stale` per mip. Native and mip coordinator callbacks classify publication outcomes, and resident fallback scans classify non-exact payload reuse. Existing `Reused`, `Generated`, `Rejected`, `Failed`, and `Evicted` counters remain unchanged. ICW-144 stays In Review until repeated hardware benchmark evidence exists.
 
 ## Council Update, 2026-08-03
 
