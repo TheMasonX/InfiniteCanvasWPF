@@ -12,8 +12,10 @@ dependsOn: []
 related: []
 links:
   - docs/tasks/README.md
+  - src/InfiniteCanvas.Rendering/BackgroundTileMaterializer.cs
+  - tests/InfiniteCanvas.Tests/BackgroundTileMaterializerTests.cs
 created: 2026-07-25
-updated: 2026-07-25
+updated: 2026-08-07
 ---
 
 # ICW-076 - Add background tile mip-level fetching for zoomed-out views
@@ -66,9 +68,15 @@ Add zoom-dependent mip selection to the background tile path so zoomed-out views
 - `TileCacheBudget` keys and pins by tile ID and budgets one full-resolution tile cost, which would undercount and incorrectly protect multiple mip payloads.
 - The prior floor-coordinate sampling proposal aliases high-frequency source details. Canonical low-pass reduction is required for stable mip transitions.
 
+## Wave AE Update, 2026-08-07
+
+Added `BackgroundTileMaterializer` as the first source-neutral materializer slice. The materializer uses `TileWorkCoordinator` for equal-key coalescing and claimant cancellation. It validates returned payloads through `BackgroundTilePayload`, accounts actual variant bytes, supports variant pinning, and rejects stale scene completions. Focused tests pass 3/3.
+
+The existing `SampleImageTile` and Windows raster path still use their established synthetic adapters. This wave does not claim the full ICW-076 migration.
+
 ## Next Step
 
-Implement the source-neutral materializer/cache boundary for nonzero variants. It must own coalescing, byte reservations, variant-key pinning, completion notification, and scene-epoch suppression before external providers or pixelometer mip-zero requests are migrated.
+Connect `SampleImageTile` to the materializer and migrate the Windows raster path to resident payload dimensions. Preserve non-blocking placeholders and explicit mip-zero pixelometer reads.
 
 ## Related Tasks
 

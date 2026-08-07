@@ -25,6 +25,10 @@ The overlap test covers last-applicable-wins output, but the UI pixelometer text
 - ADR search found active references to `IBackgroundTileSource`.
 - The unrelated ICW-336 settings changes remain uncommitted and untouched.
 
+## Review Correction
+
+The original handoff contained a malformed `interface.+-` line. Wave AE records the correction without changing the Wave AD source scope.
+
 ## Next Step
 
 Continue ICW-076 by connecting `IBackgroundTileSource` to the source-neutral materializer and cache.
