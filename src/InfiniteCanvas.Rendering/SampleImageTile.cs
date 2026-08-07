@@ -351,6 +351,10 @@ public sealed class SampleImageTile
             {
                 pixels = bestPixels;
                 residentMipLevel = bestMip;
+                RenderingDiagnostics.RecordCurrent(
+                    RenderingDiagnosticOutcome.ResidentFallback,
+                    bestMip,
+                    residentPayloadBytes: bestPixels.LongLength);
                 return true;
             }
         }
@@ -669,8 +673,13 @@ public sealed class SampleImageTile
 
         if (!published)
         {
+            RenderingDiagnostics.RecordCurrent(RenderingDiagnosticOutcome.Stale, key.MipLevel);
             Log.Debug("TileGen DISCARD {TileId} mip{MipLevel} expectedEpoch={ExpectedEpoch} currentEpoch={CurrentEpoch} pixelsAlreadySet={PixelsSet}",
                 Id, key.MipLevel, expectedEpoch, currentEpoch, _pixels is not null);
+        }
+        else
+        {
+            RenderingDiagnostics.RecordCurrent(RenderingDiagnosticOutcome.Useful, key.MipLevel);
         }
 
         // Always fire the event so the render pipeline stays active and can
@@ -862,8 +871,13 @@ public sealed class SampleImageTile
 
         if (!published)
         {
+            RenderingDiagnostics.RecordCurrent(RenderingDiagnosticOutcome.Stale, mipLevel);
             Log.Debug("TileGen DISCARD mip {TileId} mip{MipLevel} expectedEpoch={ExpectedEpoch} currentEpoch={CurrentEpoch}",
                 Id, mipLevel, expectedEpoch, currentEpoch);
+        }
+        else
+        {
+            RenderingDiagnostics.RecordCurrent(RenderingDiagnosticOutcome.Useful, mipLevel);
         }
 
         // Always fire the event so the render pipeline stays active.

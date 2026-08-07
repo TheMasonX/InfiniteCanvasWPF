@@ -16,6 +16,9 @@ public enum RenderingDiagnosticOutcome
     Requested,
     Generated,
     Reused,
+    ResidentFallback,
+    Useful,
+    Stale,
     Rejected,
     Failed,
     Evicted
@@ -25,6 +28,9 @@ public sealed record RenderingMipDiagnostics(
     long Requested,
     long Generated,
     long Reused,
+    long ResidentFallback,
+    long Useful,
+    long Stale,
     long Rejected,
     long Failed,
     long Evicted,
@@ -151,6 +157,9 @@ public sealed class RenderingDiagnostics
         private long _requested;
         private long _generated;
         private long _reused;
+        private long _residentFallback;
+        private long _useful;
+        private long _stale;
         private long _rejected;
         private long _failed;
         private long _evicted;
@@ -164,6 +173,9 @@ public sealed class RenderingDiagnostics
                 case RenderingDiagnosticOutcome.Requested: Interlocked.Increment(ref _requested); break;
                 case RenderingDiagnosticOutcome.Generated: Interlocked.Increment(ref _generated); break;
                 case RenderingDiagnosticOutcome.Reused: Interlocked.Increment(ref _reused); break;
+                case RenderingDiagnosticOutcome.ResidentFallback: Interlocked.Increment(ref _residentFallback); break;
+                case RenderingDiagnosticOutcome.Useful: Interlocked.Increment(ref _useful); break;
+                case RenderingDiagnosticOutcome.Stale: Interlocked.Increment(ref _stale); break;
                 case RenderingDiagnosticOutcome.Rejected: Interlocked.Increment(ref _rejected); break;
                 case RenderingDiagnosticOutcome.Failed: Interlocked.Increment(ref _failed); break;
                 case RenderingDiagnosticOutcome.Evicted: Interlocked.Increment(ref _evicted); break;
@@ -184,6 +196,9 @@ public sealed class RenderingDiagnostics
             Volatile.Read(ref _requested),
             Volatile.Read(ref _generated),
             Volatile.Read(ref _reused),
+            Volatile.Read(ref _residentFallback),
+            Volatile.Read(ref _useful),
+            Volatile.Read(ref _stale),
             Volatile.Read(ref _rejected),
             Volatile.Read(ref _failed),
             Volatile.Read(ref _evicted),

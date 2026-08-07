@@ -47,6 +47,9 @@ public sealed class RenderingDiagnosticsTests
         diagnostics.Record(RenderingDiagnosticOutcome.Requested, 2, sampleCount: 128, residentPayloadBytes: 128);
         diagnostics.Record(RenderingDiagnosticOutcome.Generated, 2);
         diagnostics.Record(RenderingDiagnosticOutcome.Reused, 2);
+        diagnostics.Record(RenderingDiagnosticOutcome.ResidentFallback, 2);
+        diagnostics.Record(RenderingDiagnosticOutcome.Useful, 2);
+        diagnostics.Record(RenderingDiagnosticOutcome.Stale, 2);
         diagnostics.Record(RenderingDiagnosticOutcome.Rejected, 2);
         diagnostics.Record(RenderingDiagnosticOutcome.Failed, 2);
         diagnostics.Record(RenderingDiagnosticOutcome.Evicted, 2);
@@ -58,6 +61,9 @@ public sealed class RenderingDiagnosticsTests
             Assert.That(mip.Requested, Is.EqualTo(1));
             Assert.That(mip.Generated, Is.EqualTo(1));
             Assert.That(mip.Reused, Is.EqualTo(1));
+            Assert.That(mip.ResidentFallback, Is.EqualTo(1));
+            Assert.That(mip.Useful, Is.EqualTo(1));
+            Assert.That(mip.Stale, Is.EqualTo(1));
             Assert.That(mip.Rejected, Is.EqualTo(1));
             Assert.That(mip.Failed, Is.EqualTo(1));
             Assert.That(mip.Evicted, Is.EqualTo(1));
