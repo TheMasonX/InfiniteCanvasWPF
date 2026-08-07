@@ -52,6 +52,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
     private TileCacheBudget _tileCacheBudget = new(TileCacheBudget.DefaultMaxBytes);
     private bool _showBackgroundImages = true;
     private bool _showImageTiles = true;
+    private bool _showSparseImageTiles = true;
     private IReadOnlyList<FeatureDisplayItem> _selectedAnnotationFeatures = [];
     private TileWorkCoordinator _tileCoordinator = null!;
     private int _frameClaimantId;
@@ -285,14 +286,17 @@ public partial class MainWindow : Window, ICanvasSceneSource
         LabelSizeSlider.Value = settings.LabelSize;
         LabelDisplayComboBox.SelectedIndex = settings.LabelDisplay;
         ShowLabelsCheckBox.IsChecked = settings.ShowLabels;
+        ShowBoxesCheckBox.IsChecked = settings.ShowBoxes;
         ShowImageTilesCheckBox.IsChecked = settings.ShowImageTiles;
         _showImageTiles = settings.ShowImageTiles;
+        ShowSparseImageTilesCheckBox.IsChecked = settings.ShowSparseImageTiles;
+        _showSparseImageTiles = settings.ShowSparseImageTiles;
         ShowBackgroundImagesCheckBox.IsChecked = settings.ShowBackgroundImages;
         _showBackgroundImages = settings.ShowBackgroundImages;
         _mainViewModel.ApplySettings(settings);
         // The canvas owns the raster Image element; the host drives its
         // visibility from the layer-visibility settings (ICW-315).
-        CanvasSurface.RasterVisible = _showBackgroundImages || _showImageTiles;
+        CanvasSurface.RasterVisible = _showBackgroundImages || _showImageTiles || _showSparseImageTiles;
     }
 
     private async Task RegenerateSceneAsync(bool fitToWidth)
@@ -572,7 +576,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
                 _tileCacheBudget.TryReserve,
                 minimumSparseTilePixelSize: _minimumSparseTilePixelSize,
                 showBackgroundImages: _showBackgroundImages,
-                showSparseImageTiles: _showImageTiles);
+                showSparseImageTiles: _showSparseImageTiles);
             return (Bitmap: bitmap, VisibleItems: visibleItems, VisibleTiles: visibleTiles);
         }, cancellationToken);
 
@@ -792,8 +796,8 @@ public partial class MainWindow : Window, ICanvasSceneSource
             var fillBrush = CreateFillBrush(_annotationDisplayOptions.Mode, annotation.Color);
             var outline = new Rectangle
             {
-                Stroke = outlineBrush,
-                Fill = fillBrush,
+                Stroke = _annotationDisplayOptions.ShowBoxes ? outlineBrush : null,
+                Fill = _annotationDisplayOptions.ShowBoxes ? fillBrush : null,
                 StrokeThickness = _annotationDisplayOptions.OutlineThickness,
                 SnapsToDevicePixels = true,
                 StrokeDashCap = PenLineCap.Round,
@@ -944,7 +948,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
         }
 
         _showBackgroundImages = ShowBackgroundImagesCheckBox.IsChecked ?? true;
-        CanvasSurface.RasterVisible = _showBackgroundImages || _showImageTiles;
+        CanvasSurface.RasterVisible = _showBackgroundImages || _showImageTiles || _showSparseImageTiles;
         await RequestRenderAsync();
     }
 
@@ -964,7 +968,27 @@ public partial class MainWindow : Window, ICanvasSceneSource
         }
 
         _showImageTiles = ShowImageTilesCheckBox.IsChecked ?? true;
-        CanvasSurface.RasterVisible = _showBackgroundImages || _showImageTiles;
+        CanvasSurface.RasterVisible = _showBackgroundImages || _showImageTiles || _showSparseImageTiles;
+        await RequestRenderAsync();
+    }
+
+    private void OnShowSparseImageTilesChanged(object sender, RoutedEventArgs e)
+    {
+        SafeAsyncEventHandler.Handle(
+            () => OnShowSparseImageTilesChangedAsync(sender, e),
+            ReportAsyncEventFailure,
+            "sparse image visibility update");
+    }
+
+    private async Task OnShowSparseImageTilesChangedAsync(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        _showSparseImageTiles = ShowSparseImageTilesCheckBox.IsChecked ?? true;
+        CanvasSurface.RasterVisible = _showBackgroundImages || _showImageTiles || _showSparseImageTiles;
         await RequestRenderAsync();
     }
 
@@ -1275,6 +1299,25 @@ public partial class MainWindow : Window, ICanvasSceneSource
         await RequestRenderAsync();
     }
 
+    private void OnShowBoxesChanged(object sender, RoutedEventArgs e)
+    {
+        SafeAsyncEventHandler.Handle(
+            () => OnShowBoxesChangedAsync(sender, e),
+            ReportAsyncEventFailure,
+            "box visibility update");
+    }
+
+    private async Task OnShowBoxesChangedAsync(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        ApplyDisplayOptionsFromUi();
+        await RequestRenderAsync();
+    }
+
     private void ApplyDisplayOptionsFromUi()
     {
         var selectedMode = DisplayModeComboBox.SelectedIndex switch
@@ -1289,7 +1332,8 @@ public partial class MainWindow : Window, ICanvasSceneSource
             Math.Round(OutlineThicknessSlider.Value, 2),
             Math.Round(LabelSizeSlider.Value, 2),
             LabelDisplayComboBox.SelectedIndex == 1 ? AnnotationLabelDisplay.Id : AnnotationLabelDisplay.Class,
-            ShowLabelsCheckBox.IsChecked ?? true);
+            ShowLabelsCheckBox.IsChecked ?? true,
+            ShowBoxesCheckBox.IsChecked ?? true);
     }
 
     private void OnRegenerateClicked(object sender, RoutedEventArgs e)
@@ -1490,7 +1534,9 @@ public partial class MainWindow : Window, ICanvasSceneSource
             LabelSize = LabelSizeSlider.Value,
             LabelDisplay = LabelDisplayComboBox.SelectedIndex,
             ShowLabels = ShowLabelsCheckBox.IsChecked ?? true,
+            ShowBoxes = ShowBoxesCheckBox.IsChecked ?? true,
             ShowImageTiles = _showImageTiles,
+            ShowSparseImageTiles = _showSparseImageTiles,
             ShowBackgroundImages = _showBackgroundImages,
             BackgroundTargetValue = (byte)Math.Round(_mainViewModel.TileBackgroundNoiseSettings.TargetValue),
             BackgroundNoise = (byte)Math.Round(_mainViewModel.TileBackgroundNoiseSettings.Noise),
@@ -1588,13 +1634,15 @@ public partial class MainWindow : Window, ICanvasSceneSource
         double OutlineThickness,
         double LabelSize,
         AnnotationLabelDisplay LabelDisplay,
-        bool ShowLabels)
+        bool ShowLabels,
+        bool ShowBoxes)
     {
         public static AnnotationDisplayOptions Default { get; } = new(
             AnnotationDisplayMode.Outline,
             2,
                 8.5,
                 AnnotationLabelDisplay.Class,
+            true,
             true);
     }
 

@@ -136,8 +136,14 @@
                         <CheckBox x:Name="ShowLabelsCheckBox" Content="Show labels" IsChecked="True"
                                   Margin="0,8,0,0" Checked="OnShowLabelsChanged" Unchecked="OnShowLabelsChanged" />
 
+                        <CheckBox x:Name="ShowBoxesCheckBox" Content="Show boxes" IsChecked="True"
+                                  Margin="0,8,0,0" Checked="OnShowBoxesChanged" Unchecked="OnShowBoxesChanged" />
+
                         <CheckBox x:Name="ShowImageTilesCheckBox" Content="Show image tiles" IsChecked="True"
                                   Margin="0,8,0,0" Checked="OnShowImageTilesChanged" Unchecked="OnShowImageTilesChanged" />
+
+                        <CheckBox x:Name="ShowSparseImageTilesCheckBox" Content="Show sparse image tiles" IsChecked="True"
+                                  Margin="0,8,0,0" Checked="OnShowSparseImageTilesChanged" Unchecked="OnShowSparseImageTilesChanged" />
 
                         <CheckBox x:Name="ShowBackgroundImagesCheckBox" Content="Show background images" IsChecked="True"
                                   Margin="0,8,0,0" Checked="OnShowBackgroundImagesChanged" Unchecked="OnShowBackgroundImagesChanged" />
