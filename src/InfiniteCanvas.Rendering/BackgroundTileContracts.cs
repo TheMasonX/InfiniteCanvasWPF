@@ -2,6 +2,9 @@ using InfiniteCanvas.Core;
 
 namespace InfiniteCanvas.Rendering;
 
+/// <summary>
+/// Describes source-neutral tile identity and native dimensions for ICW-076.
+/// </summary>
 public sealed record BackgroundTileDescriptor
 {
     public BackgroundTileDescriptor(
@@ -49,6 +52,9 @@ public sealed record BackgroundTileDescriptor
     public byte PlaceholderValue { get; }
 }
 
+/// <summary>
+/// Identifies one source revision and mip variant in the tile cache.
+/// </summary>
 public readonly record struct BackgroundTileCacheKey(
     string SourceId,
     string TileId,
@@ -59,6 +65,9 @@ public interface ICacheReservation : IDisposable
 {
 }
 
+/// <summary>
+/// Requests one canonical mip payload for a source-neutral tile descriptor.
+/// </summary>
 public readonly record struct BackgroundTileRequest
 {
     public BackgroundTileRequest(BackgroundTileDescriptor descriptor, int mipLevel)
@@ -99,6 +108,9 @@ public sealed record BackgroundTileReadoutInfo(string TileId, int MipLevel, int 
     }
 }
 
+/// <summary>
+/// Carries validated Gray8 pixels for one source-neutral tile request.
+/// </summary>
 public sealed class BackgroundTilePayload
 {
     public BackgroundTilePayload(BackgroundTileRequest request, byte[] pixels)
@@ -129,6 +141,10 @@ public sealed class BackgroundTilePayload
     public long ByteCost { get; }
 }
 
+/// <summary>
+/// Resolves source-neutral background tile requests without WPF dependencies.
+/// ICW-076 will connect this contract to the materializer and cache.
+/// </summary>
 public interface IBackgroundTileSource
 {
     ValueTask<BackgroundTilePayload> ResolveAsync(
