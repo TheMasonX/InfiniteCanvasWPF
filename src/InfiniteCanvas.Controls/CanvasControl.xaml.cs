@@ -339,7 +339,9 @@ public partial class CanvasControl : UserControl
             || !double.IsFinite(viewportPoint.X)
             || !double.IsFinite(viewportPoint.Y)
             || !double.IsFinite(ViewModel.Camera.ScaleX)
-            || !double.IsFinite(ViewModel.Camera.ScaleY))
+            || !double.IsFinite(ViewModel.Camera.ScaleY)
+            || ViewModel.Camera.ScaleX == 0
+            || ViewModel.Camera.ScaleY == 0)
         {
             return;
         }

@@ -27,8 +27,18 @@ Wave U is complete. The viewport MVP audit identified selection ownership as the
 
 The viewport audit remains correct about the remaining tooltip gap. Tooltip payload and tooltip lifecycle still depend on typed annotation metrics under ICW-031. The control now owns point selection, but host-specific annotation visuals remain in `MainWindow` until the next interaction slice.
 
+The review found no selection regression. The first implementation lacked an explicit zero-scale guard during viewport-point conversion. Wave V adds that guard so invalid camera state cannot produce infinite world coordinates.
+
 The first contract edit exposed a known editor-tool persistence mismatch. The implementation uses a new Core helper instead of relying on an interface default member. The real on-disk source and all validation commands confirm the helper path.
+
+## Wave V Update
+
+- Added `AnnotationMetrics` with typed Confidence and Severity values.
+- Captured generated metric values once and mirrored them into legacy feature rows.
+- Migrated tooltip metric formatting from dictionary lookups to typed access.
+- Marked `Features` obsolete while retaining non-metric compatibility rows.
+- Added generated-metric and typed-presenter regression coverage.
 
 ## Next Step
 
-Implement typed annotation metrics, then move tooltip payload and tooltip display lifecycle into the control under ICW-314.
+Move tooltip payload and tooltip display lifecycle into the control under ICW-314.

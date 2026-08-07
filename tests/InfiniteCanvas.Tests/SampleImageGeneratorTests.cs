@@ -297,6 +297,8 @@ public class SampleImageGeneratorTests
         {
             Assert.That(rows.Select(item => item.Name), Has.Member("Confidence"));
             Assert.That(rows.Select(item => item.Name), Has.Member("Severity"));
+            Assert.That(annotation.Metrics.Confidence, Is.InRange(0.75, 0.999));
+            Assert.That(annotation.Metrics.Severity, Is.InRange(0, 1));
             // Values are readable plain-double strings, not percents (ICW-206).
             Assert.That(rows.All(item => !string.IsNullOrWhiteSpace(item.Value)), Is.True);
         }

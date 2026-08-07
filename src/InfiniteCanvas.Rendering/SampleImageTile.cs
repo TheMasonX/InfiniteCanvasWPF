@@ -900,6 +900,8 @@ public sealed class SampleImageTile
 #endif
 }
 
+public readonly record struct AnnotationMetrics(double Confidence, double Severity);
+
 public class SampleAnnotation : ISpatialEntity, ICanvasItem
 {
     public string Id { get; }
@@ -910,8 +912,9 @@ public class SampleAnnotation : ISpatialEntity, ICanvasItem
     public string Classification {get; }
 
     private readonly Lazy<IReadOnlyDictionary<string, object>> _featuresLazy;
+    private readonly Lazy<AnnotationMetrics> _metricsLazy;
 
-    public SampleAnnotation(string id, string tileId, string objectId, SpatialBounds bounds, Bgra32Color color, string classification, Func<IReadOnlyDictionary<string, object>> features, int defectPixelWidth, int defectPixelHeight, byte[] defectPixels)
+    public SampleAnnotation(string id, string tileId, string objectId, SpatialBounds bounds, Bgra32Color color, string classification, Func<IReadOnlyDictionary<string, object>> features, int defectPixelWidth, int defectPixelHeight, byte[] defectPixels, AnnotationMetrics? metrics = null)
     {
         Id = id;
         TileId = tileId;
@@ -920,12 +923,16 @@ public class SampleAnnotation : ISpatialEntity, ICanvasItem
         Color = color;
         Classification = classification;
         _featuresLazy = new(features);
+        _metricsLazy = new(() => metrics ?? ReadMetrics(_featuresLazy.Value));
         DefectPixelWidth = defectPixelWidth;
         DefectPixelHeight = defectPixelHeight;
         DefectPixels = defectPixels;
     }
 
+    [Obsolete("Use Metrics for Confidence and Severity. Features remains for legacy non-metric rows.")]
     public IReadOnlyDictionary<string, object> Features => _featuresLazy.Value;
+    internal IReadOnlyDictionary<string, object> LegacyFeatures => _featuresLazy.Value;
+    public AnnotationMetrics Metrics => _metricsLazy.Value;
     public int DefectPixelWidth {get; }
     public int DefectPixelHeight {get; }
     public byte[] DefectPixels {get; }
@@ -959,6 +966,17 @@ public class SampleAnnotation : ISpatialEntity, ICanvasItem
     public IReadOnlyList<FeatureDisplayItem> GetFeatureDisplayItems()
     {
         return AnnotationFeaturePresenter.BuildRows(this);
+    }
+
+    private static AnnotationMetrics ReadMetrics(IReadOnlyDictionary<string, object> features)
+    {
+        var confidence = features.TryGetValue("Confidence", out var confidenceValue) && confidenceValue is double confidenceNumber
+            ? confidenceNumber
+            : 0;
+        var severity = features.TryGetValue("Severity", out var severityValue) && severityValue is double severityNumber
+            ? severityNumber
+            : 0;
+        return new AnnotationMetrics(confidence, severity);
     }
 }
 

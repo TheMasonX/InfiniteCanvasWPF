@@ -8,9 +8,15 @@ public static class AnnotationFeaturePresenter
     {
         ArgumentNullException.ThrowIfNull(annotation);
 
-        return annotation.Features
+        return annotation.LegacyFeatures
             .OrderBy(static item => item.Key, StringComparer.OrdinalIgnoreCase)
-            .Select(item => new FeatureDisplayItem(item.Key, FormatFeatureValue(item.Value)))
+            .Select(item => new FeatureDisplayItem(
+                item.Key,
+                item.Key.Equals("Confidence", StringComparison.OrdinalIgnoreCase)
+                    ? FormatFeatureValue(annotation.Metrics.Confidence)
+                    : item.Key.Equals("Severity", StringComparison.OrdinalIgnoreCase)
+                        ? FormatFeatureValue(annotation.Metrics.Severity)
+                        : FormatFeatureValue(item.Value)))
             .ToArray();
     }
 
@@ -18,8 +24,8 @@ public static class AnnotationFeaturePresenter
     {
         ArgumentNullException.ThrowIfNull(annotation);
 
-        var confidence = annotation.Features.TryGetValue("Confidence", out var confidenceValue) ? confidenceValue : 0;
-        var severity = annotation.Features.TryGetValue("Severity", out var severityValue) ? severityValue : 0;
+        var confidence = annotation.Metrics.Confidence;
+        var severity = annotation.Metrics.Severity;
 
         return string.Join(
             Environment.NewLine,

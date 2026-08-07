@@ -3,7 +3,7 @@ id: ICW-031-typed-annotation-metrics
 author: External Audit (Integration-1)
 key: ICW-031
 title: Replace string-keyed annotation feature dictionary with typed AnnotationMetrics
-status: To Do
+status: In Progress
 type: Task
 priority: P2
 tags:
@@ -23,19 +23,19 @@ links:
   - src/InfiniteCanvas.App/MainWindow.xaml.cs
   - docs/audits/infinitecanvaswpf-icw-implementation-audit-26-07-30-16-40-49.md
 created: 2026-07-25
-updated: 2026-07-30
+updated: 2026-08-07
 ---
 
 # ICW-031 — Replace string-keyed annotation feature dictionary with typed AnnotationMetrics
 
 ## Summary
 
-**Audit finding (95% confidence):** Code reads `annotation.Features["Confidence"]` / `["Severity"]` in multiple places using raw string indexers. These throw `KeyNotFoundException` if either key is ever absent. The concrete call site at `CreateAnnotationToolTip` (`MainWindow.xaml.cs:724`) does `annotation.Features["Confidence"]` with no `TryGetValue`. A `KeyNotFoundException` here would be silently swallowed by the global dispatcher handler.
+**Audit finding (95% confidence):** Annotation metrics use a string-keyed dictionary. This forces consumers to know the keys by convention and weakens refactoring safety.
 
 **Concrete call sites to migrate:**
-1. `CreateAnnotationToolTip` (line 724) — raw indexer access
-2. `AnnotationFeaturePresenter.BuildRows` (if it uses raw indexers) — verify
-3. Feature-grid DataGrid binding — verify whether it uses `Features["Confidence"]` or typed access
+1. `AnnotationFeaturePresenter.BuildRows` — feature-row projection
+2. `AnnotationFeaturePresenter.BuildTooltipContent` — typed metric presentation
+3. Feature-grid DataGrid binding — verify that it consumes the presenter rows
 
 ## Root Cause
 
@@ -62,14 +62,14 @@ updated: 2026-07-30
 
 ### Dependency on ICW-101
 
-ICW-101 (tooltip presenter restore) should land first. It replaces the raw-indexer access in `CreateAnnotationToolTip` with the presenter's `TryGetValue`-based method, which eliminates the crash risk immediately. This ticket then replaces the `TryGetValue`-based access with typed access — a pure refactoring with no behavioral change.
+ICW-101 already landed the deferred presenter path. This ticket replaces the presenter’s remaining metric-key lookup with typed access before ICW-314 moves tooltip ownership into the reusable control.
 
 ### Acceptance Criteria
 
 - `SampleAnnotation` has a typed `Metrics` property instead of (or in addition to) the string-keyed dictionary.
 - All call sites use typed access.
 - No `KeyNotFoundException` is possible from feature access.
-- `Features` dictionary is deprecated with `[Obsolete]` or removed.
+- `Features` remains a compatibility surface for non-metric rows and is marked obsolete.
 
 ## Files to Change
 
@@ -87,6 +87,15 @@ ICW-101 (tooltip presenter restore) should land first. It replaces the raw-index
 ```
 dotnet test tests/InfiniteCanvas.Tests --configuration Release --filter "AnnotationMetrics|TypedMetrics"
 ```
+
+Wave V evidence:
+
+- Focused annotation presenter tests pass, `3/3`.
+- Core tests pass, `196/196`.
+- Windows tests pass, `26/26`.
+- App Release build passes with the known unused `_frameClaimantId` warning.
+- Task tracker validation passes, `224` task files validated and `5` legacy files skipped.
+- `git diff --check` passes.
 
 ## Related Tasks
 

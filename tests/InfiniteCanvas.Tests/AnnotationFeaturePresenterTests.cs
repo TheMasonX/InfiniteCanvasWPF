@@ -24,7 +24,8 @@ public class AnnotationFeaturePresenterTests
             },
             defectPixelWidth: 1,
             defectPixelHeight: 1,
-            defectPixels: new byte[] { 0 });
+            defectPixels: new byte[] { 0 },
+            metrics: new AnnotationMetrics(0.8, 0.25));
 
         var rows = AnnotationFeaturePresenter.BuildRows(annotation);
 
@@ -57,7 +58,8 @@ public class AnnotationFeaturePresenterTests
             },
             defectPixelWidth: 1,
             defectPixelHeight: 1,
-            defectPixels: new byte[] { 0 });
+            defectPixels: new byte[] { 0 },
+            metrics: new AnnotationMetrics(0.9, 0.4));
         var deferredToolTip = new DeferredAnnotationToolTip(annotation);
 
         Assert.That(deferredToolTip.ToString(), Is.EqualTo(AnnotationFeaturePresenter.BuildTooltipContent(annotation)));

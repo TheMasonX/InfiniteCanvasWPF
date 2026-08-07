@@ -25,6 +25,8 @@ internal static class AnnotationGenerator
             string objectId = random.NextInt64(0x100000000L, 0xFFFFFFFFFFFFL).ToString("X12");
             Bgra32Color color = SampleImageGenerator.ClassificationColors[classification];
             SampleImageGenerator.DefectTemplate defectTemplate = defectTemplatePool[random.Next(defectTemplatePool.Count)];
+            double confidence = Math.Round(0.75 + (random.NextDouble() * 0.249), 3);
+            double severity = Math.Round(random.NextDouble(), 3);
 
             annotations[index] = new SampleAnnotation(
                 $"{tileId}-{objectId}",
@@ -37,8 +39,8 @@ internal static class AnnotationGenerator
                 {
                     ["ID"] = index,
                     ["Class"] = classification,
-                    ["Confidence"] = Math.Round(0.75 + (random.NextDouble() * 0.249), 3),
-                    ["Severity"] = Math.Round(random.NextDouble(), 3),
+                    ["Confidence"] = confidence,
+                    ["Severity"] = severity,
                     ["Area"] = width * height,
                     ["Width"] = width,
                     ["Height"] = height,
@@ -50,7 +52,8 @@ internal static class AnnotationGenerator
                 },
                 defectTemplate.Width,
                 defectTemplate.Height,
-                defectTemplate.Pixels);
+                defectTemplate.Pixels,
+                new AnnotationMetrics(confidence, severity));
         }
 
         return annotations;
