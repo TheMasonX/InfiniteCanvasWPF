@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -43,4 +45,14 @@ jobs:
       - name: Check whitespace
         shell: pwsh
         run: |
-          git diff --check
+          $base = if ($env:GITHUB_EVENT_NAME -eq 'pull_request') {
+            '${{ github.event.pull_request.base.sha }}'
+          } else {
+            '${{ github.event.before }}'
+          }
+
+          if ([string]::IsNullOrWhiteSpace($base) -or $base -match '^0+$') {
+            git diff --check HEAD^ HEAD
+          } else {
+            git diff --check "$base...HEAD"
+          }
