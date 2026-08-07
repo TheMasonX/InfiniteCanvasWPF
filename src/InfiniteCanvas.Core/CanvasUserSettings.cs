@@ -15,6 +15,8 @@ public sealed record CanvasUserSettings
 
     public const double DefaultMinimumSparseTilePixelSize = 0;
 
+    public const double LegacyDefaultMinimumSparseTilePixelSize = 96;
+
     public int Version { get; init; } = CurrentVersion;
 
     public int TileColumns { get; init; } = 2;
@@ -104,7 +106,17 @@ public static class CanvasUserSettingsStore
             }
 
             var settings = JsonSerializer.Deserialize<CanvasUserSettings>(File.ReadAllText(path), SerializerOptions);
-            return settings is { IsValid: true } ? settings : new CanvasUserSettings();
+            if (settings is not { IsValid: true })
+            {
+                return new CanvasUserSettings();
+            }
+
+            // Migrate the previous demo default. A valid settings file can
+            // outlive a code default, so changing the property initializer
+            // alone does not remove the old 96-pixel background gate.
+            return settings.MinimumSparseTilePixelSize == CanvasUserSettings.LegacyDefaultMinimumSparseTilePixelSize
+                ? settings with { MinimumSparseTilePixelSize = CanvasUserSettings.DefaultMinimumSparseTilePixelSize }
+                : settings;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
         {

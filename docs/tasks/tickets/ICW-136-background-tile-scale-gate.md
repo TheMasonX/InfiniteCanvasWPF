@@ -36,12 +36,14 @@ Background tiles must remain renderable at that scale.
 
 - Define the demo threshold as `CanvasUserSettings.DefaultMinimumSparseTilePixelSize`.
 - Set the named default to zero.
+- Migrate the previous persisted value `CanvasUserSettings.LegacyDefaultMinimumSparseTilePixelSize` to zero on load.
 - Keep positive thresholds available for explicit suppression tests and host policies.
 - Keep the existing below-threshold renderer test.
 
 ## Acceptance criteria
 
 - A new `CanvasUserSettings` instance uses the named zero-value default.
+- A persisted previous default of `96` loads as the named zero-value default.
 - The XAML control uses the same zero-value default.
 - MainWindow uses the same zero-value default.
 - A positive threshold still prevents generation for a projected tile below that threshold.
@@ -57,6 +59,9 @@ Background tiles must remain renderable at that scale.
 
 ## Validation result
 
-- Focused settings tests: 6/6.
-- Focused Windows renderer tests: 13/13.
+- Core tests: 196/196.
+- Windows tests: 25/25.
+- App Release build: succeeded with the existing `_frameClaimantId` warning.
+- Focused settings migration tests: 7/7.
 - Editor diagnostics: no errors in the changed code files.
+- Task tracker script: blocked by the Windows PowerShell runtime because `System.IO.Path.GetRelativePath` is unavailable.

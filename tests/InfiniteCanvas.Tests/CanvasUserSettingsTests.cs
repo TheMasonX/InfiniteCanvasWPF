@@ -133,4 +133,22 @@ public class CanvasUserSettingsTests
             Assert.That(settings.MinimumSparseTilePixelSize, Is.EqualTo(CanvasUserSettings.DefaultMinimumSparseTilePixelSize));
         }
     }
+
+    [Test]
+    public void Load_MigratesPreviousBackgroundTileDefaultToUnlimited()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, "{\"Version\":1,\"MinimumSparseTilePixelSize\":96}");
+
+            var loaded = CanvasUserSettingsStore.Load(path);
+
+            Assert.That(loaded.MinimumSparseTilePixelSize, Is.EqualTo(CanvasUserSettings.DefaultMinimumSparseTilePixelSize));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
 }

@@ -16,6 +16,7 @@ The demo now uses a named zero-value default.
 - Set the persisted settings default to that constant.
 - Set the MainWindow field default to that constant.
 - Set the XAML control default to zero.
+- Migrate persisted settings that contain the previous 96-pixel demo default.
 - Kept positive threshold values available for explicit host policies.
 - Kept the existing Windows regression test for positive threshold suppression.
 - Updated the functional requirement and task tracker.
