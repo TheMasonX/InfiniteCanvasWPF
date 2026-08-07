@@ -194,16 +194,12 @@ public partial class MainWindow : Window, ICanvasSceneSource
 
         // Named point-query contract (ICW-316A F-001): no magic probe box at
         // the read site.
-        byte defect = 0;
         var hitAnnotations = QueryPoint(worldX, worldY);
-        for (var index = 0; index < hitAnnotations.Count; index++)
-        {
-            if (hitAnnotations[index] is SampleAnnotation annotation
-                && annotation.TryGetDefectValue(worldX, worldY, out var value))
-            {
-                defect = Math.Max(defect, value);
-            }
-        }
+        var defect = DefectOverlaySampler.ResolveDisplayValue(
+            background,
+            hitAnnotations.OfType<SampleAnnotation>(),
+            worldX,
+            worldY);
 
         var dimensions = BackgroundTileMipPolicy.GetDimensions(tile.PixelWidth, tile.PixelHeight, mipLevel);
         sample = new CanvasPixelSample(
@@ -330,7 +326,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
 
             // The noise settings view model is stable for the window lifetime,
             // so the generator reads the same snapshot that remains bound to UI.
-            var backgroundNoiseSettings = _mainViewModel.CreateBackgroundNoiseSnapshot();
+            var backgroundSettings = _mainViewModel.CreateBackgroundSettingsSnapshot();
             _tiles = await Task.Run(
                 () => SampleImageGenerator.GenerateSet(
                     imageCount: tileCount,
@@ -339,14 +335,15 @@ public partial class MainWindow : Window, ICanvasSceneSource
                     rows: _tileRows,
                     seed: _generationSeed,
                     defectPoolSize: 64,
-                    targetValue: backgroundNoiseSettings.TargetValue,
-                    noise: backgroundNoiseSettings.Noise,
-                    circleCount: backgroundNoiseSettings.CircleCount,
-                    noiseScale: backgroundNoiseSettings.NoiseScale,
-                    noiseOctaves: backgroundNoiseSettings.NoiseOctaves,
-                    noiseLacunarity: backgroundNoiseSettings.NoiseLacunarity,
-                    noiseGain: backgroundNoiseSettings.NoiseGain,
-                    noiseAmplitude: backgroundNoiseSettings.NoiseAmplitude),
+                    targetValue: backgroundSettings.TargetValue,
+                    noise: backgroundSettings.Noise,
+                    circleCount: backgroundSettings.CircleCount,
+                    noiseScale: backgroundSettings.NoiseScale,
+                    noiseOctaves: backgroundSettings.NoiseOctaves,
+                    noiseLacunarity: backgroundSettings.NoiseLacunarity,
+                    noiseGain: backgroundSettings.NoiseGain,
+                    noiseAmplitude: backgroundSettings.NoiseAmplitude,
+                    showTileLabels: backgroundSettings.ShowTileLabels),
                 _lifetime.Token);
             // Assign the coordinator to all tiles so lazy generation is
             // bounded and cancellable via the coordinator.
@@ -1537,14 +1534,15 @@ public partial class MainWindow : Window, ICanvasSceneSource
             ShowImageTiles = _showImageTiles,
             ShowSparseImageTiles = _showSparseImageTiles,
             ShowBackgroundImages = _showBackgroundImages,
-            BackgroundTargetValue = (byte)Math.Round(_mainViewModel.TileBackgroundNoiseSettings.TargetValue),
-            BackgroundNoise = (byte)Math.Round(_mainViewModel.TileBackgroundNoiseSettings.Noise),
-            BackgroundCircleCount = (int)Math.Round(_mainViewModel.TileBackgroundNoiseSettings.CircleCount),
-            BackgroundNoiseScale = _mainViewModel.TileBackgroundNoiseSettings.Scale,
-            BackgroundNoiseOctaves = (int)Math.Round(_mainViewModel.TileBackgroundNoiseSettings.Octaves),
-            BackgroundNoiseLacunarity = _mainViewModel.TileBackgroundNoiseSettings.Lacunarity,
-            BackgroundNoiseGain = _mainViewModel.TileBackgroundNoiseSettings.Gain,
-            BackgroundNoiseAmplitude = _mainViewModel.TileBackgroundNoiseSettings.Amplitude
+            ShowBackgroundTileLabels = _mainViewModel.TileBackgroundSettings.ShowTileLabels,
+            BackgroundTargetValue = (byte)Math.Round(_mainViewModel.TileBackgroundSettings.TargetValue),
+            BackgroundNoise = (byte)Math.Round(_mainViewModel.TileBackgroundSettings.Noise),
+            BackgroundCircleCount = (int)Math.Round(_mainViewModel.TileBackgroundSettings.CircleCount),
+            BackgroundNoiseScale = _mainViewModel.TileBackgroundSettings.Scale,
+            BackgroundNoiseOctaves = (int)Math.Round(_mainViewModel.TileBackgroundSettings.Octaves),
+            BackgroundNoiseLacunarity = _mainViewModel.TileBackgroundSettings.Lacunarity,
+            BackgroundNoiseGain = _mainViewModel.TileBackgroundSettings.Gain,
+            BackgroundNoiseAmplitude = _mainViewModel.TileBackgroundSettings.Amplitude
         };
 
         if (!settings.IsValid)

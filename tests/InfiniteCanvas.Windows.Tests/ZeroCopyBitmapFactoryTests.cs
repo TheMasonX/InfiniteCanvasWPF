@@ -274,8 +274,50 @@ public class ZeroCopyBitmapFactoryTests
         }
     }
 
+    [Test]
+    public void GenerateFrozenBitmap_UsesSameLastWinsDefectValueAsSampler()
+    {
+        var annotations = new[]
+        {
+            CreateDefectAnnotation("first", 20),
+            CreateDefectAnnotation("second", 80)
+        };
+        using var factory = new ZeroCopyBitmapFactory(4, 4);
+
+        var bitmap = factory.GenerateFrozenBitmap([], annotations, new CameraTransform().Capture());
+        var pixels = new byte[4 * 4 * 4];
+        bitmap.CopyPixels(pixels, 4 * 4, 0);
+
+        var expected = DefectOverlaySampler.ResolveDisplayValue(
+            0,
+            annotations,
+            1,
+            1);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(expected, Is.EqualTo(80));
+            Assert.That(ReadGray(pixels, 4, 1, 1), Is.EqualTo(expected));
+        }
+    }
+
     private static byte ReadGray(byte[] pixels, int width, int x, int y)
     {
         return pixels[((y * width) + x) * 4];
+    }
+
+    private static SampleAnnotation CreateDefectAnnotation(string id, byte value)
+    {
+        return new SampleAnnotation(
+            id,
+            "tile",
+            id,
+            new SpatialBounds(0, 0, 4, 4),
+            new Bgra32Color(0, 0, 255, 255),
+            "Scratch",
+            () => new Dictionary<string, object>(),
+            2,
+            2,
+            [value, value, value, value]);
     }
 }
