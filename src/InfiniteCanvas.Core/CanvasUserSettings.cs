@@ -6,6 +6,13 @@ public sealed record CanvasUserSettings
 {
     public const int CurrentVersion = 1;
 
+    /// <summary>
+    /// Upper bound for objects per tile, shared with
+    /// <see cref="InfiniteCanvas.Rendering.SampleImageGenerator.MaxObjectsPerTile"/>.
+    /// Tests assert the two constants stay equal.
+    /// </summary>
+    public const int MaxObjectsPerTile = 256;
+
     public int Version { get; init; } = CurrentVersion;
 
     public int TileColumns { get; init; } = 2;
@@ -52,12 +59,17 @@ public sealed record CanvasUserSettings
 
     public double MinimumSparseTilePixelSize { get; init; } = 96;
 
+    public static bool ValidateObjectsPerTile(int value) => value is >= 0 and <= MaxObjectsPerTile;
+
+    public static bool ValidateMinimumSparseTilePixelSize(double value) =>
+        double.IsFinite(value) && value is >= 0 and <= 4096;
+
     public bool IsValid =>
         Version == CurrentVersion
         && TileColumns > 0
         && TileRows > 0
         && (long)TileColumns * TileRows <= 2000
-        && ObjectsPerTile >= 0
+        && ValidateObjectsPerTile(ObjectsPerTile)
         && AnnotationDisplayMode is >= 0 and <= 2
         && OutlineThickness is >= 1 and <= 6
         && LabelSize is >= 8 and <= 20
@@ -68,7 +80,7 @@ public sealed record CanvasUserSettings
         && BackgroundNoiseLacunarity is >= 0.1 and <= 8
         && BackgroundNoiseGain is >= 0 and <= 1
         && BackgroundNoiseAmplitude is >= 0 and <= 4
-        && MinimumSparseTilePixelSize is >= 0 and <= 4096;
+        && ValidateMinimumSparseTilePixelSize(MinimumSparseTilePixelSize);
 }
 
 public static class CanvasUserSettingsStore

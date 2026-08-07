@@ -163,6 +163,9 @@
                                 <appcontrols:SliderTextBox x:Name="ObjectsPerTileSliderTextBox" Label="Objects per tile"
                                                         Minimum="0" Maximum="256" TickFrequency="1"
                                                         NumericType="Integer" Value="16" />
+                                <appcontrols:SliderTextBox x:Name="MinimumSparseTilePixelSizeSliderTextBox" Label="Minimum sparse tile pixels"
+                                                        Minimum="0" Maximum="4096" TickFrequency="16"
+                                                        NumericType="Double" Value="96" />
                                 <appcontrols:SliderTextBox x:Name="GenerationSeedSliderTextBox" Label="Generation seed"
                                                         Minimum="0" Maximum="2147483647" TickFrequency="1"
                                                         NumericType="Integer" ShowSlider="False" Value="1729" />

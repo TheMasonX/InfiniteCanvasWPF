@@ -46,6 +46,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
     private int _tileColumns = 2;
     private int _tileRows = 32;
     private int _objectsPerTile = 16;
+    private double _minimumSparseTilePixelSize = 96;
     private int _generationSeed = 1729;
     private int _busyOperationCount;
     private TileCacheBudget _tileCacheBudget = new(TileCacheBudget.DefaultMaxBytes);
@@ -267,6 +268,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
         TilesXSliderTextBox.Value = _tileColumns;
         TilesYSliderTextBox.Value = _tileRows;
         ObjectsPerTileSliderTextBox.Value = _objectsPerTile;
+        MinimumSparseTilePixelSizeSliderTextBox.Value = _minimumSparseTilePixelSize;
         GenerationSeedSliderTextBox.Value = _generationSeed;
     }
 
@@ -275,6 +277,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
         _tileColumns = settings.TileColumns;
         _tileRows = settings.TileRows;
         _objectsPerTile = settings.ObjectsPerTile;
+        _minimumSparseTilePixelSize = settings.MinimumSparseTilePixelSize;
         _generationSeed = settings.GenerationSeed;
         ApplyGenerationControlsToUi();
         DisplayModeComboBox.SelectedIndex = settings.AnnotationDisplayMode;
@@ -567,6 +570,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
                 visibleItems,
                 camera,
                 _tileCacheBudget.TryReserve,
+                minimumSparseTilePixelSize: _minimumSparseTilePixelSize,
                 showBackgroundImages: _showBackgroundImages,
                 showSparseImageTiles: _showImageTiles);
             return (Bitmap: bitmap, VisibleItems: visibleItems, VisibleTiles: visibleTiles);
@@ -1407,6 +1411,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
         var columns = (int)Math.Round(TilesXSliderTextBox.Value);
         var rows = (int)Math.Round(TilesYSliderTextBox.Value);
         var objectsPerTile = (int)Math.Round(ObjectsPerTileSliderTextBox.Value);
+        var minimumSparseTilePixelSize = MinimumSparseTilePixelSizeSliderTextBox.Value;
         var seed = (int)Math.Round(GenerationSeedSliderTextBox.Value);
 
         if (columns <= 0 || rows <= 0)
@@ -1421,9 +1426,22 @@ public partial class MainWindow : Window, ICanvasSceneSource
             return false;
         }
 
+        if (!CanvasUserSettings.ValidateObjectsPerTile(objectsPerTile))
+        {
+            validationError = $"Objects per tile must be between 0 and {CanvasUserSettings.MaxObjectsPerTile}.";
+            return false;
+        }
+
+        if (!CanvasUserSettings.ValidateMinimumSparseTilePixelSize(minimumSparseTilePixelSize))
+        {
+            validationError = "Minimum sparse tile pixel size must be between 0 and 4096.";
+            return false;
+        }
+
         _tileColumns = columns;
         _tileRows = rows;
         _objectsPerTile = objectsPerTile;
+        _minimumSparseTilePixelSize = minimumSparseTilePixelSize;
         _generationSeed = seed;
         return true;
     }
@@ -1465,6 +1483,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
             TileColumns = (int)Math.Round(TilesXSliderTextBox.Value),
             TileRows = (int)Math.Round(TilesYSliderTextBox.Value),
             ObjectsPerTile = (int)Math.Round(ObjectsPerTileSliderTextBox.Value),
+            MinimumSparseTilePixelSize = MinimumSparseTilePixelSizeSliderTextBox.Value,
             GenerationSeed = (int)Math.Round(GenerationSeedSliderTextBox.Value),
             AnnotationDisplayMode = DisplayModeComboBox.SelectedIndex,
             OutlineThickness = OutlineThicknessSlider.Value,

@@ -13,7 +13,7 @@ public static class SampleImageGenerator
     public const int DefaultPixelWidth = 8192;
     public const int DefaultPixelHeight = 4096;
     public const int NoiseBlockSize = 512;
-    public const int MaxObjectsPerTile = 256;
+    public const int MaxObjectsPerTile = CanvasUserSettings.MaxObjectsPerTile;
 
     public sealed class NoiseSettings
     {
@@ -91,7 +91,7 @@ public static class SampleImageGenerator
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pixelWidth);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pixelHeight);
 
-        if (objectsPerTile is < 0 or > MaxObjectsPerTile)
+        if (!CanvasUserSettings.ValidateObjectsPerTile(objectsPerTile))
         {
             throw new ArgumentOutOfRangeException(nameof(objectsPerTile));
         }
@@ -143,7 +143,7 @@ public static class SampleImageGenerator
             throw new ArgumentOutOfRangeException("pixelHeight");
         }
 
-        if (options.ObjectsPerTile < 0 || options.ObjectsPerTile > MaxObjectsPerTile)
+        if (!CanvasUserSettings.ValidateObjectsPerTile(options.ObjectsPerTile))
         {
             throw new ArgumentOutOfRangeException("objectsPerTile");
         }

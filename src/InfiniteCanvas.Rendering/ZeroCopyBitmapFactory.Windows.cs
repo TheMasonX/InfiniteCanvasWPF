@@ -195,11 +195,17 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
 
         var mipLevel = BackgroundTileMipPolicy.SelectMipLevel(camera);
         byte[]? sourcePixels = null;
-        var hasSourcePixels = tile.TryGetPixelsNonBlocking(
-            mipLevel,
-            out sourcePixels,
-            out var residentMipLevel,
-            tryReserveCacheEntry is null ? null : (key, byteCost) => tryReserveCacheEntry(tile, key, byteCost));
+        var residentMipLevel = mipLevel;
+        // Skip generation requests for tiles below the sparse threshold
+        // (ICW-P1-SETTINGS-VALIDATION). Resident pixels stay visible; only
+        // new generation work is skipped for tiles that are too small on
+        // screen to justify materialization.
+        var hasSourcePixels = tile.ShouldGenerateForPixelSize(camera, minimumSparseTilePixelSize)
+            && tile.TryGetPixelsNonBlocking(
+                mipLevel,
+                out sourcePixels,
+                out residentMipLevel,
+                tryReserveCacheEntry is null ? null : (key, byteCost) => tryReserveCacheEntry(tile, key, byteCost));
         var sourceDimensions = BackgroundTileMipPolicy.GetDimensions(tile.PixelWidth, tile.PixelHeight, residentMipLevel);
         var placeholder = tile.PlaceholderValue;
         var cameraOffsetX = camera.OffsetX;

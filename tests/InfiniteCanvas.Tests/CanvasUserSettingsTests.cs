@@ -90,4 +90,35 @@ public class CanvasUserSettingsTests
             File.Delete(path);
         }
     }
+
+    [Test]
+    public void Load_ReturnsDefaultsWhenObjectsPerTileExceedsGeneratorLimit()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, "{\"Version\":1,\"ObjectsPerTile\":500}");
+
+            var loaded = CanvasUserSettingsStore.Load(path);
+
+            Assert.That(loaded, Is.EqualTo(new CanvasUserSettings()));
+            Assert.That(CanvasUserSettings.ValidateObjectsPerTile(500), Is.False);
+            Assert.That(CanvasUserSettings.ValidateObjectsPerTile(CanvasUserSettings.MaxObjectsPerTile), Is.True);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Test]
+    public void ValidationFunctions_RejectNonFiniteSparseTileThreshold()
+    {
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(CanvasUserSettings.ValidateMinimumSparseTilePixelSize(double.NaN), Is.False);
+            Assert.That(CanvasUserSettings.ValidateMinimumSparseTilePixelSize(double.PositiveInfinity), Is.False);
+            Assert.That(CanvasUserSettings.ValidateMinimumSparseTilePixelSize(4096), Is.True);
+        }
+    }
 }

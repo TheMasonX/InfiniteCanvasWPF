@@ -3,7 +3,7 @@ id: ICW-P1-SETTINGS-VALIDATION
 author: External Audit (Integration-1)
 key: ICW-P1-SETTINGS-VALIDATION
 title: Create single validation function per option field used by all entry paths
-status: Proposed
+status: Done
 type: Bug
 priority: P1
 tags:
@@ -22,7 +22,7 @@ links:
   - src/InfiniteCanvas.Rendering/SampleImageGenerator.cs
   - docs/audits/infinitecanvaswpf-icw-implementation-audit-26-07-30-16-40-49.md
 created: 2026-07-30
-updated: 2026-07-30
+updated: 2026-08-06
 ---
 
 # ICW-P1-SETTINGS-VALIDATION — Create single validation function per option field used by all entry paths
@@ -112,6 +112,24 @@ There is no single shared validation function per setting field. Each consumer i
 ```
 dotnet test tests/InfiniteCanvas.Tests --configuration Release --filter "SettingsValidation|ObjectsPerTile|MinimumSparseTilePixelSize"
 ```
+
+Current wave validation also includes the Windows renderer tests, the Release app build, and the task tracker validator.
+
+## Notes
+
+- Wave M is complete and pushed at `79d0cb2`.
+- The current branch includes the CI commit `b89aa55`, now pushed to `origin/main`.
+- Wave N is complete and pushed (shared validators + sparse-tile gate).
+
+## Validation Result (Wave N, 2026-08-06)
+
+- Core settings tests: 5/5.
+- Full core suite: 191/191.
+- Windows renderer tests: 13/13.
+- Full Windows suite: 25/25.
+- App Release build: succeeded (existing `_frameClaimantId` warning only).
+- Task tracker validator: clean.
+- `git diff --check`: clean.
 
 ## Related Tasks
 

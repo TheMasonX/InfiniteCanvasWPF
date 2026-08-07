@@ -84,6 +84,27 @@ public class ZeroCopyBitmapFactoryTests
     }
 
     [Test]
+    public void GenerateFrozenBitmap_DoesNotStartMissingTileBelowSparsePixelThreshold()
+    {
+        var tile = new SampleImageTile(
+            "small-tile",
+            new SpatialBounds(0, 0, 1, 1),
+            64,
+            32,
+            () => Enumerable.Repeat((byte)77, 64 * 32).ToArray(),
+            []);
+        using var factory = new ZeroCopyBitmapFactory(64, 32);
+
+        factory.GenerateFrozenBitmap(
+            [tile],
+            [],
+            new CameraTransform().Capture(),
+            minimumSparseTilePixelSize: 2);
+
+        Assert.That(tile.IsImageGenerated, Is.False);
+    }
+
+    [Test]
     public void GenerateSet_BakesTileIndexIntoGray8Payload()
     {
         var tile = SampleImageGenerator.GenerateSet(
