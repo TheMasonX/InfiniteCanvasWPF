@@ -3,7 +3,7 @@ id: ICW-334
 author: Copilot
 key: ICW-334
 title: Move point selection into CanvasControl through the item contract
-status: In Progress
+status: Done
 type: Story
 priority: P1
 tags:
@@ -35,7 +35,7 @@ The current host owns selection state and visual click handlers.
 
 ## Scope
 
-- Add a host-neutral point hit-test member to `ICanvasItem`.
+- Add host-neutral point hit testing in Core for the existing `ICanvasItem` boundary.
 - Make `CanvasControl` query the injected scene source on an un-dragged left click.
 - Expose the selected item and a selection-change event from the control.
 - Forward selection changes from `MainWindow` to the existing inspection state.
@@ -60,7 +60,7 @@ The current host owns selection state and visual click handlers.
 
 The existing `ICanvasSceneSource.QueryPoint` is the single point-query authority.
 The control uses the current camera snapshot to convert viewport coordinates to world coordinates.
-The control selects the first returned item that accepts the point through `HitTest`.
+The control selects the first returned item whose bounds contain the point through `CanvasItemHitTesting`.
 
 ICW-314 remains open for tooltip payload and tooltip lifecycle ownership.
 Those concerns require the typed metrics decision tracked by ICW-031.

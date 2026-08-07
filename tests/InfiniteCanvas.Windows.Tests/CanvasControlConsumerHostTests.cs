@@ -127,6 +127,31 @@ public sealed class CanvasControlConsumerHostTests
         Assert.That(control.IsLoadingVisible, Is.False);
     }
 
+    [Test]
+    public void ConsumerHost_SelectsItemAtViewportPointAndClearsOnEmptySpace()
+    {
+        var control = new CanvasControl
+        {
+            SceneSource = new SelectableHostSceneSource()
+        };
+        control.SetSceneBounds(new SpatialBounds(0, 0, 100, 100));
+        control.SetViewportSize(100, 100);
+
+        var changes = new List<ICanvasItem?>();
+        control.SelectionChanged += (_, args) => changes.Add(args.SelectedItem);
+
+        control.SelectAtViewportPoint(new Point(25, 25));
+        control.SelectAtViewportPoint(new Point(90, 90));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(control.SelectedItem, Is.Null);
+            Assert.That(changes, Has.Count.EqualTo(2));
+            Assert.That(changes[0]!.Id, Is.EqualTo("selected"));
+            Assert.That(changes[1], Is.Null);
+        });
+    }
+
     private static BitmapSource CreateFrozenRaster(int width, int height)
     {
         var bitmap = new WriteableBitmap(width, height, 96, 96, PixelFormats.Bgra32, null);
@@ -162,6 +187,29 @@ public sealed class CanvasControlConsumerHostTests
 
         public IReadOnlyList<ICanvasItem> QueryPoint(double worldX, double worldY) =>
             [];
+
+        public bool TryReadResidentPixel(double worldX, double worldY, int mipLevel, out CanvasPixelSample sample)
+        {
+            sample = default;
+            return false;
+        }
+    }
+
+    private sealed class SelectableHostSceneSource : ICanvasSceneSource
+    {
+        private readonly HostItem _item = new("selected", new SpatialBounds(10, 10, 30, 30));
+
+        public SpatialBounds SceneBounds { get; } = new(0, 0, 100, 100);
+
+        public int TotalItemCount => 1;
+
+#pragma warning disable CS0067
+        public event EventHandler? SceneChanged;
+#pragma warning restore CS0067
+
+        public IReadOnlyList<ICanvasItem> QueryVisible(SpatialBounds viewport) => [_item];
+
+        public IReadOnlyList<ICanvasItem> QueryPoint(double worldX, double worldY) => [_item];
 
         public bool TryReadResidentPixel(double worldX, double worldY, int mipLevel, out CanvasPixelSample sample)
         {

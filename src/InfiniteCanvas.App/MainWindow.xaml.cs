@@ -77,6 +77,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
         CanvasSurface.ViewportChanged += OnCanvasViewportChanged;
         CanvasSurface.PointerMoved += OnCanvasPointerMoved;
         CanvasSurface.PointerWheel += OnCanvasPointerWheel;
+        CanvasSurface.SelectionChanged += OnCanvasSelectionChanged;
         CanvasSurface.SizeChanged += OnViewportSizeChanged;
         // The canvas owns the frame shell and raster display (ICW-315). The
         // host keeps overlay composition and populates it per published frame.
@@ -816,7 +817,6 @@ public partial class MainWindow : Window, ICanvasSceneSource
                 Tag = annotation,
                 ToolTip = new DeferredAnnotationToolTip(annotation)
             };
-            annotationElement.MouseLeftButtonDown += OnAnnotationMouseLeftButtonDown;
             Canvas.SetLeft(annotationElement, topLeft.X);
             Canvas.SetTop(annotationElement, topLeft.Y);
             annotationLayer.Children.Add(annotationElement);
@@ -913,23 +913,20 @@ public partial class MainWindow : Window, ICanvasSceneSource
         CanvasSurface.RefreshScrollbars();
     }
 
-    private void OnAnnotationMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void OnCanvasSelectionChanged(object? sender, CanvasSelectionChangedEventArgs e)
     {
         SafeAsyncEventHandler.Handle(
-            () => OnAnnotationMouseLeftButtonDownAsync(sender, e),
+            () => OnCanvasSelectionChangedAsync(e.SelectedItem),
             ReportAsyncEventFailure,
             "annotation selection");
     }
 
-    private async Task OnAnnotationMouseLeftButtonDownAsync(object sender, MouseButtonEventArgs e)
+    private async Task OnCanvasSelectionChangedAsync(ICanvasItem? item)
     {
-        if (sender is Border { Tag: SampleAnnotation annotation })
-        {
-            _selectedAnnotationId = annotation.Id;
-            UpdateSelectedAnnotationFeatures(annotation);
-            e.Handled = true;
-            await RequestRenderAsync();
-        }
+        var annotation = item as SampleAnnotation;
+        _selectedAnnotationId = annotation?.Id;
+        UpdateSelectedAnnotationFeatures(annotation);
+        await RequestRenderAsync();
     }
 
     private void OnShowBackgroundImagesChanged(object sender, RoutedEventArgs e)

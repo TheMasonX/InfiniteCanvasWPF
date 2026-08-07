@@ -18,6 +18,7 @@ public partial class CanvasControl : UserControl
     private const double _panGain = 0.075;
 
     private Point? _lastPointerPosition;
+    private bool _pointerMovedDuringDrag;
     private Point? _anchorPanOrigin;
     private Point _anchorPanPointer;
     private ViewportScrollbarAxis? _scrollbarDragAxis;
@@ -155,6 +156,9 @@ public partial class CanvasControl : UserControl
     public event MouseEventHandler? PointerMoved;
     public event MouseWheelEventHandler? PointerWheel;
     public event EventHandler<CanvasFrame>? FramePublished;
+    public event EventHandler<CanvasSelectionChangedEventArgs>? SelectionChanged;
+
+    public ICanvasItem? SelectedItem { get; private set; }
 
     /// <summary>
     /// Publishes a rendered frame across the canvas boundary (ICW-315,
@@ -281,6 +285,7 @@ public partial class CanvasControl : UserControl
         }
 
         _lastPointerPosition = e.GetPosition(ViewportHost);
+        _pointerMovedDuringDrag = false;
         ViewportHost.CaptureMouse();
         Mouse.OverrideCursor = Cursors.SizeAll;
     }
@@ -292,7 +297,14 @@ public partial class CanvasControl : UserControl
             return;
         }
 
+        var pointerPosition = e.GetPosition(ViewportHost);
+        if (!_pointerMovedDuringDrag && _lastPointerPosition is not null)
+        {
+            SelectAtViewportPoint(pointerPosition);
+        }
+
         _lastPointerPosition = null;
+        _pointerMovedDuringDrag = false;
         ViewportHost.ReleaseMouseCapture();
         Mouse.OverrideCursor = null;
     }
@@ -312,9 +324,38 @@ public partial class CanvasControl : UserControl
         }
 
         _lastPointerPosition = current;
+        if (Math.Abs(current.X - previous.X) > 2 || Math.Abs(current.Y - previous.Y) > 2)
+        {
+            _pointerMovedDuringDrag = true;
+        }
         ViewModel.Pan(current.X - previous.X, current.Y - previous.Y, ViewportHost.ActualWidth, ViewportHost.ActualHeight);
         UpdateViewportScrollbars();
         ViewportChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void SelectAtViewportPoint(Point viewportPoint)
+    {
+        if (SceneSource is null
+            || !double.IsFinite(viewportPoint.X)
+            || !double.IsFinite(viewportPoint.Y)
+            || !double.IsFinite(ViewModel.Camera.ScaleX)
+            || !double.IsFinite(ViewModel.Camera.ScaleY))
+        {
+            return;
+        }
+
+        var camera = ViewModel.Camera.Capture();
+        var worldX = (viewportPoint.X - camera.OffsetX) / camera.ScaleX;
+        var worldY = (viewportPoint.Y - camera.OffsetY) / camera.ScaleY;
+        var selected = SceneSource.QueryPoint(worldX, worldY)
+            .FirstOrDefault(item => CanvasItemHitTesting.Contains(item, worldX, worldY));
+        if (ReferenceEquals(SelectedItem, selected))
+        {
+            return;
+        }
+
+        SelectedItem = selected;
+        SelectionChanged?.Invoke(this, new CanvasSelectionChangedEventArgs(selected));
     }
 
     private void OnViewportMouseRightButtonDown(object sender, MouseButtonEventArgs e)

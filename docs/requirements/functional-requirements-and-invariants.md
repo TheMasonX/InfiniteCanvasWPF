@@ -93,6 +93,9 @@ Cache debug status must report the live cache instance and its actual resident, 
 | Running items preserved for cache warming | `PublishInterestSet` must NOT cancel in-flight (running) tile generation even if the tile is no longer visible. The pixels may still be useful for cache warming when the viewport returns. | ICW-143, ADR-0006 | Cancellation of running items is driven by claimant-token fire (CTS replacement), not interest set. These are separate mechanisms. |
 
 ## Sprint 3 additions (2026-08-04)
+| Area | Requirement | Related work | Notes |
+| --- | --- | --- | --- |
+| Canvas point selection | `CanvasControl` owns point selection. An un-dragged left click converts viewport coordinates through the current camera, queries the injected `ICanvasSceneSource`, selects the first item whose host-neutral `HitTest` accepts the point, and clears selection on empty space. Drag panning does not change selection. Selection notifications expose only `ICanvasItem` data. | ICW-334, ICW-314, ADR-0007 | Tooltip payload and tooltip lifecycle remain a separate follow-up gated by typed annotation metrics under ICW-031. |
 
 | Area | Requirement | Related work | Notes |
 | --- | --- | --- | --- |
