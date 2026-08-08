@@ -98,6 +98,198 @@ public sealed class CanvasControlConsumerHostTests
     }
 
     [Test]
+    public void ConsumerHost_StaleSemanticIdentity_IsDiscardedEvenWithNewerRenderSequence()
+    {
+        var control = new CanvasControl
+        {
+            SceneSource = new HostSceneSource()
+        };
+        var currentIdentity = new CanvasFrameIdentity(
+            "session-a",
+            sceneRevision: 2,
+            new CanvasLayerRevisionVector(2, 2, 2, 2, 2),
+            displayRevision: 2,
+            selectionRevision: 2,
+            renderSequence: 7);
+        var staleIdentity = new CanvasFrameIdentity(
+            "session-a",
+            sceneRevision: 1,
+            new CanvasLayerRevisionVector(1, 1, 1, 1, 1),
+            displayRevision: 1,
+            selectionRevision: 1,
+            renderSequence: 8);
+        var firstFrame = new CanvasFrame(
+            CreateFrozenRaster(64, 48),
+            [new HostItem("current", new SpatialBounds(0, 0, 10, 10))],
+            new SpatialBounds(0, 0, 100, 100),
+            visibleItemCount: 1,
+            totalItemCount: 1,
+            width: 64,
+            height: 48,
+            revision: 7,
+            identity: currentIdentity);
+        var staleFrame = new CanvasFrame(
+            CreateFrozenRaster(64, 48),
+            [new HostItem("stale", new SpatialBounds(0, 0, 10, 10))],
+            new SpatialBounds(0, 0, 100, 100),
+            visibleItemCount: 1,
+            totalItemCount: 1,
+            width: 64,
+            height: 48,
+            revision: 8,
+            identity: staleIdentity);
+
+        var publishedCount = 0;
+        var layerPublishingCount = 0;
+        control.FrameLayersPublishing += (_, _) => layerPublishingCount++;
+        control.FramePublished += (_, _) => publishedCount++;
+        control.PublishFrame(firstFrame);
+        control.PublishFrame(staleFrame);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(layerPublishingCount, Is.EqualTo(1));
+            Assert.That(publishedCount, Is.EqualTo(1));
+            Assert.That(control.ViewModel.VisibleItems[0].Id, Is.EqualTo("current"));
+        });
+    }
+
+    [Test]
+    public void ConsumerHost_AcceptsNewSourceSessionWhenRenderSequenceResets()
+    {
+        var control = new CanvasControl();
+        var firstFrame = CreateFrame(
+            new HostItem("old", new SpatialBounds(0, 0, 10, 10)),
+            revision: 7,
+            identity: new CanvasFrameIdentity(
+                "session-a",
+                4,
+                new CanvasLayerRevisionVector(4, 4, 4, 4, 4),
+                4,
+                4,
+                7));
+        var replacementFrame = CreateFrame(
+            new HostItem("new", new SpatialBounds(0, 0, 10, 10)),
+            revision: 0,
+            identity: new CanvasFrameIdentity(
+                "session-b",
+                0,
+                default,
+                0,
+                0,
+                0));
+
+        control.PublishFrame(firstFrame);
+        control.PublishFrame(replacementFrame);
+
+        Assert.That(control.ViewModel.VisibleItems[0].Id, Is.EqualTo("new"));
+    }
+
+    [Test]
+    public void ConsumerHost_AcceptedFrameCarriesOrderedLayerPlan()
+    {
+        var identity = new CanvasFrameIdentity(
+            "session-a",
+            1,
+            new CanvasLayerRevisionVector(3, 4, 5, 6, 7),
+            8,
+            9,
+            10);
+        var frame = new CanvasFrame(
+            CreateFrozenRaster(64, 48),
+            [],
+            new SpatialBounds(0, 0, 100, 100),
+            visibleItemCount: 0,
+            totalItemCount: 0,
+            width: 64,
+            height: 48,
+            revision: 10,
+            identity: identity,
+            layerPlan: new CanvasLayerPlan(
+            [
+                new(CanvasLayerKind.Raster, true, 10),
+                new(CanvasLayerKind.BackgroundMaterial, true, 3),
+                new(CanvasLayerKind.DefectImagery, false, 4),
+                new(CanvasLayerKind.TileGrid, true, 5),
+                new(CanvasLayerKind.Annotations, true, 6),
+                new(CanvasLayerKind.Labels, false, 6),
+                new(CanvasLayerKind.Selection, false, 9),
+                new(CanvasLayerKind.Pixelometer, true, 7)
+            ]));
+
+        var control = new CanvasControl();
+        control.PublishFrame(frame);
+
+        Assert.That(
+            frame.LayerPlan.Layers.Select(layer => layer.Kind),
+            Is.EqualTo(Enum.GetValues<CanvasLayerKind>()));
+        Assert.That(frame.LayerPlan.IsVisible(CanvasLayerKind.DefectImagery), Is.False);
+    }
+
+    [Test]
+    public void ConsumerHost_RejectsMismatchedIntegerAndSemanticRenderSequence()
+    {
+        var identity = new CanvasFrameIdentity(
+            "session-a",
+            1,
+            default,
+            0,
+            0,
+            renderSequence: 9);
+
+        Assert.Throws<ArgumentException>(() => new CanvasFrame(
+            CreateFrozenRaster(64, 48),
+            [],
+            new SpatialBounds(0, 0, 100, 100),
+            visibleItemCount: 0,
+            totalItemCount: 0,
+            width: 64,
+            height: 48,
+            revision: 8,
+            identity: identity));
+    }
+
+    [Test]
+    public void ConsumerHost_RejectsUnfrozenRaster()
+    {
+        var raster = new WriteableBitmap(64, 48, 96, 96, PixelFormats.Bgra32, null);
+
+        Assert.Throws<ArgumentException>(() => new CanvasFrame(
+            raster,
+            [],
+            new SpatialBounds(0, 0, 100, 100),
+            visibleItemCount: 0,
+            totalItemCount: 0,
+            width: 64,
+            height: 48));
+    }
+
+    [Test]
+    public void ConsumerHost_FrameOwnsItemSequence()
+    {
+        var control = new CanvasControl();
+        var items = new List<ICanvasItem>
+        {
+            new HostItem("a", new SpatialBounds(0, 0, 10, 10))
+        };
+        var frame = new CanvasFrame(
+            CreateFrozenRaster(64, 48),
+            items,
+            new SpatialBounds(0, 0, 100, 100),
+            visibleItemCount: 1,
+            totalItemCount: 1,
+            width: 64,
+            height: 48,
+            revision: 1);
+
+        items.Clear();
+        control.PublishFrame(frame);
+
+        Assert.That(frame.Items, Has.Count.EqualTo(1));
+        Assert.That(control.ViewModel.VisibleItems, Has.Count.EqualTo(1));
+    }
+
+    [Test]
     public void ConsumerHost_ControlOwnsTooltipRegistrationAndClearsItOnNextFrame()
     {
         var control = new CanvasControl();
@@ -208,7 +400,7 @@ public sealed class CanvasControlConsumerHostTests
         return bitmap;
     }
 
-    private static CanvasFrame CreateFrame(ICanvasItem item, int revision) => new(
+    private static CanvasFrame CreateFrame(ICanvasItem item, int revision, CanvasFrameIdentity? identity = null) => new(
         CreateFrozenRaster(64, 48),
         [item],
         new SpatialBounds(0, 0, 100, 100),
@@ -216,7 +408,8 @@ public sealed class CanvasControlConsumerHostTests
         totalItemCount: 1,
         width: 64,
         height: 48,
-        revision: revision);
+        revision: revision,
+        identity: identity);
 
     private sealed class HostItem : ICanvasItem
     {
@@ -235,10 +428,12 @@ public sealed class CanvasControlConsumerHostTests
     {
         public SpatialBounds SceneBounds { get; } = new(0, 0, 100, 100);
 
+        public CanvasFrameIdentity Identity { get; } = CanvasFrameIdentity.Default();
+
         public int TotalItemCount => 3;
 
 #pragma warning disable CS0067 // Interface member the fake never raises.
-        public event EventHandler? SceneChanged;
+        public event EventHandler<CanvasSceneChangedEventArgs>? SceneChanged;
 #pragma warning restore CS0067
 
         public IReadOnlyList<ICanvasItem> QueryVisible(SpatialBounds viewport) =>
@@ -260,10 +455,12 @@ public sealed class CanvasControlConsumerHostTests
 
         public SpatialBounds SceneBounds { get; } = new(0, 0, 100, 100);
 
+        public CanvasFrameIdentity Identity { get; } = CanvasFrameIdentity.Default();
+
         public int TotalItemCount => 1;
 
 #pragma warning disable CS0067
-        public event EventHandler? SceneChanged;
+        public event EventHandler<CanvasSceneChangedEventArgs>? SceneChanged;
 #pragma warning restore CS0067
 
         public IReadOnlyList<ICanvasItem> QueryVisible(SpatialBounds viewport) => [_item];

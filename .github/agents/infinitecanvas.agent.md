@@ -18,6 +18,7 @@ Before implementing anything non-trivial, read the relevant design and planning 
 - README.md for runtime and validation commands.
 - docs/ADR/ and docs/tasks/task-tracker.md for the starting assumptions, decisions, and open work.
 - The relevant source area in src/ before editing so changes stay consistent with existing abstractions.
+- For performance, debugging, or profiling work, load [profiling-evidence](../skills/profiling-evidence/SKILL.md). Inspect the local Serilog logs and repository benchmark artifacts before requesting a user capture.
 
 Keep these core project notes in mind:
 
@@ -95,11 +96,12 @@ If the user gives a requirement, bug report, task note, implementation hint, use
 
 1. Review the relevant design documentation and current task tracker before starting.
 2. Capture any new user requirement, bug note, or task detail immediately in the durable task/ADR store.
-3. Identify the spec source: find the issue, PRD, or design doc that defines what correct looks like. Pin a fixed point (commit/branch) for diff-based work.
-4. Implement the smallest change that addresses the task and keep the diff focused. Check each hunk against the Standards and Spec axes in your head.
-5. Validate with the narrowest relevant command, such as dotnet build, dotnet test, or a benchmark smoke run.
-6. Before committing, self-review the diff against the smell baseline. Tag any concerns as hard violations (fix now) or judgement calls (consider).
-7. Update the tracker with the outcome, evidence, and the next step.
+3. For performance work, inspect `%LOCALAPPDATA%\\InfiniteCanvas\\logs\\infinitecanvas-*.log` and existing benchmark artifacts before asking the user for Visual Studio Profiler or ETW data.
+4. Identify the spec source: find the issue, PRD, or design doc that defines what correct looks like. Pin a fixed point (commit/branch) for diff-based work.
+5. Implement the smallest change that addresses the task and keep the diff focused. Check each hunk against the Standards and Spec axes in your head.
+6. Validate with the narrowest relevant command, such as dotnet build, dotnet test, or a benchmark smoke run.
+7. Before committing, self-review the diff against the smell baseline. Tag any concerns as hard violations (fix now) or judgement calls (consider).
+8. Update the tracker with the outcome, evidence, and the next step.
 
 ## Task tracking
 

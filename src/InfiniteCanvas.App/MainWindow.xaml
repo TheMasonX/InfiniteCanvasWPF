@@ -161,11 +161,17 @@
                             </Expander.Header>
                             <StackPanel>
                                 <appcontrols:SliderTextBox x:Name="TilesXSliderTextBox" Label="Tiles X"
-                                                        Minimum="1" Maximum="2000" TickFrequency="1"
+                                                        Minimum="1" Maximum="24288" TickFrequency="1"
                                                         NumericType="Integer" Value="2" />
                                 <appcontrols:SliderTextBox x:Name="TilesYSliderTextBox" Label="Tiles Y"
-                                                        Minimum="1" Maximum="2000" TickFrequency="1"
+                                                        Minimum="1" Maximum="24288" TickFrequency="1"
                                                         NumericType="Integer" Value="32" />
+                                <appcontrols:SliderTextBox x:Name="TilePixelWidthSliderTextBox" Label="Tile pixel width"
+                                                        Minimum="1" Maximum="16384" TickFrequency="256"
+                                                        NumericType="Integer" Value="8192" />
+                                <appcontrols:SliderTextBox x:Name="TilePixelHeightSliderTextBox" Label="Tile pixel height"
+                                                        Minimum="1" Maximum="16384" TickFrequency="256"
+                                                        NumericType="Integer" Value="4096" />
                                 <appcontrols:SliderTextBox x:Name="ObjectsPerTileSliderTextBox" Label="Objects per tile"
                                                         Minimum="0" Maximum="256" TickFrequency="1"
                                                         NumericType="Integer" Value="16" />

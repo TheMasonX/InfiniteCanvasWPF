@@ -242,6 +242,72 @@ public class ZeroCopyBitmapFactoryTests
     }
 
     [Test]
+    public void GenerateFrozenBitmap_UsesMaterializerResidentPayload()
+    {
+        var tile = new SampleImageTile(
+            "material-tile",
+            new SpatialBounds(0, 0, 8, 8),
+            8,
+            8,
+            () => Enumerable.Repeat((byte)11, 64).ToArray(),
+            []);
+        var request = tile.CreateBackgroundTileRequest(0);
+        var payload = new BackgroundTilePayload(request, Enumerable.Repeat((byte)77, 64).ToArray());
+        using var factory = new ZeroCopyBitmapFactory(4, 4);
+
+        var bitmap = factory.GenerateFrozenBitmap(
+            [tile],
+            [],
+            new CameraTransform().Capture(),
+            new Dictionary<BackgroundTileCacheKey, BackgroundTilePayload> { [payload.Request.CacheKey] = payload });
+        var output = new byte[4 * 4 * 4];
+        bitmap.CopyPixels(output, 4 * 4, 0);
+
+        Assert.That(ReadGray(output, 4, 2, 2), Is.EqualTo(77));
+    }
+
+    [Test]
+    public void GenerateFrozenBitmap_SeparatesResidentPayloadsWithCollidingTileIds()
+    {
+        var firstTile = new SampleImageTile(
+            "same-id",
+            new SpatialBounds(0, 0, 1, 1),
+            1,
+            1,
+            () => [11],
+            []);
+        var secondTile = new SampleImageTile(
+            "same-id",
+            new SpatialBounds(1, 0, 1, 1),
+            1,
+            1,
+            () => [22],
+            []);
+        var firstPayload = new BackgroundTilePayload(firstTile.CreateBackgroundTileRequest(0), [33]);
+        secondTile.ResetImageCache();
+        var secondPayload = new BackgroundTilePayload(secondTile.CreateBackgroundTileRequest(0), [77]);
+        using var factory = new ZeroCopyBitmapFactory(2, 1);
+
+        var bitmap = factory.GenerateFrozenBitmap(
+            [firstTile, secondTile],
+            [],
+            new CameraTransform().Capture(),
+            new Dictionary<BackgroundTileCacheKey, BackgroundTilePayload>
+            {
+                [firstPayload.Request.CacheKey] = firstPayload,
+                [secondPayload.Request.CacheKey] = secondPayload
+            });
+        var output = new byte[2 * 4];
+        bitmap.CopyPixels(output, 2 * 4, 0);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ReadGray(output, 2, 0, 0), Is.EqualTo(33));
+            Assert.That(ReadGray(output, 2, 1, 0), Is.EqualTo(77));
+        });
+    }
+
+    [Test]
     public void GenerateFrozenBitmap_RendersDefectPayloadUnalteredOutsideLogicalBounds()
     {
         // ICW-321: the display value comes from DefectPixels via the sampler.

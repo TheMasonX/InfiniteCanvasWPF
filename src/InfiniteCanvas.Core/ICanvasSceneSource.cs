@@ -8,6 +8,9 @@ namespace InfiniteCanvas.Core;
 /// </summary>
 public interface ICanvasSceneSource
 {
+    /// <summary>Semantic identity for the current source scene.</summary>
+    CanvasFrameIdentity Identity { get; }
+
     /// <summary>World bounds of the whole scene.</summary>
     SpatialBounds SceneBounds { get; }
 
@@ -32,5 +35,5 @@ public interface ICanvasSceneSource
     bool TryReadResidentPixel(double worldX, double worldY, int mipLevel, out CanvasPixelSample sample);
 
     /// <summary>Raised when the scene content changes and the host must re-query.</summary>
-    event EventHandler? SceneChanged;
+    event EventHandler<CanvasSceneChangedEventArgs>? SceneChanged;
 }

@@ -22,7 +22,9 @@ public sealed class CanvasFrame
         int totalItemCount,
         int width,
         int height,
-        int revision = 0)
+        int revision = 0,
+        CanvasFrameIdentity? identity = null,
+        CanvasLayerPlan? layerPlan = null)
     {
         ArgumentNullException.ThrowIfNull(raster);
         ArgumentNullException.ThrowIfNull(items);
@@ -72,14 +74,41 @@ public sealed class CanvasFrame
                 nameof(raster));
         }
 
+        if (!raster.IsFrozen)
+        {
+            throw new ArgumentException(
+                "CanvasFrame requires a frozen raster.",
+                nameof(raster));
+        }
+
         Raster = raster;
-        Items = items;
+        Items = Array.AsReadOnly(items.ToArray());
         Viewport = viewport;
         VisibleItemCount = visibleItemCount;
         TotalItemCount = totalItemCount;
         Width = width;
         Height = height;
         Revision = revision;
+        var frameIdentity = identity ?? CanvasFrameIdentity.Default(revision);
+        if (frameIdentity.RenderSequence != revision)
+        {
+            throw new ArgumentException(
+                "CanvasFrame revision must match CanvasFrameIdentity.RenderSequence.",
+                nameof(identity));
+        }
+
+        Identity = frameIdentity;
+        LayerPlan = layerPlan ?? new CanvasLayerPlan(
+        [
+            new(CanvasLayerKind.Raster, true, Identity.RenderSequence),
+            new(CanvasLayerKind.BackgroundMaterial, true, Identity.LayerRevisions.Background),
+            new(CanvasLayerKind.DefectImagery, true, Identity.LayerRevisions.Defect),
+            new(CanvasLayerKind.TileGrid, true, Identity.LayerRevisions.TileGrid),
+            new(CanvasLayerKind.Annotations, true, Identity.LayerRevisions.Annotations),
+            new(CanvasLayerKind.Labels, true, Identity.LayerRevisions.Annotations),
+            new(CanvasLayerKind.Selection, true, Identity.SelectionRevision),
+            new(CanvasLayerKind.Pixelometer, true, Identity.LayerRevisions.Pixelometer)
+        ]);
     }
 
     /// <summary>Frozen raster image displayed by the canvas.</summary>
@@ -110,4 +139,8 @@ public sealed class CanvasFrame
     /// only as the first frame.
     /// </summary>
     public int Revision { get; }
+
+    public CanvasFrameIdentity Identity { get; }
+
+    public CanvasLayerPlan LayerPlan { get; }
 }

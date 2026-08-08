@@ -53,8 +53,8 @@ public class FrameShellWiringTests
                 "PublishFrame must accept a CanvasFrame, never a UIElement tree.");
             Assert.That(ControlCodeBehind, Does.Not.Contain("PublishFrame(UIElement"),
                 "The UIElement overload must be gone.");
-            Assert.That(ControlCodeBehind, Does.Contain("FramePublished?.Invoke"),
-                "The control must raise FramePublished so the host can compose overlays.");
+            Assert.That(ControlCodeBehind, Does.Contain("FrameLayersPublishing?.Invoke"),
+                "The control must publish host layers inside the accepted frame boundary.");
         }
     }
 

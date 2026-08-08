@@ -10,8 +10,8 @@ namespace InfiniteCanvas.Rendering;
 
 public static class SampleImageGenerator
 {
-    public const int DefaultPixelWidth = 8192;
-    public const int DefaultPixelHeight = 4096;
+    public const int DefaultPixelWidth = CanvasUserSettings.DefaultTilePixelWidth;
+    public const int DefaultPixelHeight = CanvasUserSettings.DefaultTilePixelHeight;
     public const int NoiseBlockSize = 512;
     public const int MaxObjectsPerTile = CanvasUserSettings.MaxObjectsPerTile;
 
@@ -135,12 +135,12 @@ public static class SampleImageGenerator
             throw new ArgumentOutOfRangeException("imageCount");
         }
 
-        if (options.PixelWidth <= 0)
+        if (!CanvasUserSettings.ValidateTilePixelDimension(options.PixelWidth))
         {
             throw new ArgumentOutOfRangeException("pixelWidth");
         }
 
-        if (options.PixelHeight <= 0)
+        if (!CanvasUserSettings.ValidateTilePixelDimension(options.PixelHeight))
         {
             throw new ArgumentOutOfRangeException("pixelHeight");
         }
@@ -173,6 +173,11 @@ public static class SampleImageGenerator
                 "imageCount must equal columns multiplied by rows when rows is specified.",
                 "imageCount");
         }
+
+            if (!CanvasUserSettings.ValidateTileCount(tileCount))
+            {
+                throw new ArgumentOutOfRangeException("imageCount");
+            }
 
         var poolSeed = unchecked(options.Seed + 48611);
         var poolRandom = new DeterministicRandom(poolSeed);

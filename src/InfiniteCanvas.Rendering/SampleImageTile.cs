@@ -9,6 +9,7 @@ namespace InfiniteCanvas.Rendering;
 
 public sealed class SampleImageTile
 {
+    public const string SourceId = "sample-image";
     private readonly Lock _cacheGate = new();
     private readonly Func<CancellationToken, byte[]> _pixelFactory;
     private readonly Func<int, CancellationToken, byte[]>? _mipPixelFactory;
@@ -122,6 +123,39 @@ public sealed class SampleImageTile
     public int PixelHeight { get; }
 
     public byte PlaceholderValue => _placeholderValue;
+
+    public BackgroundTileRequest CreateBackgroundTileRequest(int mipLevel)
+    {
+        return new BackgroundTileRequest(
+            new BackgroundTileDescriptor(
+                SourceId,
+                Id,
+                CurrentGenerationEpoch,
+                Bounds,
+                PixelWidth,
+                PixelHeight,
+                PlaceholderValue),
+            mipLevel);
+    }
+
+    internal ValueTask<BackgroundTilePayload> ResolveBackgroundTileAsync(
+        BackgroundTileRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!string.Equals(request.Descriptor.SourceId, SourceId, StringComparison.Ordinal)
+            || !string.Equals(request.Descriptor.TileId, Id, StringComparison.Ordinal)
+            || request.Descriptor.ContentRevision != CurrentGenerationEpoch)
+        {
+            throw new InvalidOperationException("The tile request does not match the current sample tile revision.");
+        }
+
+        var pixels = request.MipLevel == 0
+            ? _pixelFactory(cancellationToken)
+            : _mipPixelFactory is null
+                ? throw new InvalidOperationException("The sample tile does not provide mip payloads.")
+                : _mipPixelFactory(request.MipLevel, cancellationToken);
+        return ValueTask.FromResult(new BackgroundTilePayload(request, pixels));
+    }
 
     public long ResidentByteCount
     {

@@ -175,6 +175,158 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
         }
     }
 
+    public unsafe InteropBitmap GenerateFrozenBitmap(
+        IReadOnlyList<SampleImageTile> tiles,
+        IReadOnlyList<SampleAnnotation> annotations,
+        CameraSnapshot camera,
+        IReadOnlyDictionary<BackgroundTileCacheKey, BackgroundTilePayload> residentPayloads,
+        double minimumSparseTilePixelSize = 0,
+        bool showBackgroundImages = true,
+        bool showSparseImageTiles = true)
+    {
+        ArgumentNullException.ThrowIfNull(tiles);
+        ArgumentNullException.ThrowIfNull(annotations);
+        ArgumentNullException.ThrowIfNull(residentPayloads);
+
+        lock (_lifetimeGate)
+        {
+            ObjectDisposedException.ThrowIf(_section is null, this);
+            NativeMemory.Clear((void*)_view, (nuint)_layout.ByteCount);
+
+            var pixels = (byte*)_view;
+            if (showBackgroundImages)
+            {
+                foreach (var tile in tiles)
+                {
+                    DrawResidentTile(pixels, tile, camera, residentPayloads);
+                }
+            }
+
+            if (showSparseImageTiles)
+            {
+                foreach (var annotation in annotations)
+                {
+                    DrawDefectPatch(pixels, annotation, camera);
+                }
+            }
+
+            var bitmap = (InteropBitmap)Imaging.CreateBitmapSourceFromMemorySection(
+                _section.DangerousGetHandle(),
+                _layout.Width,
+                _layout.Height,
+                PixelFormats.Bgra32,
+                _layout.Stride,
+                0);
+
+            bitmap.Freeze();
+            return bitmap;
+        }
+    }
+
+    private unsafe void DrawResidentTile(
+        byte* destination,
+        SampleImageTile tile,
+        CameraSnapshot camera,
+        IReadOnlyDictionary<BackgroundTileCacheKey, BackgroundTilePayload> residentPayloads)
+    {
+        using var measurement = RenderingDiagnostics.MeasureCurrent(
+            RenderingStage.TileComposition,
+            BackgroundTileMipPolicy.SelectMipLevel(camera));
+        var topLeft = camera.WorldToScreen(tile.Bounds.X, tile.Bounds.Y);
+        var bottomRight = camera.WorldToScreen(tile.Bounds.Right, tile.Bounds.Bottom);
+        var left = Math.Clamp((int)Math.Floor(topLeft.X), 0, _layout.Width);
+        var top = Math.Clamp((int)Math.Floor(topLeft.Y), 0, _layout.Height);
+        var right = Math.Clamp((int)Math.Ceiling(bottomRight.X), 0, _layout.Width);
+        var bottom = Math.Clamp((int)Math.Ceiling(bottomRight.Y), 0, _layout.Height);
+        if (left >= right || top >= bottom)
+        {
+            return;
+        }
+
+        var request = tile.CreateBackgroundTileRequest(BackgroundTileMipPolicy.SelectMipLevel(camera));
+        TryGetBestResidentPayload(request, residentPayloads, out var payload);
+        var hasSourcePixels = payload is not null;
+        var sourcePixels = hasSourcePixels ? payload!.OwnedPixels : default;
+        var sourceWidth = hasSourcePixels ? payload!.Width : 1;
+        var sourceHeight = hasSourcePixels ? payload!.Height : 1;
+        var maxSourceX = sourceWidth - 1;
+        var maxSourceY = sourceHeight - 1;
+        var placeholder = tile.PlaceholderValue;
+        var cameraOffsetX = camera.OffsetX;
+        var cameraOffsetY = camera.OffsetY;
+        var cameraScaleX = camera.ScaleX;
+        var cameraScaleY = camera.ScaleY;
+        var tileX = tile.Bounds.X;
+        var tileY = tile.Bounds.Y;
+        var tileWidth = tile.Bounds.Width;
+        var tileHeight = tile.Bounds.Height;
+
+        for (var y = top; y < bottom; y++)
+        {
+            var rowOffset = y * _layout.Stride;
+            var destinationOffset = rowOffset + (left * 4);
+            var worldY = (y - cameraOffsetY) / cameraScaleY;
+            var sourceY = Math.Clamp(
+                (int)((worldY - tileY) * sourceHeight / tileHeight),
+                0,
+                maxSourceY);
+            var sourceRowOffset = sourceY * sourceWidth;
+
+            for (var x = left; x < right; x++)
+            {
+                var value = hasSourcePixels
+                    ? GetResidentTilePixelValue(
+                        x,
+                        cameraOffsetX,
+                        cameraScaleX,
+                        tileX,
+                        tileWidth,
+                        sourceWidth,
+                        maxSourceX,
+                        sourcePixels,
+                        sourceRowOffset)
+                    : placeholder;
+                WritePackedGrayPixel(destination, destinationOffset, value);
+                destinationOffset += 4;
+            }
+        }
+    }
+
+    private static bool TryGetBestResidentPayload(
+        BackgroundTileRequest request,
+        IReadOnlyDictionary<BackgroundTileCacheKey, BackgroundTilePayload> residentPayloads,
+        out BackgroundTilePayload? payload)
+    {
+        if (residentPayloads.TryGetValue(request.CacheKey, out var exactPayload))
+        {
+            payload = exactPayload;
+            return true;
+        }
+
+        var bestDistance = int.MaxValue;
+        payload = null;
+        foreach (var entry in residentPayloads)
+        {
+            var key = entry.Key;
+            if (!string.Equals(key.SourceId, request.CacheKey.SourceId, StringComparison.Ordinal)
+                || !string.Equals(key.TileId, request.CacheKey.TileId, StringComparison.Ordinal)
+                || key.ContentRevision != request.CacheKey.ContentRevision)
+            {
+                continue;
+            }
+
+            var distance = Math.Abs(key.MipLevel - request.MipLevel);
+            if (distance < bestDistance
+                || (distance == bestDistance && key.MipLevel < (payload?.Request.MipLevel ?? int.MaxValue)))
+            {
+                bestDistance = distance;
+                payload = entry.Value;
+            }
+        }
+
+        return payload is not null;
+    }
+
     private unsafe void DrawTile(
         byte* destination,
         SampleImageTile tile,
@@ -332,7 +484,7 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
         double tileWidth,
         int sourceWidth,
         int maxSourceX,
-        byte[]? sourcePixels,
+        ReadOnlyMemory<byte> sourcePixels,
         int sourceRowOffset)
     {
         var worldX = (screenX - cameraOffsetX) / cameraScaleX;
@@ -340,7 +492,7 @@ public sealed class ZeroCopyBitmapFactory : IDisposable
             (int)((worldX - tileX) * sourceWidth / tileWidth),
             0,
             maxSourceX);
-        return sourcePixels![sourceRowOffset + sourceX];
+        return sourcePixels.Span[sourceRowOffset + sourceX];
     }
 
     private unsafe void DrawDefectPatch(byte* destination, SampleAnnotation annotation, CameraSnapshot camera)

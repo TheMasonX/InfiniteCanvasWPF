@@ -38,6 +38,8 @@ public sealed class CanvasSceneSourceContractsTests
 
         public SpatialBounds SceneBounds { get; }
 
+        public CanvasFrameIdentity Identity { get; } = CanvasFrameIdentity.Default();
+
         public int TotalItemCount { get; }
 
         public IReadOnlyList<ICanvasItem> QueryVisible(SpatialBounds viewport)
@@ -58,11 +60,11 @@ public sealed class CanvasSceneSourceContractsTests
             return false;
         }
 
-        public event EventHandler? SceneChanged;
+        public event EventHandler<CanvasSceneChangedEventArgs>? SceneChanged;
 
         public void RaiseSceneChanged()
         {
-            SceneChanged?.Invoke(this, EventArgs.Empty);
+            SceneChanged?.Invoke(this, new CanvasSceneChangedEventArgs(Identity));
         }
     }
 

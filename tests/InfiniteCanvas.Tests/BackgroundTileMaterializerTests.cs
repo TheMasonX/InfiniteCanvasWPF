@@ -79,6 +79,42 @@ public class BackgroundTileMaterializerTests
         Assert.That(materializer.UsedBytes, Is.Zero);
     }
 
+    [Test]
+    public void MissingSelectedMip_StillRequestsWhenFallbackIsResident()
+    {
+        var source = new CountingSource();
+        using var coordinator = new TileWorkCoordinator();
+        using var materializer = new BackgroundTileMaterializer(source, coordinator, maxBytes: 64);
+        var mip0 = CreateRequest("source", "tile", 1, mipLevel: 0);
+        var mip1 = CreateRequest("source", "tile", 1, mipLevel: 1);
+
+        Assert.That(materializer.Request(mip0, new object(), CancellationToken.None), Is.True);
+        Assert.That(SpinWait.SpinUntil(() => materializer.TryGetResident(mip0, out _), TimeSpan.FromSeconds(2)), Is.True);
+        Assert.That(materializer.TryGetBestResident(mip1, out var fallback), Is.True);
+        Assert.That(fallback.Request.MipLevel, Is.EqualTo(0));
+
+        Assert.That(materializer.Request(mip1, new object(), CancellationToken.None), Is.True);
+        Assert.That(SpinWait.SpinUntil(() => materializer.TryGetResident(mip1, out _), TimeSpan.FromSeconds(2)), Is.True);
+
+        Assert.That(source.RequestCount, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void Payload_OwnsSourceBytesAndExposesReadOnlyMemory()
+    {
+        var request = CreateRequest("source", "tile", 1, mipLevel: 1);
+        var sourcePixels = Enumerable.Repeat((byte)17, 8).ToArray();
+        var payload = new BackgroundTilePayload(request, sourcePixels);
+
+        sourcePixels[0] = 99;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(payload.Pixels[0], Is.EqualTo(17));
+            Assert.That(payload.Pixels.Count, Is.EqualTo(8));
+        });
+    }
+
     private static BackgroundTileRequest CreateRequest(string sourceId, string tileId, long revision, int mipLevel) =>
         new(new BackgroundTileDescriptor(sourceId, tileId, revision, new SpatialBounds(0, 0, 8, 4), 8, 4), mipLevel);
 

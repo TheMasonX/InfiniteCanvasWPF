@@ -80,6 +80,42 @@ public class SampleImageGeneratorTests
     }
 
     [Test]
+    public void GenerateSet_UsesConfiguredTilePixelDimensions()
+    {
+        var tiles = SampleImageGenerator.GenerateSet(
+            imageCount: 2,
+            pixelWidth: 512,
+            pixelHeight: 256,
+            columns: 2,
+            rows: 1,
+            objectsPerTile: 0);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(tiles, Has.Count.EqualTo(2));
+            Assert.That(tiles, Has.All.Property(nameof(SampleImageTile.PixelWidth)).EqualTo(512));
+            Assert.That(tiles, Has.All.Property(nameof(SampleImageTile.PixelHeight)).EqualTo(256));
+            Assert.That(tiles[1].Bounds.X, Is.EqualTo(512));
+        }
+    }
+
+    [Test]
+    public void GenerateSet_RejectsTileCountAboveMaximum()
+    {
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            SampleImageGenerator.GenerateSet(
+                imageCount: CanvasUserSettings.MaxGeneratedTiles + 1,
+                pixelWidth: 1,
+                pixelHeight: 1,
+                columns: 1,
+                rows: CanvasUserSettings.MaxGeneratedTiles + 1,
+                objectsPerTile: 0,
+                defectPoolSize: 1));
+
+        Assert.That(exception!.ParamName, Is.EqualTo("imageCount"));
+    }
+
+    [Test]
     public void TileCacheBudget_DefaultCapacity_AcceptsDefaultTileCost()
     {
         var cacheBudget = new TileCacheBudget(TileCacheBudget.DefaultMaxBytes);

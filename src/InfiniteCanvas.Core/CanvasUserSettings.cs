@@ -13,6 +13,14 @@ public sealed record CanvasUserSettings
     /// </summary>
     public const int MaxObjectsPerTile = 256;
 
+    public const int MaxGeneratedTiles = 24_288;
+
+    public const int DefaultTilePixelWidth = 8192;
+
+    public const int DefaultTilePixelHeight = 4096;
+
+    public const int MaxTilePixelDimension = 16_384;
+
     public const double DefaultMinimumSparseTilePixelSize = 0;
 
     public const double LegacyDefaultMinimumSparseTilePixelSize = 96;
@@ -22,6 +30,10 @@ public sealed record CanvasUserSettings
     public int TileColumns { get; init; } = 2;
 
     public int TileRows { get; init; } = 32;
+
+    public int TilePixelWidth { get; init; } = DefaultTilePixelWidth;
+
+    public int TilePixelHeight { get; init; } = DefaultTilePixelHeight;
 
     public int ObjectsPerTile { get; init; } = 16;
 
@@ -67,6 +79,10 @@ public sealed record CanvasUserSettings
 
     public static bool ValidateObjectsPerTile(int value) => value is >= 0 and <= MaxObjectsPerTile;
 
+    public static bool ValidateTileCount(long value) => value is > 0 and <= MaxGeneratedTiles;
+
+    public static bool ValidateTilePixelDimension(int value) => value is > 0 and <= MaxTilePixelDimension;
+
     public static bool ValidateMinimumSparseTilePixelSize(double value) =>
         double.IsFinite(value) && value is >= 0 and <= 4096;
 
@@ -74,7 +90,9 @@ public sealed record CanvasUserSettings
         Version == CurrentVersion
         && TileColumns > 0
         && TileRows > 0
-        && (long)TileColumns * TileRows <= 2000
+        && ValidateTileCount((long)TileColumns * TileRows)
+        && ValidateTilePixelDimension(TilePixelWidth)
+        && ValidateTilePixelDimension(TilePixelHeight)
         && ValidateObjectsPerTile(ObjectsPerTile)
         && AnnotationDisplayMode is >= 0 and <= 2
         && OutlineThickness is >= 1 and <= 6

@@ -8,6 +8,7 @@ public sealed class BackgroundTileMaterializer : IDisposable
     private readonly IBackgroundTileSource _source;
     private readonly TileWorkCoordinator _coordinator;
     private readonly long _maxBytes;
+    private Guid _activeCacheId = Guid.NewGuid();
     private readonly Lock _gate = new();
     private readonly Dictionary<BackgroundTileCacheKey, CacheEntry> _resident = new();
     private readonly Dictionary<BackgroundTileCacheKey, int> _inFlightEpochs = new();
@@ -15,6 +16,8 @@ public sealed class BackgroundTileMaterializer : IDisposable
     private readonly HashSet<BackgroundTileCacheKey> _pinnedKeys = new();
     private long _usedBytes;
     private int _sceneEpoch;
+    private int _evictionCount;
+    private DateTimeOffset _lastResetAtUtc = DateTimeOffset.UtcNow;
     private bool _disposed;
 
     public BackgroundTileMaterializer(IBackgroundTileSource source, TileWorkCoordinator coordinator, long maxBytes)
@@ -38,6 +41,30 @@ public sealed class BackgroundTileMaterializer : IDisposable
             lock (_gate)
             {
                 return _usedBytes;
+            }
+        }
+    }
+
+    public long MaxBytes => _maxBytes;
+
+    public int EvictionCount
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _evictionCount;
+            }
+        }
+    }
+
+    public int ReservationCount
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _resident.Count + _inFlightEpochs.Count;
             }
         }
     }
@@ -71,6 +98,41 @@ public sealed class BackgroundTileMaterializer : IDisposable
             if (_resident.TryGetValue(request.CacheKey, out var entry))
             {
                 payload = entry.Payload;
+                return true;
+            }
+        }
+
+        payload = null!;
+        return false;
+    }
+
+    public bool TryGetBestResident(BackgroundTileRequest request, out BackgroundTilePayload payload)
+    {
+        lock (_gate)
+        {
+            var bestDistance = int.MaxValue;
+            BackgroundTilePayload? bestPayload = null;
+            foreach (var entry in _resident)
+            {
+                if (!string.Equals(entry.Key.SourceId, request.CacheKey.SourceId, StringComparison.Ordinal)
+                    || !string.Equals(entry.Key.TileId, request.CacheKey.TileId, StringComparison.Ordinal)
+                    || entry.Key.ContentRevision != request.CacheKey.ContentRevision)
+                {
+                    continue;
+                }
+
+                var distance = Math.Abs(entry.Key.MipLevel - request.MipLevel);
+                if (distance < bestDistance
+                    || (distance == bestDistance && entry.Key.MipLevel < (bestPayload?.Request.MipLevel ?? int.MaxValue)))
+                {
+                    bestDistance = distance;
+                    bestPayload = entry.Value.Payload;
+                }
+            }
+
+            if (bestPayload is not null)
+            {
+                payload = bestPayload;
                 return true;
             }
         }
@@ -138,7 +200,7 @@ public sealed class BackgroundTileMaterializer : IDisposable
                     throw new InvalidOperationException("The source returned a payload for a different cache key.");
                 }
 
-                return sourcePayload.Pixels;
+                return sourcePayload.OwnedPixels.ToArray();
             },
             claimantId,
             claimantToken,
@@ -163,6 +225,9 @@ public sealed class BackgroundTileMaterializer : IDisposable
             _inFlightEpochs.Clear();
             _inFlightCosts.Clear();
             _usedBytes = 0;
+            _activeCacheId = Guid.NewGuid();
+            _evictionCount = 0;
+            _lastResetAtUtc = DateTimeOffset.UtcNow;
         }
 
         _coordinator.CancelAll();
@@ -182,6 +247,9 @@ public sealed class BackgroundTileMaterializer : IDisposable
             _inFlightEpochs.Clear();
             _inFlightCosts.Clear();
             _usedBytes = 0;
+            _activeCacheId = Guid.NewGuid();
+            _evictionCount = 0;
+            _lastResetAtUtc = DateTimeOffset.UtcNow;
         }
 
         _coordinator.CancelAll();
@@ -191,7 +259,7 @@ public sealed class BackgroundTileMaterializer : IDisposable
     {
         try
         {
-            var payload = new BackgroundTilePayload(request, pixels);
+            var payload = new BackgroundTilePayload(request, pixels, ownsPixels: true);
             lock (_gate)
             {
                 if (_disposed || requestEpoch != _sceneEpoch)
@@ -246,6 +314,41 @@ public sealed class BackgroundTileMaterializer : IDisposable
 
             _resident.Remove(candidate.Key);
             _usedBytes -= candidate.Value.Payload.ByteCost;
+            _evictionCount++;
+        }
+    }
+
+    public TileCacheDiagnosticsSnapshot GetDiagnosticsSnapshot(int queuedWorkCount = 0)
+    {
+        lock (_gate)
+        {
+            var variants = _resident.Values
+                .Select(entry => new TileCacheVariantDiagnostics(
+                    entry.Payload.Request.CacheKey,
+                    entry.Payload.ByteCost,
+                    true))
+                .ToArray();
+            var reservationCount = _resident.Count + _inFlightEpochs.Count;
+
+            return new TileCacheDiagnosticsSnapshot(
+                _activeCacheId,
+                variants.Select(variant => variant.Key.TileId).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+                variants,
+                queuedWorkCount,
+                reservationCount,
+                _evictionCount,
+                _lastResetAtUtc);
+        }
+    }
+
+    public string DescribeStatus()
+    {
+        const long gibibyte = 1024L * 1024 * 1024;
+        lock (_gate)
+        {
+            var reservationCount = _resident.Count + _inFlightEpochs.Count;
+            return $"Cache {_usedBytes / (double)gibibyte:F2} GiB/{_maxBytes / (double)gibibyte:F2} GiB  |  "
+                + $"{_resident.Count:N0} tiles  |  {reservationCount:N0} variants  |  {_evictionCount:N0} evictions";
         }
     }
 

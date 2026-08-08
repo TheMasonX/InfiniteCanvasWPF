@@ -180,6 +180,7 @@ public partial class CanvasControl : UserControl
     /// zero, is accepted.
     /// </summary>
     private int _lastPublishedRevision = int.MinValue;
+    private CanvasFrameIdentity? _lastPublishedIdentity;
 
     /// <summary>
     /// Show or hide the raster Image element without rebuilding the shell.
@@ -201,6 +202,7 @@ public partial class CanvasControl : UserControl
     public event EventHandler? ViewportChanged;
     public event MouseEventHandler? PointerMoved;
     public event MouseWheelEventHandler? PointerWheel;
+    public event EventHandler<CanvasFrame>? FrameLayersPublishing;
     public event EventHandler<CanvasFrame>? FramePublished;
     public event EventHandler<CanvasSelectionChangedEventArgs>? SelectionChanged;
 
@@ -210,8 +212,8 @@ public partial class CanvasControl : UserControl
     /// Publishes a rendered frame across the canvas boundary (ICW-315,
     /// ADR-0007). The canvas displays the frozen raster and applies the frame
     /// state to its view model. It never touches the raster's backing memory
-    /// section, so the zero-copy handoff stays intact. The host keeps overlay
-    /// composition and subscribes to <see cref="FramePublished"/>.
+    /// section, so the zero-copy handoff stays intact. The host composes its
+    /// layers through <see cref="FrameLayersPublishing"/>.
     /// </summary>
     public void PublishFrame(CanvasFrame frame)
     {
@@ -222,16 +224,26 @@ public partial class CanvasControl : UserControl
         // version; a frame older than the last one displayed is stale and must
         // not overwrite newer frame state. Equal revisions are accepted as an
         // idempotent republish of the same frame.
-        if (frame.Revision < _lastPublishedRevision)
+        if (_lastPublishedIdentity is { } previousIdentity
+            && string.Equals(
+                frame.Identity.SourceSessionId,
+                previousIdentity.SourceSessionId,
+                StringComparison.Ordinal)
+            && (frame.Revision < _lastPublishedRevision
+                || !frame.Identity.CanReplace(previousIdentity)))
         {
             return;
         }
 
         _lastPublishedRevision = frame.Revision;
+        _lastPublishedIdentity = frame.Identity;
         ClearRegisteredItemVisuals();
         EnsureFrameShell();
         _frameShell!.Width = frame.Width;
         _frameShell.Height = frame.Height;
+        // The host composes app-specific layers inside the same accepted
+        // frame boundary, before the raster and view-model state change.
+        FrameLayersPublishing?.Invoke(this, frame);
         if (_frameImage is not null)
         {
             _frameImage.Visibility = _rasterVisible ? Visibility.Visible : Visibility.Collapsed;

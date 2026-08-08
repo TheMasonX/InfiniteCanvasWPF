@@ -31,6 +31,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "InfiniteCanvas",
         "settings.json");
+    private readonly string _sourceSessionId = Guid.NewGuid().ToString("N");
     private IReadOnlyList<SampleImageTile> _tiles = [];
     private IReadOnlyDictionary<string, SpatialBounds> _tileBoundsById = new Dictionary<string, SpatialBounds>();
     private IReadOnlyList<SampleAnnotation> _annotations = [];
@@ -69,17 +70,19 @@ public partial class MainWindow : Window, ICanvasSceneSource
     private AnnotationDisplayOptions _annotationDisplayOptions = AnnotationDisplayOptions.Default;
     private int _tileColumns = 2;
     private int _tileRows = 32;
+    private int _tilePixelWidth = CanvasUserSettings.DefaultTilePixelWidth;
+    private int _tilePixelHeight = CanvasUserSettings.DefaultTilePixelHeight;
     private int _objectsPerTile = 16;
     private double _minimumSparseTilePixelSize = CanvasUserSettings.DefaultMinimumSparseTilePixelSize;
     private int _generationSeed = 1729;
     private int _busyOperationCount;
-    private TileCacheBudget _tileCacheBudget = new(TileCacheBudget.DefaultMaxBytes);
+    private readonly SampleImageTileSource _backgroundTileSource = new();
+    private readonly BackgroundTileMaterializer _backgroundTileMaterializer;
     private bool _showBackgroundImages = true;
     private bool _showImageTiles = true;
     private bool _showSparseImageTiles = true;
     private IReadOnlyList<FeatureDisplayItem> _selectedAnnotationFeatures = [];
     private TileWorkCoordinator _tileCoordinator = null!;
-    private int _frameClaimantId;
     private readonly RenderRequestTracker _renderRequestTracker = new();
     private CancellationTokenSource? _frameTileCts;
     private CancellationTokenSource? _previousFrameTileCts;
@@ -90,6 +93,14 @@ public partial class MainWindow : Window, ICanvasSceneSource
     private int _frameCount;
     private int _shutdownStarted;
     private long _lastDiagnosticsExportTicks;
+    private long _sceneRevision;
+    private long _backgroundLayerRevision;
+    private long _defectLayerRevision;
+    private long _tileGridLayerRevision;
+    private long _annotationLayerRevision;
+    private long _pixelometerRevision;
+    private long _displayRevision;
+    private long _selectionRevision;
 
     public IReadOnlyList<FeatureDisplayItem> SelectedAnnotationFeatures => _selectedAnnotationFeatures;
 
@@ -105,7 +116,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
         CanvasSurface.SizeChanged += OnViewportSizeChanged;
         // The canvas owns the frame shell and raster display (ICW-315). The
         // host keeps overlay composition and populates it per published frame.
-        CanvasSurface.FramePublished += OnCanvasFramePublished;
+        CanvasSurface.FrameLayersPublishing += OnCanvasFrameLayersPublishing;
         // The window is the concrete data-source implementation behind the
         // canvas boundary (ICW-312, ADR-0007). The control consumes content
         // only through this contract, never through app types. The scene
@@ -117,6 +128,10 @@ public partial class MainWindow : Window, ICanvasSceneSource
         DataContext = _mainViewModel;
         InitializeSpatialState();
         _tileCoordinator = new TileWorkCoordinator();
+        _backgroundTileMaterializer = new BackgroundTileMaterializer(
+            _backgroundTileSource,
+            _tileCoordinator,
+            TileCacheBudget.DefaultMaxBytes);
         _renderAction = new CoalescingAsyncAction(DispatchRenderFrameAsync, OnRenderActionFaulted);
         _selectionOutlineAnimator = SelectionOutlineAnimatorFactory.Create(SelectionOutlineAnimationMode.MarchingDash);
 
@@ -153,9 +168,11 @@ public partial class MainWindow : Window, ICanvasSceneSource
 
     public SpatialBounds SceneBounds => _sceneBounds;
 
+    public CanvasFrameIdentity Identity => CaptureFrameIdentity(0);
+
     public int TotalItemCount => _spatialIndex.Count;
 
-    public event EventHandler? SceneChanged;
+    public event EventHandler<CanvasSceneChangedEventArgs>? SceneChanged;
 
     public IReadOnlyList<ICanvasItem> QueryVisible(SpatialBounds viewport)
     {
@@ -204,12 +221,13 @@ public partial class MainWindow : Window, ICanvasSceneSource
         var tile = _tiles[tileIndex];
 
         byte background;
-        if (tile.TryGetResidentPixels(mipLevel, out var sourcePixels, out var residentMipLevel))
+        var readoutRequest = tile.CreateBackgroundTileRequest(0);
+        if (_backgroundTileMaterializer.TryGetResident(readoutRequest, out var payload))
         {
-            var sourceDimensions = BackgroundTileMipPolicy.GetDimensions(tile.PixelWidth, tile.PixelHeight, residentMipLevel);
+            var sourceDimensions = (payload.Width, payload.Height);
             var sourceX = Math.Clamp((int)((worldX - tile.Bounds.X) * sourceDimensions.Width / tile.Bounds.Width), 0, Math.Max(0, sourceDimensions.Width - 1));
             var sourceY = Math.Clamp((int)((worldY - tile.Bounds.Y) * sourceDimensions.Height / tile.Bounds.Height), 0, Math.Max(0, sourceDimensions.Height - 1));
-            background = sourcePixels[(sourceY * sourceDimensions.Width) + sourceX];
+            background = payload.Pixels[(sourceY * sourceDimensions.Width) + sourceX];
         }
         else
         {
@@ -225,12 +243,12 @@ public partial class MainWindow : Window, ICanvasSceneSource
             worldX,
             worldY);
 
-        var dimensions = BackgroundTileMipPolicy.GetDimensions(tile.PixelWidth, tile.PixelHeight, mipLevel);
+        var dimensions = BackgroundTileMipPolicy.GetDimensions(tile.PixelWidth, tile.PixelHeight, 0);
         sample = new CanvasPixelSample(
             background,
             defect,
             tile.Id,
-            new BackgroundTileReadoutInfo(tile.Id, mipLevel, dimensions.Width, dimensions.Height).Format());
+            new BackgroundTileReadoutInfo(tile.Id, 0, dimensions.Width, dimensions.Height).Format());
         return true;
     }
 
@@ -289,6 +307,8 @@ public partial class MainWindow : Window, ICanvasSceneSource
     {
         TilesXSliderTextBox.Value = _tileColumns;
         TilesYSliderTextBox.Value = _tileRows;
+        TilePixelWidthSliderTextBox.Value = _tilePixelWidth;
+        TilePixelHeightSliderTextBox.Value = _tilePixelHeight;
         ObjectsPerTileSliderTextBox.Value = _objectsPerTile;
         MinimumSparseTilePixelSizeSliderTextBox.Value = _minimumSparseTilePixelSize;
         GenerationSeedSliderTextBox.Value = _generationSeed;
@@ -298,6 +318,8 @@ public partial class MainWindow : Window, ICanvasSceneSource
     {
         _tileColumns = settings.TileColumns;
         _tileRows = settings.TileRows;
+        _tilePixelWidth = settings.TilePixelWidth;
+        _tilePixelHeight = settings.TilePixelHeight;
         _objectsPerTile = settings.ObjectsPerTile;
         _minimumSparseTilePixelSize = settings.MinimumSparseTilePixelSize;
         _generationSeed = settings.GenerationSeed;
@@ -333,8 +355,13 @@ public partial class MainWindow : Window, ICanvasSceneSource
             InitializeSpatialState();
             _selectedAnnotationId = null;
             CanvasSurface.ResetCamera();
-            _tileCacheBudget = new TileCacheBudget(_tileCacheBudget.MaxBytes);
-            UnsubscribeTileGenerationEvents(_tiles);
+            _sceneRevision++;
+            _backgroundLayerRevision++;
+            _defectLayerRevision++;
+            _tileGridLayerRevision++;
+            _annotationLayerRevision++;
+            _pixelometerRevision++;
+            _backgroundTileMaterializer.AdvanceScene();
 
             // Dispose defect template pools from the previous scene. The pool is
             // shared across all tiles in a generation set, so we collect unique
@@ -354,6 +381,8 @@ public partial class MainWindow : Window, ICanvasSceneSource
             _tiles = await Task.Run(
                 () => SampleImageGenerator.GenerateSet(
                     imageCount: tileCount,
+                    pixelWidth: _tilePixelWidth,
+                    pixelHeight: _tilePixelHeight,
                     objectsPerTile: _objectsPerTile,
                     columns: _tileColumns,
                     rows: _tileRows,
@@ -369,14 +398,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
                     noiseAmplitude: backgroundSettings.NoiseAmplitude,
                     showTileLabels: backgroundSettings.ShowTileLabels),
                 _lifetime.Token);
-            // Assign the coordinator to all tiles so lazy generation is
-            // bounded and cancellable via the coordinator.
-            for (var i = 0; i < _tiles.Count; i++)
-            {
-                _tiles[i].Coordinator = _tileCoordinator;
-                _tiles[i].ClaimantIdProvider = null; // Use per-tile claimant identity
-                _tiles[i].ClaimantTokenProvider = () => _frameTileCts?.Token ?? CancellationToken.None;
-            }
+            _backgroundTileSource.SetTiles(_tiles);
 
             // Cache tile bounds by id for center-distance scheduling (ICW-205).
             // The map is rebuilt once per scene, not per frame.
@@ -388,7 +410,6 @@ public partial class MainWindow : Window, ICanvasSceneSource
 
             _tileBoundsById = tileBoundsById;
 
-            SubscribeTileGenerationEvents(_tiles);
             _sceneBounds = GetSceneBounds(_tiles);
             CanvasSurface.SetSceneBounds(_sceneBounds);
 
@@ -412,7 +433,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
             // Notify scene-source consumers that the scene content changed
             // (ICW-312). The canvas and any external host re-query through
             // the source contract.
-            SceneChanged?.Invoke(this, EventArgs.Empty);
+            SceneChanged?.Invoke(this, new CanvasSceneChangedEventArgs(Identity));
         }
         finally
         {
@@ -422,25 +443,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
         }
     }
 
-    private void SubscribeTileGenerationEvents(IReadOnlyList<SampleImageTile> tiles)
-    {
-        for (var i = 0; i < tiles.Count; i++)
-        {
-            tiles[i].PixelsGenerated += OnTilePixelsGenerated;
-            tiles[i].PixelsGenerationFailed += OnTilePixelsGenerationFailed;
-        }
-    }
-
-    private void UnsubscribeTileGenerationEvents(IReadOnlyList<SampleImageTile> tiles)
-    {
-        for (var i = 0; i < tiles.Count; i++)
-        {
-            tiles[i].PixelsGenerated -= OnTilePixelsGenerated;
-            tiles[i].PixelsGenerationFailed -= OnTilePixelsGenerationFailed;
-        }
-    }
-
-    private void OnTilePixelsGenerated(object? sender, EventArgs e)
+    private void OnBackgroundTileMaterialized()
     {
         if (_lifetime.IsCancellationRequested)
         {
@@ -449,28 +452,16 @@ public partial class MainWindow : Window, ICanvasSceneSource
 
         _ = Dispatcher.InvokeAsync(async () =>
         {
-            if (!IsLoaded || _lifetime.IsCancellationRequested)
+            if (IsLoaded && !_lifetime.IsCancellationRequested)
             {
-                return;
+                await RequestRenderAsync();
             }
-
-            await RequestRenderAsync();
         });
     }
 
-    private void OnTilePixelsGenerationFailed(object? sender, EventArgs e)
+    private void OnBackgroundTileMaterializationFailed()
     {
-        // Trigger a re-render so the pipeline can retry generation for tiles
-        // that failed. Without this, a generation failure would silently end
-        // the render loop if no other event triggers a frame.
-        if (!_lifetime.IsCancellationRequested)
-        {
-            _ = Dispatcher.InvokeAsync(async () =>
-            {
-                if (!IsLoaded || _lifetime.IsCancellationRequested) return;
-                await RequestRenderAsync();
-            });
-        }
+        OnBackgroundTileMaterialized();
     }
 
     private async Task RequestRenderAsync()
@@ -522,6 +513,8 @@ public partial class MainWindow : Window, ICanvasSceneSource
         var camera = _camera.Capture();
         var viewport = camera.GetViewportBounds(width, height);
         var stopwatch = Stopwatch.StartNew();
+        var requestVersion = _renderRequestTracker.BeginRequest();
+        var frameIdentity = CaptureFrameIdentity(requestVersion);
 
         // Replace the per-frame tile-work cancellation token source.
         // The previous frame's CTS is cancelled so that its tile claimants
@@ -546,15 +539,10 @@ public partial class MainWindow : Window, ICanvasSceneSource
         var mipLevel = BackgroundTileMipPolicy.SelectMipLevel(camera);
         var centerX = viewport.X + (viewport.Width / 2.0);
         var centerY = viewport.Y + (viewport.Height / 2.0);
-        var visibleTileKeys = new HashSet<BackgroundTileCacheKey>();
-        for (var i = 0; i < _tiles.Count; i++)
-        {
-            if (_tiles[i].Bounds.Intersects(viewport))
-            {
-                var epoch = _tiles[i].CurrentGenerationEpoch;
-                visibleTileKeys.Add(new BackgroundTileCacheKey("synthetic", _tiles[i].Id, epoch, mipLevel));
-            }
-        }
+        var visibleTiles = _tiles.Where(tile => tile.Bounds.Intersects(viewport)).ToArray();
+        var visibleTileKeys = visibleTiles
+            .Select(tile => tile.CreateBackgroundTileRequest(mipLevel).CacheKey)
+            .ToHashSet();
 
         // Squared distance from the camera center to each tile center, so the
         // coordinator drains closest visible tiles first. Returns 0 for keys
@@ -581,25 +569,49 @@ public partial class MainWindow : Window, ICanvasSceneSource
             centerY,
             mipLevel,
             squaredDistanceFromCenter));
+        _backgroundTileMaterializer.SetPinnedKeys(visibleTileKeys);
 
-        // Track this render request for stale-frame rejection.
-        var requestVersion = _renderRequestTracker.BeginRequest();
+        var frameTileToken = _frameTileCts!.Token;
+        foreach (var tile in visibleTiles)
+        {
+            var request = tile.CreateBackgroundTileRequest(mipLevel);
+            if (_backgroundTileMaterializer.TryGetResident(request, out _)
+                || !tile.ShouldGenerateForPixelSize(camera, _minimumSparseTilePixelSize))
+            {
+                continue;
+            }
+
+            _backgroundTileMaterializer.Request(
+                request,
+                tile,
+                frameTileToken,
+                onCompleted: _ => OnBackgroundTileMaterialized(),
+                onFailed: _ => OnBackgroundTileMaterializationFailed());
+        }
 
         var factory = AcquireBackBuffer(width, height);
         var frame = await Task.Run(() =>
         {
             var visibleItems = _spatialIndex.Query(viewport);
-            var visibleTiles = _tiles.Where(tile => tile.Bounds.Intersects(viewport)).ToArray();
-            _tileCacheBudget.SetPinnedTiles(visibleTiles);
+            var residentPayloads = new Dictionary<BackgroundTileCacheKey, BackgroundTilePayload>();
+            foreach (var tile in visibleTiles)
+            {
+                var request = tile.CreateBackgroundTileRequest(mipLevel);
+                if (_backgroundTileMaterializer.TryGetBestResident(request, out var payload))
+                {
+                    residentPayloads[payload.Request.CacheKey] = payload;
+                }
+            }
+
             var bitmap = factory.GenerateFrozenBitmap(
                 visibleTiles,
                 visibleItems,
                 camera,
-                _tileCacheBudget.TryReserve,
+                residentPayloads,
                 minimumSparseTilePixelSize: _minimumSparseTilePixelSize,
                 showBackgroundImages: _showBackgroundImages,
                 showSparseImageTiles: _showSparseImageTiles);
-            return (Bitmap: bitmap, VisibleItems: visibleItems, VisibleTiles: visibleTiles);
+            return (Bitmap: bitmap, VisibleItems: visibleItems, VisibleTiles: visibleTiles, ResidentPayloads: residentPayloads);
         }, cancellationToken);
 
         // If a newer render request has started since we began, discard
@@ -607,14 +619,15 @@ public partial class MainWindow : Window, ICanvasSceneSource
         if (!_renderRequestTracker.IsCurrent(requestVersion))
             return;
 
-        PublishFrame(factory, frame.Bitmap, frame.VisibleItems, frame.VisibleTiles, camera, width, height, requestVersion);
+        PublishFrame(factory, frame.Bitmap, frame.VisibleItems, frame.VisibleTiles, camera, width, height, requestVersion, frameIdentity);
         _renderRequestTracker.Advance();
 
         stopwatch.Stop();
-        var generatedTileCount = _tiles.Count(tile => tile.IsBackgroundFetched);
-        var visibleBackgroundTileCount = frame.VisibleTiles.Count(tile => tile.IsImageGenerated);
+        var generatedTileCount = _backgroundTileMaterializer.ResidentCount;
+        var visibleBackgroundTileCount = frame.ResidentPayloads.Count;
         UpdateCacheStatus(visibleBackgroundTileCount);
-        var queuedTileCount = _tiles.Count(tile => tile.IsGenerationQueued);
+        var coordinatorCounters = _tileCoordinator.GetCounters();
+        var queuedTileCount = coordinatorCounters.QueuedCount;
         var completedTiles = _tiles.Where(tile => tile.GenerationDuration.HasValue).ToArray();
         var averageGenerationMilliseconds = completedTiles.Length == 0
             ? 0
@@ -625,8 +638,6 @@ public partial class MainWindow : Window, ICanvasSceneSource
         var averageConversionMilliseconds = completedConversionTiles.Length == 0
             ? 0
             : completedConversionTiles.Average(tile => tile.BitmapConversionDuration!.Value.TotalMilliseconds);
-        var coordinatorCounters = _tileCoordinator.GetCounters();
-
         // Update loading indicator: show the busy bar when tile generation
         // is actively running or queued (ICW-319 method surface).
         var hasPendingTileWork = coordinatorCounters.PendingCount > 0;
@@ -652,7 +663,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
         {
             var avgMs = _totalFrameTicks / (double)_frameCount / TimeSpan.TicksPerMillisecond;
             var totalTiles = _tiles.Count;
-            var fetchedTiles = _tiles.Count(t => t.IsBackgroundFetched);
+            var fetchedTiles = _backgroundTileMaterializer.ResidentCount;
             var generatedMs = completedTiles.Length == 0
                 ? 0.0
                 : completedTiles.Average(t => t.GenerationDuration?.TotalMilliseconds ?? 0);
@@ -668,7 +679,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
                 coordinatorCounters.CompletedCount, coordinatorCounters.CanceledCount,
                 coordinatorCounters.FailedCount,
                 fetchedTiles, totalTiles, generatedMs,
-                _tileCacheBudget.MaxBytes);
+                _backgroundTileMaterializer.MaxBytes);
 
             LogAnnotationDiagnostics();
 
@@ -695,7 +706,8 @@ public partial class MainWindow : Window, ICanvasSceneSource
         CameraSnapshot camera,
         int frameWidth,
         int frameHeight,
-        int revision)
+        int revision,
+        CanvasFrameIdentity identity)
     {
         _lastPublishedCamera = camera;
         _lastPublishedVisibleTiles = visibleTiles;
@@ -714,7 +726,9 @@ public partial class MainWindow : Window, ICanvasSceneSource
             totalItemCount: _spatialIndex.Count,
             width: frameWidth,
             height: frameHeight,
-            revision: revision);
+            revision: revision,
+            identity: identity,
+            layerPlan: CreateLayerPlan(identity));
         CanvasSurface.PublishFrame(frame);
         // Triple-buffer rotation (ICW-P0-BUFFER-REUSE-SYNC). The buffer that
         // was displayed until now moves to the retired slot instead of being
@@ -723,7 +737,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
         _frameBufferPool.Publish(renderedBuffer);
     }
 
-    private void OnCanvasFramePublished(object? sender, CanvasFrame frame)
+    private void OnCanvasFrameLayersPublishing(object? sender, CanvasFrame frame)
     {
         // Host-composed overlays stay camera-synchronized with the raster that
         // was published for this frame (ICW-315; overlay layering invariant).
@@ -734,6 +748,37 @@ public partial class MainWindow : Window, ICanvasSceneSource
         var annotationUpdateTicks = Stopwatch.GetTimestamp() - annotationUpdateStarted;
         _annotationUpdateTicks += annotationUpdateTicks;
         _annotationMaxUpdateTicks = Math.Max(_annotationMaxUpdateTicks, annotationUpdateTicks);
+    }
+
+    private CanvasFrameIdentity CaptureFrameIdentity(long renderSequence)
+    {
+        return new CanvasFrameIdentity(
+            _sourceSessionId,
+            _sceneRevision,
+            new CanvasLayerRevisionVector(
+                _backgroundLayerRevision,
+                _defectLayerRevision,
+                _tileGridLayerRevision,
+                _annotationLayerRevision,
+                _pixelometerRevision),
+            _displayRevision,
+            _selectionRevision,
+            renderSequence);
+    }
+
+    private CanvasLayerPlan CreateLayerPlan(CanvasFrameIdentity identity)
+    {
+        return new CanvasLayerPlan(
+        [
+            new(CanvasLayerKind.Raster, true, identity.RenderSequence),
+            new(CanvasLayerKind.BackgroundMaterial, _showBackgroundImages, identity.LayerRevisions.Background),
+            new(CanvasLayerKind.DefectImagery, _showSparseImageTiles, identity.LayerRevisions.Defect),
+            new(CanvasLayerKind.TileGrid, true, identity.LayerRevisions.TileGrid),
+            new(CanvasLayerKind.Annotations, true, identity.LayerRevisions.Annotations),
+            new(CanvasLayerKind.Labels, _annotationDisplayOptions.ShowLabels, identity.LayerRevisions.Annotations),
+            new(CanvasLayerKind.Selection, _selectedAnnotationId is not null, identity.SelectionRevision),
+            new(CanvasLayerKind.Pixelometer, true, identity.LayerRevisions.Pixelometer)
+        ]);
     }
 
     private void UpdateTileGridLayer(CameraSnapshot camera, IReadOnlyList<SampleImageTile> visibleTiles, int frameWidth, int frameHeight)
@@ -1133,6 +1178,8 @@ public partial class MainWindow : Window, ICanvasSceneSource
     {
         var annotation = item as SampleAnnotation;
         _selectedAnnotationId = annotation?.Id;
+            _selectionRevision++;
+            _annotationLayerRevision++;
         UpdateSelectedAnnotationFeatures(annotation);
         await RequestRenderAsync();
     }
@@ -1153,6 +1200,8 @@ public partial class MainWindow : Window, ICanvasSceneSource
         }
 
         _showBackgroundImages = ShowBackgroundImagesCheckBox.IsChecked ?? true;
+            _displayRevision++;
+            _backgroundLayerRevision++;
         CanvasSurface.RasterVisible = _showBackgroundImages || _showImageTiles || _showSparseImageTiles;
         await RequestRenderAsync();
     }
@@ -1173,6 +1222,8 @@ public partial class MainWindow : Window, ICanvasSceneSource
         }
 
         _showImageTiles = ShowImageTilesCheckBox.IsChecked ?? true;
+            _displayRevision++;
+            _annotationLayerRevision++;
         CanvasSurface.RasterVisible = _showBackgroundImages || _showImageTiles || _showSparseImageTiles;
         await RequestRenderAsync();
     }
@@ -1193,6 +1244,8 @@ public partial class MainWindow : Window, ICanvasSceneSource
         }
 
         _showSparseImageTiles = ShowSparseImageTilesCheckBox.IsChecked ?? true;
+            _displayRevision++;
+            _defectLayerRevision++;
         CanvasSurface.RasterVisible = _showBackgroundImages || _showImageTiles || _showSparseImageTiles;
         await RequestRenderAsync();
     }
@@ -1532,13 +1585,19 @@ public partial class MainWindow : Window, ICanvasSceneSource
             _ => AnnotationDisplayMode.Outline
         };
 
-        _annotationDisplayOptions = new AnnotationDisplayOptions(
+            var nextOptions = new AnnotationDisplayOptions(
             selectedMode,
             Math.Round(OutlineThicknessSlider.Value, 2),
             Math.Round(LabelSizeSlider.Value, 2),
             LabelDisplayComboBox.SelectedIndex == 1 ? AnnotationLabelDisplay.Id : AnnotationLabelDisplay.Class,
             ShowLabelsCheckBox.IsChecked ?? true,
             ShowBoxesCheckBox.IsChecked ?? true);
+            if (_annotationDisplayOptions != nextOptions)
+            {
+                _annotationDisplayOptions = nextOptions;
+                _displayRevision++;
+                _annotationLayerRevision++;
+            }
     }
 
     private void OnRegenerateClicked(object sender, RoutedEventArgs e)
@@ -1566,8 +1625,8 @@ public partial class MainWindow : Window, ICanvasSceneSource
 
     private async Task OnDebugDumpCacheClickedAsync()
     {
-        var fetchedTiles = _tiles.Where(tile => tile.IsBackgroundFetched).Select(tile => tile.Id).ToArray();
-        var dump = $"Cache fetched {fetchedTiles.Length}/{_tiles.Count}: {string.Join(", ", fetchedTiles.Take(10))}{(fetchedTiles.Length > 10 ? "..." : string.Empty)}";
+        var fetchedTileCount = _backgroundTileMaterializer.ResidentCount;
+        var dump = $"Cache fetched {fetchedTileCount}/{_tiles.Count}";
         Serilog.Log.Debug(dump);
 
         foreach (var tile in _tiles)
@@ -1575,7 +1634,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
             tile.ResetImageCache();
         }
 
-        _tileCacheBudget = new TileCacheBudget(_tileCacheBudget.MaxBytes);
+        _backgroundTileMaterializer.AdvanceScene();
         UpdateCacheStatus();
         StatusText.Text = "Image cache reset. Tiles will regenerate lazily as they come into range.";
         await RequestRenderAsync();
@@ -1614,7 +1673,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
             return;
         }
 
-        var snapshot = _tileCacheBudget.GetDiagnosticsSnapshot(_tileCoordinator.GetCounters().PendingCount);
+        var snapshot = _backgroundTileMaterializer.GetDiagnosticsSnapshot(_tileCoordinator.GetCounters().PendingCount);
         await TileCacheDiagnosticsExporter.WriteAsync(dialog.FileName, snapshot, _lifetime.Token);
         StatusText.Text = $"Cache diagnostics exported to {System.IO.Path.GetFileName(dialog.FileName)}";
     }
@@ -1632,7 +1691,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
     private void UpdateCacheStatus(int? visibleBackgroundTileCount = null)
     {
         var visibleCount = visibleBackgroundTileCount ?? 0;
-        var cacheSummary = _tileCacheBudget.DescribeStatus();
+        var cacheSummary = _backgroundTileMaterializer.DescribeStatus();
         CacheStatusText.Text = cacheSummary;
         Serilog.Log.Debug("Cache summary: {Summary} (visible backgrounds {Visible})", cacheSummary, visibleCount);
     }
@@ -1702,9 +1761,12 @@ public partial class MainWindow : Window, ICanvasSceneSource
         validationError = string.Empty;
 
         // The SliderTextBox controls clamp each value to its configured range,
-        // so only the cross-field tile-count cap needs explicit validation here.
+        // so explicit validation here covers the cross-field tile-count bound
+        // and the shared tile-dimension contract.
         var columns = (int)Math.Round(TilesXSliderTextBox.Value);
         var rows = (int)Math.Round(TilesYSliderTextBox.Value);
+        var pixelWidth = (int)Math.Round(TilePixelWidthSliderTextBox.Value);
+        var pixelHeight = (int)Math.Round(TilePixelHeightSliderTextBox.Value);
         var objectsPerTile = (int)Math.Round(ObjectsPerTileSliderTextBox.Value);
         var minimumSparseTilePixelSize = MinimumSparseTilePixelSizeSliderTextBox.Value;
         var seed = (int)Math.Round(GenerationSeedSliderTextBox.Value);
@@ -1715,9 +1777,16 @@ public partial class MainWindow : Window, ICanvasSceneSource
             return false;
         }
 
-        if ((long)columns * rows > 2000)
+        if (!CanvasUserSettings.ValidateTileCount((long)columns * rows))
         {
-            validationError = "Tile count must be 2000 or less for this demo.";
+            validationError = $"Tile count must be between 1 and {CanvasUserSettings.MaxGeneratedTiles:N0}.";
+            return false;
+        }
+
+        if (!CanvasUserSettings.ValidateTilePixelDimension(pixelWidth)
+            || !CanvasUserSettings.ValidateTilePixelDimension(pixelHeight))
+        {
+            validationError = $"Tile pixel dimensions must be between 1 and {CanvasUserSettings.MaxTilePixelDimension:N0}.";
             return false;
         }
 
@@ -1735,6 +1804,8 @@ public partial class MainWindow : Window, ICanvasSceneSource
 
         _tileColumns = columns;
         _tileRows = rows;
+        _tilePixelWidth = pixelWidth;
+        _tilePixelHeight = pixelHeight;
         _objectsPerTile = objectsPerTile;
         _minimumSparseTilePixelSize = minimumSparseTilePixelSize;
         _generationSeed = seed;
@@ -1758,7 +1829,6 @@ public partial class MainWindow : Window, ICanvasSceneSource
 
         SaveSettings();
         _resizeTimer.Stop();
-        UnsubscribeTileGenerationEvents(_tiles);
         _lifetime.Cancel();
 
         await _renderAction.DisposeAsync();
@@ -1777,6 +1847,8 @@ public partial class MainWindow : Window, ICanvasSceneSource
         {
             TileColumns = (int)Math.Round(TilesXSliderTextBox.Value),
             TileRows = (int)Math.Round(TilesYSliderTextBox.Value),
+            TilePixelWidth = (int)Math.Round(TilePixelWidthSliderTextBox.Value),
+            TilePixelHeight = (int)Math.Round(TilePixelHeightSliderTextBox.Value),
             ObjectsPerTile = (int)Math.Round(ObjectsPerTileSliderTextBox.Value),
             MinimumSparseTilePixelSize = MinimumSparseTilePixelSizeSliderTextBox.Value,
             GenerationSeed = (int)Math.Round(GenerationSeedSliderTextBox.Value),
@@ -1806,6 +1878,8 @@ public partial class MainWindow : Window, ICanvasSceneSource
             {
                 TileColumns = _tileColumns,
                 TileRows = _tileRows,
+                TilePixelWidth = _tilePixelWidth,
+                TilePixelHeight = _tilePixelHeight,
                 ObjectsPerTile = _objectsPerTile
             };
         }

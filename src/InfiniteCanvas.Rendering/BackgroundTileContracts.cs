@@ -114,6 +114,11 @@ public sealed record BackgroundTileReadoutInfo(string TileId, int MipLevel, int 
 public sealed class BackgroundTilePayload
 {
     public BackgroundTilePayload(BackgroundTileRequest request, byte[] pixels)
+        : this(request, pixels, ownsPixels: false)
+    {
+    }
+
+    internal BackgroundTilePayload(BackgroundTileRequest request, byte[] pixels, bool ownsPixels)
     {
         ArgumentNullException.ThrowIfNull(pixels);
         var (width, height) = request.CanonicalDimensions;
@@ -126,9 +131,12 @@ public sealed class BackgroundTilePayload
         Request = request;
         Width = width;
         Height = height;
-        Pixels = pixels;
-        ByteCost = pixels.LongLength;
+        _pixels = ownsPixels ? pixels : pixels.ToArray();
+        Pixels = Array.AsReadOnly(_pixels);
+        ByteCost = _pixels.LongLength;
     }
+
+    private readonly byte[] _pixels;
 
     public BackgroundTileRequest Request { get; }
 
@@ -136,14 +144,16 @@ public sealed class BackgroundTilePayload
 
     public int Height { get; }
 
-    public byte[] Pixels { get; }
+    public IReadOnlyList<byte> Pixels { get; }
+
+    internal ReadOnlyMemory<byte> OwnedPixels => _pixels;
 
     public long ByteCost { get; }
 }
 
 /// <summary>
 /// Resolves source-neutral background tile requests without WPF dependencies.
-/// ICW-076 will connect this contract to the materializer and cache.
+/// BackgroundTileMaterializer owns coalescing, admission, and resident state.
 /// </summary>
 public interface IBackgroundTileSource
 {

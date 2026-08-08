@@ -14,6 +14,8 @@ public class CanvasUserSettingsTests
         {
             TileColumns = 4,
             TileRows = 10,
+            TilePixelWidth = 640,
+            TilePixelHeight = 320,
             ObjectsPerTile = 7,
             GenerationSeed = 42,
             AnnotationDisplayMode = 2,
@@ -111,6 +113,24 @@ public class CanvasUserSettingsTests
         finally
         {
             File.Delete(path);
+        }
+    }
+
+    [Test]
+    public void TileGenerationBounds_UseConfiguredLimitsAndDefaults()
+    {
+        var settings = new CanvasUserSettings();
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(CanvasUserSettings.MaxGeneratedTiles, Is.EqualTo(24_288));
+            Assert.That(CanvasUserSettings.ValidateTileCount(24_288), Is.True);
+            Assert.That(CanvasUserSettings.ValidateTileCount(24_289), Is.False);
+            Assert.That(settings.TilePixelWidth, Is.EqualTo(8192));
+            Assert.That(settings.TilePixelHeight, Is.EqualTo(4096));
+            Assert.That(CanvasUserSettings.ValidateTilePixelDimension(1), Is.True);
+            Assert.That(CanvasUserSettings.ValidateTilePixelDimension(CanvasUserSettings.MaxTilePixelDimension), Is.True);
+            Assert.That(CanvasUserSettings.ValidateTilePixelDimension(CanvasUserSettings.MaxTilePixelDimension + 1), Is.False);
         }
     }
 
