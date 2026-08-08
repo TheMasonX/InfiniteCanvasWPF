@@ -45,6 +45,8 @@ public sealed record CanvasUserSettings
 
     public bool ShowBackgroundImages { get; init; } = true;
 
+    public bool ShowBackgroundTileLabels { get; init; } = true;
+
     public byte BackgroundTargetValue { get; init; } = 128;
 
     public byte BackgroundNoise { get; init; } = 8;

@@ -1,4 +1,4 @@
-<UserControl x:Class="InfiniteCanvas.App.Controls.TileBackgroundNoiseSettingsView"
+<UserControl x:Class="InfiniteCanvas.App.Controls.TileBackgroundSettingsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -11,10 +11,13 @@
     <Expander IsExpanded="False" d:IsExpanded="True" Padding="8"
               Background="#151A20" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
         <Expander.Header>
-            <TextBlock Text="TILE BACKGROUND NOISE" FontFamily="Cascadia Mono" FontSize="12"
+            <TextBlock Text="BACKGROUND TILE SETTINGS" FontFamily="Cascadia Mono" FontSize="12"
                        FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" />
         </Expander.Header>
         <StackPanel>
+            <CheckBox Content="Show tile labels"
+                      IsChecked="{Binding ShowTileLabels, Mode=TwoWay}"
+                      Margin="0,0,0,8" />
             <controls:SliderTextBox Label="Target value"
                                     Minimum="0" Maximum="255" TickFrequency="1"
                                     NumericType="Integer"

@@ -148,8 +148,8 @@
                         <CheckBox x:Name="ShowBackgroundImagesCheckBox" Content="Show background images" IsChecked="True"
                                   Margin="0,8,0,0" Checked="OnShowBackgroundImagesChanged" Unchecked="OnShowBackgroundImagesChanged" />
 
-                        <appcontrols:TileBackgroundNoiseSettingsView Margin="0,12,0,0"
-                                                                  ViewModel="{Binding DataContext.TileBackgroundNoiseSettings, RelativeSource={RelativeSource AncestorType=Window}}" />
+                        <appcontrols:TileBackgroundSettingsView Margin="0,12,0,0"
+                                                                  ViewModel="{Binding DataContext.TileBackgroundSettings, RelativeSource={RelativeSource AncestorType=Window}}" />
 
                         <Border Height="1" Margin="0,14,0,12" Background="{StaticResource BorderBrush}" />
 

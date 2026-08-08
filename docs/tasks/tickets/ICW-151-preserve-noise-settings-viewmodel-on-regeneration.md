@@ -20,7 +20,7 @@ related:
 links:
   - src/InfiniteCanvas.App/MainWindow.xaml.cs
   - src/InfiniteCanvas.ViewModels/MainViewModel.cs
-  - src/InfiniteCanvas.App/Controls/TileBackgroundNoiseSettingsView.xaml
+  - src/InfiniteCanvas.App/Controls/TileBackgroundSettingsView.xaml
   - tests/InfiniteCanvas.Tests/MainViewModelTests.cs
   - docs/requirements/functional-requirements-and-invariants.md
 created: 2026-08-03

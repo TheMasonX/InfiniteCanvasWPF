@@ -84,7 +84,8 @@ public static class SampleImageGenerator
         int seed = 1729,
         int? rows = null,
         int defectPoolSize = 64,
-        int circleCount = 3)
+        int circleCount = 3,
+        bool showTileLabels = true)
     {
         // Preserve original parameter validation so thrown exceptions keep caller-visible parameter names.
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(imageCount);
@@ -121,7 +122,8 @@ public static class SampleImageGenerator
             Seed: seed,
             Rows: rows,
             DefectPoolSize: defectPoolSize,
-            CircleCount: circleCount);
+            CircleCount: circleCount,
+            ShowTileLabels: showTileLabels);
 
         return GenerateSet(options);
     }
@@ -199,12 +201,12 @@ public static class SampleImageGenerator
                 bounds,
                 options.PixelWidth,
                 options.PixelHeight,
-                () => GenerateMonochromeMipPixelsSeeded(options.PixelWidth, options.PixelHeight, options.TargetValue, options.Noise, 0, pixelSeed, options.CircleCount, noiseSettings, (float)bounds.X, (float)bounds.Y, tileId),
+                () => GenerateMonochromeMipPixelsSeeded(options.PixelWidth, options.PixelHeight, options.TargetValue, options.Noise, 0, pixelSeed, options.CircleCount, noiseSettings, (float)bounds.X, (float)bounds.Y, options.ShowTileLabels ? tileId : null),
                 annotations,
                 options.TargetValue,
-                mipLevel => GenerateMonochromeMipPixelsSeeded(options.PixelWidth, options.PixelHeight, options.TargetValue, options.Noise, mipLevel, pixelSeed, options.CircleCount, noiseSettings, (float)bounds.X, (float)bounds.Y, tileId),
-                cancellablePixelFactory: token => GenerateMonochromeMipPixelsSeeded(options.PixelWidth, options.PixelHeight, options.TargetValue, options.Noise, 0, pixelSeed, options.CircleCount, noiseSettings, (float)bounds.X, (float)bounds.Y, tileId, token),
-                cancellableMipPixelFactory: (mipLevel, token) => GenerateMonochromeMipPixelsSeeded(options.PixelWidth, options.PixelHeight, options.TargetValue, options.Noise, mipLevel, pixelSeed, options.CircleCount, noiseSettings, (float)bounds.X, (float)bounds.Y, tileId, token));
+                mipLevel => GenerateMonochromeMipPixelsSeeded(options.PixelWidth, options.PixelHeight, options.TargetValue, options.Noise, mipLevel, pixelSeed, options.CircleCount, noiseSettings, (float)bounds.X, (float)bounds.Y, options.ShowTileLabels ? tileId : null),
+                cancellablePixelFactory: token => GenerateMonochromeMipPixelsSeeded(options.PixelWidth, options.PixelHeight, options.TargetValue, options.Noise, 0, pixelSeed, options.CircleCount, noiseSettings, (float)bounds.X, (float)bounds.Y, options.ShowTileLabels ? tileId : null, token),
+                cancellableMipPixelFactory: (mipLevel, token) => GenerateMonochromeMipPixelsSeeded(options.PixelWidth, options.PixelHeight, options.TargetValue, options.Noise, mipLevel, pixelSeed, options.CircleCount, noiseSettings, (float)bounds.X, (float)bounds.Y, options.ShowTileLabels ? tileId : null, token));
             // Attach a reference to the shared defect template pool so eviction paths
             // can dispose platform bitmaps when the tile's images are evicted/regenerated.
             tiles[tileIndex].DefectTemplatePool = defectTemplatePool;

@@ -16,8 +16,8 @@ related:
   - ICW-P1-SETTINGS-VALIDATION
 links:
   - src/InfiniteCanvas.App/MainWindow.xaml
-  - src/InfiniteCanvas.App/Controls/TileBackgroundNoiseSettingsView.xaml
-  - src/InfiniteCanvas.App/Controls/TileBackgroundNoiseSettingsView.xaml.cs
+  - src/InfiniteCanvas.App/Controls/TileBackgroundSettingsView.xaml
+  - src/InfiniteCanvas.App/Controls/TileBackgroundSettingsView.xaml.cs
   - src/InfiniteCanvas.ViewModels/MainViewModel.cs
   - docs/tasks/tickets/ICW-151-preserve-noise-settings-viewmodel-on-regeneration.md
 created: 2026-07-25
@@ -40,7 +40,7 @@ The debug panel repeats label-and-slider markup for the background noise setting
 - Add a `SliderTextBox` `UserControl` with dependency properties for label, minimum, maximum, tick frequency, value, and numeric type.
 - Support integer values such as octaves and tile counts, plus double values such as amplitude and lacunarity.
 - Define one parse, clamp, and update path so slider and text-box edits stay synchronized.
-- Replace the repeated noise controls in `TileBackgroundNoiseSettingsView` with the new control.
+- Replace the repeated background controls in `TileBackgroundSettingsView` with the new control.
 - Replace Tiles X, Tiles Y, Objects per tile, and Generation seed inputs with the control or a shared numeric editor.
 - Place the scene material settings in a dedicated expander.
 - Use a lighter text resource for the tile background noise expander header.

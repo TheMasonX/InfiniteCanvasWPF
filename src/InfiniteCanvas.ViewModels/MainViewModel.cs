@@ -6,47 +6,51 @@ namespace InfiniteCanvas.ViewModels;
 public partial class MainViewModel : ObservableObject
 {
     [ObservableProperty]
-    public partial TileBackgroundNoiseSettingsViewModel TileBackgroundNoiseSettings { get; set; } = new();
+    public partial TileBackgroundSettingsViewModel TileBackgroundSettings { get; set; } = new();
 
     public void ApplySettings(CanvasUserSettings settings)
     {
-        TileBackgroundNoiseSettings.TargetValue = settings.BackgroundTargetValue;
-        TileBackgroundNoiseSettings.Noise = settings.BackgroundNoise;
-        TileBackgroundNoiseSettings.CircleCount = settings.BackgroundCircleCount;
-        TileBackgroundNoiseSettings.Scale = settings.BackgroundNoiseScale;
-        TileBackgroundNoiseSettings.Octaves = settings.BackgroundNoiseOctaves;
-        TileBackgroundNoiseSettings.Lacunarity = settings.BackgroundNoiseLacunarity;
-        TileBackgroundNoiseSettings.Gain = settings.BackgroundNoiseGain;
-        TileBackgroundNoiseSettings.Amplitude = settings.BackgroundNoiseAmplitude;
+        TileBackgroundSettings.ShowTileLabels = settings.ShowBackgroundTileLabels;
+        TileBackgroundSettings.TargetValue = settings.BackgroundTargetValue;
+        TileBackgroundSettings.Noise = settings.BackgroundNoise;
+        TileBackgroundSettings.CircleCount = settings.BackgroundCircleCount;
+        TileBackgroundSettings.Scale = settings.BackgroundNoiseScale;
+        TileBackgroundSettings.Octaves = settings.BackgroundNoiseOctaves;
+        TileBackgroundSettings.Lacunarity = settings.BackgroundNoiseLacunarity;
+        TileBackgroundSettings.Gain = settings.BackgroundNoiseGain;
+        TileBackgroundSettings.Amplitude = settings.BackgroundNoiseAmplitude;
     }
 
-    public TileBackgroundNoiseSnapshot CreateBackgroundNoiseSnapshot()
+    public TileBackgroundSettingsSnapshot CreateBackgroundSettingsSnapshot()
     {
-        return new TileBackgroundNoiseSnapshot(
-            TargetValue: (byte)Math.Clamp(Math.Round(TileBackgroundNoiseSettings.TargetValue), 0, 255),
-            Noise: (byte)Math.Clamp(Math.Round(TileBackgroundNoiseSettings.Noise), 0, 24),
-            CircleCount: Math.Clamp((int)Math.Round(TileBackgroundNoiseSettings.CircleCount), 0, 8),
-            NoiseScale: Math.Clamp(TileBackgroundNoiseSettings.Scale, 0.01, 8),
-            NoiseOctaves: Math.Clamp((int)Math.Round(TileBackgroundNoiseSettings.Octaves), 1, 12),
-            NoiseLacunarity: Math.Clamp(TileBackgroundNoiseSettings.Lacunarity, 0.1, 8),
-            NoiseGain: Math.Clamp(TileBackgroundNoiseSettings.Gain, 0, 1),
-            NoiseAmplitude: Math.Clamp(TileBackgroundNoiseSettings.Amplitude, 0, 4));
+        return new TileBackgroundSettingsSnapshot(
+            ShowTileLabels: TileBackgroundSettings.ShowTileLabels,
+            TargetValue: (byte)Math.Clamp(Math.Round(TileBackgroundSettings.TargetValue), 0, 255),
+            Noise: (byte)Math.Clamp(Math.Round(TileBackgroundSettings.Noise), 0, 24),
+            CircleCount: Math.Clamp((int)Math.Round(TileBackgroundSettings.CircleCount), 0, 8),
+            NoiseScale: Math.Clamp(TileBackgroundSettings.Scale, 0.01, 8),
+            NoiseOctaves: Math.Clamp((int)Math.Round(TileBackgroundSettings.Octaves), 1, 12),
+            NoiseLacunarity: Math.Clamp(TileBackgroundSettings.Lacunarity, 0.1, 8),
+            NoiseGain: Math.Clamp(TileBackgroundSettings.Gain, 0, 1),
+            NoiseAmplitude: Math.Clamp(TileBackgroundSettings.Amplitude, 0, 4));
     }
 
-    public void ApplyBackgroundNoiseSnapshot(TileBackgroundNoiseSnapshot snapshot)
+    public void ApplyBackgroundSettingsSnapshot(TileBackgroundSettingsSnapshot snapshot)
     {
-        TileBackgroundNoiseSettings.TargetValue = snapshot.TargetValue;
-        TileBackgroundNoiseSettings.Noise = snapshot.Noise;
-        TileBackgroundNoiseSettings.CircleCount = snapshot.CircleCount;
-        TileBackgroundNoiseSettings.Scale = snapshot.NoiseScale;
-        TileBackgroundNoiseSettings.Octaves = snapshot.NoiseOctaves;
-        TileBackgroundNoiseSettings.Lacunarity = snapshot.NoiseLacunarity;
-        TileBackgroundNoiseSettings.Gain = snapshot.NoiseGain;
-        TileBackgroundNoiseSettings.Amplitude = snapshot.NoiseAmplitude;
+        TileBackgroundSettings.ShowTileLabels = snapshot.ShowTileLabels;
+        TileBackgroundSettings.TargetValue = snapshot.TargetValue;
+        TileBackgroundSettings.Noise = snapshot.Noise;
+        TileBackgroundSettings.CircleCount = snapshot.CircleCount;
+        TileBackgroundSettings.Scale = snapshot.NoiseScale;
+        TileBackgroundSettings.Octaves = snapshot.NoiseOctaves;
+        TileBackgroundSettings.Lacunarity = snapshot.NoiseLacunarity;
+        TileBackgroundSettings.Gain = snapshot.NoiseGain;
+        TileBackgroundSettings.Amplitude = snapshot.NoiseAmplitude;
     }
 }
 
-public sealed record TileBackgroundNoiseSnapshot(
+public sealed record TileBackgroundSettingsSnapshot(
+    bool ShowTileLabels,
     byte TargetValue,
     byte Noise,
     int CircleCount,
@@ -56,11 +60,14 @@ public sealed record TileBackgroundNoiseSnapshot(
     double NoiseGain,
     double NoiseAmplitude);
 
-public partial class TileBackgroundNoiseSettingsViewModel : ObservableObject
+public partial class TileBackgroundSettingsViewModel : ObservableObject
 {
     // Centralize defaults in CanvasUserSettings so the initial control state
     // can never drift from the canonical persisted settings values.
     private static readonly CanvasUserSettings Defaults = new();
+
+    [ObservableProperty]
+    public partial bool ShowTileLabels { get; set; } = Defaults.ShowBackgroundTileLabels;
 
     [ObservableProperty]
     public partial double TargetValue { get; set; } = Defaults.BackgroundTargetValue;

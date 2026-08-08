@@ -25,6 +25,7 @@ public class CanvasUserSettingsTests
             ShowSparseImageTiles = false,
             ShowImageTiles = false,
             ShowBackgroundImages = false,
+            ShowBackgroundTileLabels = false,
             BackgroundTargetValue = 160,
             MinimumSparseTilePixelSize = 128
         };
@@ -51,6 +52,7 @@ public class CanvasUserSettingsTests
             ShowSparseImageTiles = false,
             ShowImageTiles = false,
             ShowBackgroundImages = false,
+            ShowBackgroundTileLabels = false,
             BackgroundTargetValue = 160
         };
 
@@ -64,6 +66,7 @@ public class CanvasUserSettingsTests
                 Assert.That(loaded.ShowSparseImageTiles, Is.False);
                 Assert.That(loaded.ShowImageTiles, Is.False);
                 Assert.That(loaded.ShowBackgroundImages, Is.False);
+                Assert.That(loaded.ShowBackgroundTileLabels, Is.False);
                 Assert.That(loaded.BackgroundTargetValue, Is.EqualTo(160));
             }
         }

@@ -16,5 +16,6 @@ public sealed record GeneratorOptions(
     int Seed = 1729,
     int? Rows = null,
     int DefectPoolSize = 64,
-    int CircleCount = 3
+    int CircleCount = 3,
+    bool ShowTileLabels = true
 );

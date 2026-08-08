@@ -9,11 +9,14 @@ tags:
   - icw
   - task-tracker
 dependsOn: []
-related: []
+related:
+  - ICW-337
+  - ICW-339
 links:
   - docs/tasks/README.md
   - src/InfiniteCanvas.Rendering/BackgroundTileMaterializer.cs
   - tests/InfiniteCanvas.Tests/BackgroundTileMaterializerTests.cs
+  - docs/audits/viewport-material-inspection-readiness-delta-2026-08-07.md
 created: 2026-07-25
 updated: 2026-08-07
 ---
@@ -74,9 +77,15 @@ Added `BackgroundTileMaterializer` as the first source-neutral materializer slic
 
 The existing `SampleImageTile` and Windows raster path still use their established synthetic adapters. This wave does not claim the full ICW-076 migration.
 
+## Readiness Delta, 2026-08-07
+
+Current source review confirms that `MainWindow` and `SampleImageTile` still construct `BackgroundTileCacheKey` values with the `synthetic` source identity. `BackgroundTileMaterializer` is not the active source for the Windows raster path. This blocks external material source replacement even though the source-neutral materializer tests pass.
+
+The active migration must also preserve semantic source and layer identity from the viewport frame contract. ICW-339 tracks that adjacent contract extension. The readiness audit is [viewport-material-inspection-readiness-delta-2026-08-07.md](../../audits/viewport-material-inspection-readiness-delta-2026-08-07.md).
+
 ## Next Step
 
-Connect `SampleImageTile` to the materializer and migrate the Windows raster path to resident payload dimensions. Preserve non-blocking placeholders and explicit mip-zero pixelometer reads.
+Connect `SampleImageTile` to the materializer and migrate the Windows raster path to resident payload dimensions. Replace synthetic cache identity with source-qualified keys. Preserve non-blocking placeholders and explicit mip-zero pixelometer reads.
 
 ## Related Tasks
 

@@ -4,29 +4,29 @@ using InfiniteCanvas.ViewModels;
 
 namespace InfiniteCanvas.App.Controls;
 
-public partial class TileBackgroundNoiseSettingsView : UserControl
+public partial class TileBackgroundSettingsView : UserControl
 {
     public static readonly DependencyProperty ViewModelProperty =
         DependencyProperty.Register(
             nameof(ViewModel),
-            typeof(TileBackgroundNoiseSettingsViewModel),
-            typeof(TileBackgroundNoiseSettingsView),
+            typeof(TileBackgroundSettingsViewModel),
+            typeof(TileBackgroundSettingsView),
             new PropertyMetadata(null, OnViewModelChanged));
 
-    public TileBackgroundNoiseSettingsView()
+    public TileBackgroundSettingsView()
     {
         InitializeComponent();
     }
 
-    public TileBackgroundNoiseSettingsViewModel ViewModel
+    public TileBackgroundSettingsViewModel ViewModel
     {
-        get => (TileBackgroundNoiseSettingsViewModel)GetValue(ViewModelProperty);
+        get => (TileBackgroundSettingsViewModel)GetValue(ViewModelProperty);
         set => SetValue(ViewModelProperty, value);
     }
 
     private static void OnViewModelChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is TileBackgroundNoiseSettingsView control)
+        if (d is TileBackgroundSettingsView control)
         {
             control.DataContext = e.NewValue;
         }

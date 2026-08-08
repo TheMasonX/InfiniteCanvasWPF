@@ -8,6 +8,8 @@ public class LayerVisibilityWiringTests
         Path.Combine(RepositoryRoot, "src", "InfiniteCanvas.App", "MainWindow.xaml"));
     private static readonly string MainWindowCodeBehind = File.ReadAllText(
         Path.Combine(RepositoryRoot, "src", "InfiniteCanvas.App", "MainWindow.xaml.cs"));
+    private static readonly string BackgroundSettingsMarkup = File.ReadAllText(
+        Path.Combine(RepositoryRoot, "src", "InfiniteCanvas.App", "Controls", "TileBackgroundSettingsView.xaml"));
 
     [Test]
     public void LayerVisibilitySettings_UseIndependentControlsAndRenderPaths()
@@ -19,11 +21,15 @@ public class LayerVisibilityWiringTests
             Assert.That(MainWindowMarkup, Does.Contain("ShowImageTilesCheckBox"));
             Assert.That(MainWindowMarkup, Does.Contain("ShowSparseImageTilesCheckBox"));
             Assert.That(MainWindowMarkup, Does.Contain("ShowBackgroundImagesCheckBox"));
+            Assert.That(BackgroundSettingsMarkup, Does.Contain("Show tile labels"));
             Assert.That(MainWindowCodeBehind, Does.Contain("ShowBoxes = ShowBoxesCheckBox.IsChecked ?? true"));
             Assert.That(MainWindowCodeBehind, Does.Contain("ShowSparseImageTiles = _showSparseImageTiles"));
             Assert.That(MainWindowCodeBehind, Does.Contain("showSparseImageTiles: _showSparseImageTiles"));
             Assert.That(MainWindowCodeBehind, Does.Contain("ShowBoxes ? outlineBrush : null"));
             Assert.That(MainWindowCodeBehind, Does.Contain("ShowSparseImageTilesCheckBox.IsChecked = settings.ShowSparseImageTiles"));
+            Assert.That(MainWindowCodeBehind, Does.Contain("ShowBackgroundTileLabels = _mainViewModel.TileBackgroundSettings.ShowTileLabels"));
+            Assert.That(MainWindowCodeBehind, Does.Not.Contain("OnTileBackgroundSettingsChanged"));
+            Assert.That(MainWindowCodeBehind, Does.Not.Contain("RegenerateForTileLabelSettingAsync"));
         }
     }
 
