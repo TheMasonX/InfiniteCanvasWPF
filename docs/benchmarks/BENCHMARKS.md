@@ -81,43 +81,10 @@ projection. Use it to evaluate allocation and lifecycle pressure, not full-frame
 latency.
 
 The application writes `FrameDiag` and `AnnotationDiag` records at the same
-two-second cadence. Compare runs with the same scene, camera path, build
-configuration, and debugger state. `AnnotationDiag` reports overlay update time,
-equivalent-item fast-path hits, state creation, pool reuse, pool size, and visual
-tree add/remove counts.
+two-second cadence. The app uses retained annotation visuals in every run.
+`AnnotationDiag` reports overlay update time, equivalent-item fast-path hits,
+state creation, pool reuse, pool size, and visual tree add/remove counts.
 
-## Annotation overlay A/B run
-
-Run the app in retained mode for the optimized path.
-
-```powershell
-dotnet run --project src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release -- --annotation-overlay=retained
-```
-
-Run the app in recreate mode for the pre-retention control path.
-
-```powershell
-dotnet run --project src/InfiniteCanvas.App/InfiniteCanvas.App.csproj --configuration Release -- --annotation-overlay=recreate
-```
-
-The default mode is retained. The environment variable
-`INFINITE_CANVAS_ANNOTATION_OVERLAY_MODE` accepts `retained` or `recreate`.
-The command-line argument takes precedence.
-
-Both modes log `AnnotationDiag` records to
+The app logs diagnostics to
 `%LOCALAPPDATA%\InfiniteCanvas\logs\infinitecanvas-YYYYMMDD.log`.
-Compare the mode, average and maximum update time, rebuild count, recreated
-count, fast-path count, pool hits, and visual-tree add or remove counts.
-
-Export the current day's diagnostics to CSV:
-
-```powershell
-pwsh -NoProfile -File scripts/Export-AnnotationDiagnostics.ps1 `
-	-OutputDirectory artifacts/annotation-ab
-```
-
-Pass one or more explicit log files with `-LogPath` to compare runs from
-different days. The script writes `annotation-diagnostics.csv`,
-`frame-diagnostics.csv`, `annotation-ab-summary.csv`, and `export-metadata.json`.
-The summary groups values by retained or recreate mode.
 

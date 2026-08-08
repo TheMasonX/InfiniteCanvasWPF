@@ -40,7 +40,6 @@ public partial class MainWindow : Window, ICanvasSceneSource
     private IReadOnlyList<SampleImageTile> _lastPublishedVisibleTiles = [];
     private CameraSnapshot? _lastGridCamera;
     private string[]? _lastGridTileIds;
-    private readonly AnnotationOverlayMode _annotationOverlayMode = ResolveAnnotationOverlayMode();
     private const int MaxDetachedAnnotationOverlayStates = 256;
     private readonly Dictionary<string, AnnotationOverlayState> _annotationOverlayStates = new(StringComparer.Ordinal);
     private readonly Stack<AnnotationOverlayState> _detachedAnnotationOverlayStates = [];
@@ -63,8 +62,6 @@ public partial class MainWindow : Window, ICanvasSceneSource
     private long _annotationElementRemoveCount;
     private long _annotationLabelAddCount;
     private long _annotationLabelRemoveCount;
-    private long _annotationRebuildCount;
-    private long _annotationRecreatedCount;
     private static readonly SolidColorBrush AnnotationLabelBackgroundBrush = CreateFrozenBrush(Color.FromArgb(180, 16, 22, 28));
     private static readonly FontFamily AnnotationLabelFont = new("Cascadia Mono");
     private Point? _hoverPointerPosition;
@@ -99,7 +96,6 @@ public partial class MainWindow : Window, ICanvasSceneSource
     public MainWindow()
     {
         InitializeComponent();
-        Log.Information("Annotation overlay mode: {Mode}", _annotationOverlayMode);
 
         _camera = CanvasSurface.ViewModel.Camera;
         CanvasSurface.ViewportChanged += OnCanvasViewportChanged;
@@ -807,12 +803,6 @@ public partial class MainWindow : Window, ICanvasSceneSource
         var annotationLayer = CanvasSurface.GetOverlayHost().AnnotationLayer!;
         _annotationUpdateCount++;
 
-        if (_annotationOverlayMode == AnnotationOverlayMode.Recreate)
-        {
-            RecreateAnnotationLayer(items, camera, annotationLayer);
-            return;
-        }
-
         // CanvasControl clears tooltip registrations before each publication.
         // Re-register retained visuals without touching their WPF structure
         // when the annotation inputs are unchanged.
@@ -982,95 +972,6 @@ public partial class MainWindow : Window, ICanvasSceneSource
         _lastAnnotationSelectionId = _selectedAnnotationId;
     }
 
-    private void RecreateAnnotationLayer(
-        IReadOnlyList<ICanvasItem> items,
-        CameraSnapshot camera,
-        Canvas annotationLayer)
-    {
-        _annotationRebuildCount++;
-        annotationLayer.Children.Clear();
-
-        foreach (var item in items)
-        {
-            if (item is not SampleAnnotation annotation)
-            {
-                continue;
-            }
-
-            var topLeft = camera.WorldToScreen(annotation.Bounds.X, annotation.Bounds.Y);
-            var width = annotation.Bounds.Width * camera.ScaleX;
-            var height = annotation.Bounds.Height * camera.ScaleY;
-            if (width <= 0 || height <= 0)
-            {
-                continue;
-            }
-
-            _annotationRecreatedCount++;
-            var outlineBrush = new SolidColorBrush(ToMediaColor(annotation.Color));
-            var fillBrush = CreateRecreatedFillBrush(_annotationDisplayOptions.Mode, annotation.Color);
-            var outline = new Rectangle
-            {
-                Stroke = _annotationDisplayOptions.ShowBoxes ? outlineBrush : null,
-                Fill = _annotationDisplayOptions.ShowBoxes ? fillBrush : null,
-                StrokeThickness = _annotationDisplayOptions.OutlineThickness,
-                SnapsToDevicePixels = true,
-                StrokeDashCap = PenLineCap.Round,
-                StrokeLineJoin = PenLineJoin.Round
-            };
-            var annotationVisual = new Grid
-            {
-                Children = { outline }
-            };
-            var annotationElement = new Border
-            {
-                Width = width,
-                Height = height,
-                Background = Brushes.Transparent,
-                Child = annotationVisual,
-                Tag = annotation
-            };
-            CanvasSurface.RegisterItemVisual(
-                annotationElement,
-                AnnotationFeaturePresenter.BuildTooltipContent(annotation));
-            Canvas.SetLeft(annotationElement, topLeft.X);
-            Canvas.SetTop(annotationElement, topLeft.Y);
-            annotationLayer.Children.Add(annotationElement);
-            _annotationElementAddCount++;
-
-            if (_annotationDisplayOptions.ShowLabels)
-            {
-                var labelPanel = BuildRecreatedAnnotationLabel(
-                    annotation,
-                    topLeft,
-                    outlineBrush,
-                    _annotationDisplayOptions.LabelSize,
-                    _annotationDisplayOptions.LabelDisplay);
-                annotationLayer.Children.Add(labelPanel);
-                _annotationLabelAddCount++;
-            }
-
-            if (annotation.Id == _selectedAnnotationId)
-            {
-                _selectionOutlineAnimator.Apply(outline);
-            }
-        }
-    }
-
-    private static AnnotationOverlayMode ResolveAnnotationOverlayMode()
-    {
-        const string commandLinePrefix = "--annotation-overlay=";
-        var requestedMode = Environment.GetCommandLineArgs()
-            .FirstOrDefault(argument => argument.StartsWith(commandLinePrefix, StringComparison.OrdinalIgnoreCase))
-            ?.Substring(commandLinePrefix.Length);
-        requestedMode ??= Environment.GetEnvironmentVariable("INFINITE_CANVAS_ANNOTATION_OVERLAY_MODE");
-
-        return requestedMode?.Trim().ToLowerInvariant() switch
-        {
-            "recreate" or "legacy" => AnnotationOverlayMode.Recreate,
-            _ => AnnotationOverlayMode.Retained
-        };
-    }
-
     private static bool AreEquivalentAnnotationItems(
         IReadOnlyList<ICanvasItem>? previous,
         IReadOnlyList<ICanvasItem> current)
@@ -1154,50 +1055,6 @@ public partial class MainWindow : Window, ICanvasSceneSource
         Canvas.SetLeft(labelPanel, topLeft.X);
         Canvas.SetTop(labelPanel, topLeft.Y - 22);
         return labelPanel;
-    }
-
-    private static Border BuildRecreatedAnnotationLabel(
-        SampleAnnotation annotation,
-        ScreenPoint topLeft,
-        SolidColorBrush outlineBrush,
-        double labelSize,
-        AnnotationLabelDisplay labelDisplay)
-    {
-        var labelPanel = new Border
-        {
-            Background = new SolidColorBrush(Color.FromArgb(180, 16, 22, 28)),
-            BorderBrush = outlineBrush,
-            BorderThickness = new Thickness(1),
-            Padding = new Thickness(4, 1, 4, 1),
-            Child = new TextBlock
-            {
-                Text = labelDisplay == AnnotationLabelDisplay.Id
-                    ? annotation.ObjectId
-                    : annotation.Classification,
-                Foreground = Brushes.White,
-                FontFamily = new FontFamily("Cascadia Mono"),
-                FontWeight = FontWeights.SemiBold,
-                FontSize = labelSize,
-                TextAlignment = TextAlignment.Left
-            }
-        };
-
-        Canvas.SetLeft(labelPanel, topLeft.X);
-        Canvas.SetTop(labelPanel, topLeft.Y - 22);
-        return labelPanel;
-    }
-
-    private static Brush CreateRecreatedFillBrush(AnnotationDisplayMode mode, Bgra32Color classColor)
-    {
-        var fillColor = Color.FromArgb(220, classColor.Red, classColor.Green, classColor.Blue);
-        var overlayColor = Color.FromArgb(64, classColor.Red, classColor.Green, classColor.Blue);
-        return mode switch
-        {
-            AnnotationDisplayMode.Outline => Brushes.Transparent,
-            AnnotationDisplayMode.Fill => new SolidColorBrush(fillColor),
-            AnnotationDisplayMode.OutlineAndFill => new SolidColorBrush(overlayColor),
-            _ => Brushes.Transparent
-        };
     }
 
     private SolidColorBrush GetOutlineBrush(Bgra32Color color)
@@ -1793,11 +1650,10 @@ public partial class MainWindow : Window, ICanvasSceneSource
         var maximumMilliseconds = _annotationMaxUpdateTicks * 1000.0 / Stopwatch.Frequency;
 
         Serilog.Log.Information(
-            "AnnotationDiag: mode {Mode} | {Updates,4}u | avg {AverageMs,6:F2}ms max {MaximumMs,6:F2}ms | " +
+            "AnnotationDiag: {Updates,4}u | avg {AverageMs,6:F2}ms max {MaximumMs,6:F2}ms | " +
             "fast {FastPath,4} | created {Created,4} pool-hit {PoolHit,4} return {PoolReturn,4} drop {PoolDrop,4} " +
-            "rebuild {Rebuild,4} recreated {Recreated,4} | pool-size {PoolSize,3}/{PoolCapacity,3} | " +
+            "pool-size {PoolSize,3}/{PoolCapacity,3} | " +
             "element +{ElementAdds,4}/-{ElementRemoves,4} label +{LabelAdds,4}/-{LabelRemoves,4}",
-            _annotationOverlayMode,
             _annotationUpdateCount,
             averageMilliseconds,
             maximumMilliseconds,
@@ -1806,8 +1662,6 @@ public partial class MainWindow : Window, ICanvasSceneSource
             _annotationPoolHitCount,
             _annotationPoolReturnCount,
             _annotationPoolDropCount,
-            _annotationRebuildCount,
-            _annotationRecreatedCount,
             _detachedAnnotationOverlayStates.Count,
             MaxDetachedAnnotationOverlayStates,
             _annotationElementAddCount,
@@ -1827,8 +1681,6 @@ public partial class MainWindow : Window, ICanvasSceneSource
         _annotationElementRemoveCount = 0;
         _annotationLabelAddCount = 0;
         _annotationLabelRemoveCount = 0;
-        _annotationRebuildCount = 0;
-        _annotationRecreatedCount = 0;
     }
 
     private void UpdateSelectedAnnotationFeatures(SampleAnnotation? annotation = null)
@@ -2119,12 +1971,6 @@ public partial class MainWindow : Window, ICanvasSceneSource
     {
         Class,
         Id
-    }
-
-    private enum AnnotationOverlayMode
-    {
-        Retained,
-        Recreate
     }
 
     private enum AnnotationDisplayMode

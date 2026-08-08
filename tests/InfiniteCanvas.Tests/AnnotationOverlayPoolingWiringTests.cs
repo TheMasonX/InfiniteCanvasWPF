@@ -6,7 +6,7 @@ public sealed class AnnotationOverlayPoolingWiringTests
     private static readonly string RepositoryRoot = FindRepositoryRoot();
 
     [Test]
-    public void MainWindow_RetainsAnnotationVisualsAndUnregistersStaleEntries()
+    public void MainWindow_UsesRetainedAnnotationVisualsAndUnregistersStaleEntries()
     {
         var codeBehind = File.ReadAllText(Path.Combine(RepositoryRoot, "src", "InfiniteCanvas.App", "MainWindow.xaml.cs"));
 
@@ -16,8 +16,6 @@ public sealed class AnnotationOverlayPoolingWiringTests
             Assert.That(codeBehind, Does.Contain("MaxDetachedAnnotationOverlayStates = 256"));
             Assert.That(codeBehind, Does.Contain("_detachedAnnotationOverlayStates.TryPop"));
             Assert.That(codeBehind, Does.Contain("AreEquivalentAnnotationItems"));
-            Assert.That(codeBehind, Does.Contain("if (_annotationOverlayMode == AnnotationOverlayMode.Recreate)"));
-            Assert.That(codeBehind, Does.Contain("annotationLayer.Children.Clear();"));
             Assert.That(codeBehind, Does.Contain("CanvasSurface.UnregisterItemVisual(pair.Value.Element);"));
             Assert.That(codeBehind, Does.Contain("if (!state.IsSelected)"));
             Assert.That(codeBehind, Does.Contain("LogAnnotationDiagnostics();"));
@@ -41,21 +39,6 @@ public sealed class AnnotationOverlayPoolingWiringTests
             Assert.That(benchmark, Does.Contain("ApartmentState.STA"));
             Assert.That(benchmark, Does.Contain("Children.Add"));
             Assert.That(benchmark, Does.Contain("Children.Remove"));
-        }
-    }
-
-    [Test]
-    public void MainWindow_SupportsSelectableAnnotationOverlayModes()
-    {
-        var codeBehind = File.ReadAllText(Path.Combine(RepositoryRoot, "src", "InfiniteCanvas.App", "MainWindow.xaml.cs"));
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(codeBehind, Does.Contain("AnnotationOverlayMode.Recreate"));
-            Assert.That(codeBehind, Does.Contain("--annotation-overlay="));
-            Assert.That(codeBehind, Does.Contain("INFINITE_CANVAS_ANNOTATION_OVERLAY_MODE"));
-            Assert.That(codeBehind, Does.Contain("RecreateAnnotationLayer"));
-            Assert.That(codeBehind, Does.Contain("rebuild {Rebuild,4}"));
         }
     }
 
