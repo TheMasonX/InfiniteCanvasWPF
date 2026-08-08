@@ -94,6 +94,7 @@ public partial class CanvasControl : UserControl
     public void ClearFrame()
     {
         ClearRegisteredItemVisuals();
+        _tooltipCache.Clear();
         _tileGridLayer?.Children.Clear();
         _annotationLayer?.Children.Clear();
         SetPixelometerReadout("WORLD X --  Y --", "TILE --", "PIXEL --");
@@ -102,8 +103,33 @@ public partial class CanvasControl : UserControl
     public void RegisterItemVisual(FrameworkElement visual, string? tooltipContent)
     {
         ArgumentNullException.ThrowIfNull(visual);
-        visual.ToolTip = tooltipContent is null ? null : new DeferredCanvasToolTip(tooltipContent);
+        DeferredCanvasToolTip? tooltip = null;
+        if (tooltipContent is null)
+        {
+            visual.ToolTip = null;
+            _tooltipCache.Remove(visual);
+        }
+        else if (!_tooltipCache.TryGetValue(visual, out var cachedTooltip)
+            || !String.Equals(cachedTooltip.Content, tooltipContent, StringComparison.Ordinal))
+        {
+            tooltip = new DeferredCanvasToolTip(tooltipContent);
+            _tooltipCache[visual] = tooltip;
+        }
+        else
+        {
+            tooltip = cachedTooltip;
+        }
+
+        visual.ToolTip = tooltip;
         _registeredItemVisuals.Add(visual);
+    }
+
+    public void UnregisterItemVisual(FrameworkElement visual)
+    {
+        ArgumentNullException.ThrowIfNull(visual);
+        visual.ToolTip = null;
+        _registeredItemVisuals.Remove(visual);
+        _tooltipCache.Remove(visual);
     }
 
     private void ClearRegisteredItemVisuals()
@@ -143,7 +169,8 @@ public partial class CanvasControl : UserControl
     private Image? _frameImage;
     private Canvas? _tileGridLayer;
     private Canvas? _annotationLayer;
-    private readonly List<FrameworkElement> _registeredItemVisuals = [];
+    private readonly HashSet<FrameworkElement> _registeredItemVisuals = [];
+    private readonly Dictionary<FrameworkElement, DeferredCanvasToolTip> _tooltipCache = [];
     private bool _rasterVisible = true;
     private bool _loadingVisible;
 
@@ -261,6 +288,7 @@ public partial class CanvasControl : UserControl
     public void DetachFrameShell()
     {
         ClearRegisteredItemVisuals();
+        _tooltipCache.Clear();
         FramePresenter.Child = null;
         _frameShell = null;
         _frameImage = null;

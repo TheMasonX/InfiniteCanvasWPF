@@ -117,6 +117,21 @@ public sealed class CanvasControlConsumerHostTests
     }
 
     [Test]
+    public void ConsumerHost_ReusesTooltipWrapperForRetainedVisual()
+    {
+        var control = new CanvasControl();
+        var visual = new Border();
+
+        control.RegisterItemVisual(visual, "tooltip text");
+        var firstTooltip = visual.ToolTip;
+
+        control.PublishFrame(CreateFrame(new HostItem("plain", new SpatialBounds(0, 0, 10, 10)), 1));
+        control.RegisterItemVisual(visual, "tooltip text");
+
+        Assert.That(visual.ToolTip, Is.SameAs(firstTooltip));
+    }
+
+    [Test]
     public void ConsumerHost_DetachingFrameShell_ClearsRegisteredTooltips()
     {
         var control = new CanvasControl();

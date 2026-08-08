@@ -40,6 +40,33 @@ public partial class MainWindow : Window, ICanvasSceneSource
     private IReadOnlyList<SampleImageTile> _lastPublishedVisibleTiles = [];
     private CameraSnapshot? _lastGridCamera;
     private string[]? _lastGridTileIds;
+    private readonly AnnotationOverlayMode _annotationOverlayMode = ResolveAnnotationOverlayMode();
+    private const int MaxDetachedAnnotationOverlayStates = 256;
+    private readonly Dictionary<string, AnnotationOverlayState> _annotationOverlayStates = new(StringComparer.Ordinal);
+    private readonly Stack<AnnotationOverlayState> _detachedAnnotationOverlayStates = [];
+    private readonly Dictionary<Bgra32Color, SolidColorBrush> _annotationOutlineBrushes = new();
+    private readonly Dictionary<(AnnotationDisplayMode Mode, Bgra32Color Color), Brush> _annotationFillBrushes = new();
+    private IReadOnlyList<ICanvasItem>? _lastAnnotationItems;
+    private CameraSnapshot? _lastAnnotationCamera;
+    private AnnotationDisplayOptions? _lastAnnotationDisplayOptions;
+    private string? _lastAnnotationSelectionId;
+    private int _annotationUpdateVersion;
+    private long _annotationUpdateCount;
+    private long _annotationFastPathCount;
+    private long _annotationUpdateTicks;
+    private long _annotationMaxUpdateTicks;
+    private long _annotationStateCreatedCount;
+    private long _annotationPoolHitCount;
+    private long _annotationPoolReturnCount;
+    private long _annotationPoolDropCount;
+    private long _annotationElementAddCount;
+    private long _annotationElementRemoveCount;
+    private long _annotationLabelAddCount;
+    private long _annotationLabelRemoveCount;
+    private long _annotationRebuildCount;
+    private long _annotationRecreatedCount;
+    private static readonly SolidColorBrush AnnotationLabelBackgroundBrush = CreateFrozenBrush(Color.FromArgb(180, 16, 22, 28));
+    private static readonly FontFamily AnnotationLabelFont = new("Cascadia Mono");
     private Point? _hoverPointerPosition;
     private string? _selectedAnnotationId;
     private AnnotationDisplayOptions _annotationDisplayOptions = AnnotationDisplayOptions.Default;
@@ -72,6 +99,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
     public MainWindow()
     {
         InitializeComponent();
+        Log.Information("Annotation overlay mode: {Mode}", _annotationOverlayMode);
 
         _camera = CanvasSurface.ViewModel.Camera;
         CanvasSurface.ViewportChanged += OnCanvasViewportChanged;
@@ -646,6 +674,8 @@ public partial class MainWindow : Window, ICanvasSceneSource
                 fetchedTiles, totalTiles, generatedMs,
                 _tileCacheBudget.MaxBytes);
 
+            LogAnnotationDiagnostics();
+
             _diagnosticsFrameCount = 0;
             _diagnosticsStopwatch.Restart();
         }
@@ -703,7 +733,11 @@ public partial class MainWindow : Window, ICanvasSceneSource
         // was published for this frame (ICW-315; overlay layering invariant).
         // The grid scales to the camera-visible tile set (ICW-326).
         UpdateTileGridLayer(_lastPublishedCamera, _lastPublishedVisibleTiles, frame.Width, frame.Height);
+        var annotationUpdateStarted = Stopwatch.GetTimestamp();
         UpdateAnnotationLayer(frame.Items, _lastPublishedCamera);
+        var annotationUpdateTicks = Stopwatch.GetTimestamp() - annotationUpdateStarted;
+        _annotationUpdateTicks += annotationUpdateTicks;
+        _annotationMaxUpdateTicks = Math.Max(_annotationMaxUpdateTicks, annotationUpdateTicks);
     }
 
     private void UpdateTileGridLayer(CameraSnapshot camera, IReadOnlyList<SampleImageTile> visibleTiles, int frameWidth, int frameHeight)
@@ -771,7 +805,32 @@ public partial class MainWindow : Window, ICanvasSceneSource
     private void UpdateAnnotationLayer(IReadOnlyList<ICanvasItem> items, CameraSnapshot camera)
     {
         var annotationLayer = CanvasSurface.GetOverlayHost().AnnotationLayer!;
-        annotationLayer.Children.Clear();
+        _annotationUpdateCount++;
+
+        if (_annotationOverlayMode == AnnotationOverlayMode.Recreate)
+        {
+            RecreateAnnotationLayer(items, camera, annotationLayer);
+            return;
+        }
+
+        // CanvasControl clears tooltip registrations before each publication.
+        // Re-register retained visuals without touching their WPF structure
+        // when the annotation inputs are unchanged.
+        if (AreEquivalentAnnotationItems(_lastAnnotationItems, items)
+            && _lastAnnotationCamera == camera
+            && _lastAnnotationDisplayOptions == _annotationDisplayOptions
+            && _lastAnnotationSelectionId == _selectedAnnotationId)
+        {
+            _annotationFastPathCount++;
+            foreach (var state in _annotationOverlayStates.Values)
+            {
+                CanvasSurface.RegisterItemVisual(state.Element, state.TooltipContent);
+            }
+
+            return;
+        }
+
+        var updateVersion = unchecked(++_annotationUpdateVersion);
 
         foreach (var item in items)
         {
@@ -790,8 +849,165 @@ public partial class MainWindow : Window, ICanvasSceneSource
                 continue;
             }
 
+            if (!_annotationOverlayStates.TryGetValue(annotation.Id, out var state))
+            {
+                if (_detachedAnnotationOverlayStates.TryPop(out state))
+                {
+                    state.Rebind(annotation);
+                    _annotationPoolHitCount++;
+                }
+                else
+                {
+                    state = CreateAnnotationOverlayState(annotation);
+                    _annotationStateCreatedCount++;
+                }
+
+                _annotationOverlayStates.Add(annotation.Id, state);
+            }
+
+            var outlineBrush = GetOutlineBrush(annotation.Color);
+            var fillBrush = GetFillBrush(_annotationDisplayOptions.Mode, annotation.Color);
+            state.LastSeenVersion = updateVersion;
+            state.Element.Tag = annotation;
+            state.Element.Width = width;
+            state.Element.Height = height;
+            state.Outline.Stroke = _annotationDisplayOptions.ShowBoxes ? outlineBrush : null;
+            state.Outline.Fill = _annotationDisplayOptions.ShowBoxes ? fillBrush : null;
+            state.Outline.StrokeThickness = _annotationDisplayOptions.OutlineThickness;
+            if (!ReferenceEquals(state.Annotation, annotation))
+            {
+                state.Annotation = annotation;
+                state.TooltipContent = AnnotationFeaturePresenter.BuildTooltipContent(annotation);
+            }
+
+            if (state.Element.Parent != annotationLayer)
+            {
+                annotationLayer.Children.Add(state.Element);
+                _annotationElementAddCount++;
+            }
+
+            CanvasSurface.RegisterItemVisual(
+                state.Element,
+                state.TooltipContent);
+            Canvas.SetLeft(state.Element, topLeft.X);
+            Canvas.SetTop(state.Element, topLeft.Y);
+
+            if (_annotationDisplayOptions.ShowLabels)
+            {
+                var labelPanel = UpdateAnnotationLabel(
+                    state,
+                    annotation,
+                    topLeft,
+                    outlineBrush,
+                    _annotationDisplayOptions.LabelSize,
+                    _annotationDisplayOptions.LabelDisplay);
+                if (labelPanel.Parent != annotationLayer)
+                {
+                    annotationLayer.Children.Add(labelPanel);
+                    _annotationLabelAddCount++;
+                }
+            }
+            else if (state.LabelPanel?.Parent == annotationLayer)
+            {
+                annotationLayer.Children.Remove(state.LabelPanel);
+                _annotationLabelRemoveCount++;
+            }
+
+            if (annotation.Id == _selectedAnnotationId)
+            {
+                if (!state.IsSelected)
+                {
+                    _selectionOutlineAnimator.Apply(state.Outline);
+                    state.IsSelected = true;
+                }
+            }
+            else if (state.IsSelected)
+            {
+                _selectionOutlineAnimator.Clear(state.Outline);
+                state.IsSelected = false;
+            }
+        }
+
+        List<string>? staleIds = null;
+        foreach (var pair in _annotationOverlayStates)
+        {
+            if (pair.Value.LastSeenVersion == updateVersion)
+            {
+                continue;
+            }
+
+            staleIds ??= [];
+            staleIds.Add(pair.Key);
+            CanvasSurface.UnregisterItemVisual(pair.Value.Element);
+            if (pair.Value.IsSelected)
+            {
+                _selectionOutlineAnimator.Clear(pair.Value.Outline);
+            }
+
+            if (pair.Value.Element.Parent == annotationLayer)
+            {
+                annotationLayer.Children.Remove(pair.Value.Element);
+                _annotationElementRemoveCount++;
+            }
+
+            if (pair.Value.LabelPanel?.Parent == annotationLayer)
+            {
+                annotationLayer.Children.Remove(pair.Value.LabelPanel);
+                _annotationLabelRemoveCount++;
+            }
+
+            pair.Value.PrepareForPool();
+            if (_detachedAnnotationOverlayStates.Count < MaxDetachedAnnotationOverlayStates)
+            {
+                _detachedAnnotationOverlayStates.Push(pair.Value);
+                _annotationPoolReturnCount++;
+            }
+            else
+            {
+                _annotationPoolDropCount++;
+            }
+        }
+
+        if (staleIds is not null)
+        {
+            foreach (var staleId in staleIds)
+            {
+                _annotationOverlayStates.Remove(staleId);
+            }
+        }
+
+        _lastAnnotationItems = items;
+        _lastAnnotationCamera = camera;
+        _lastAnnotationDisplayOptions = _annotationDisplayOptions;
+        _lastAnnotationSelectionId = _selectedAnnotationId;
+    }
+
+    private void RecreateAnnotationLayer(
+        IReadOnlyList<ICanvasItem> items,
+        CameraSnapshot camera,
+        Canvas annotationLayer)
+    {
+        _annotationRebuildCount++;
+        annotationLayer.Children.Clear();
+
+        foreach (var item in items)
+        {
+            if (item is not SampleAnnotation annotation)
+            {
+                continue;
+            }
+
+            var topLeft = camera.WorldToScreen(annotation.Bounds.X, annotation.Bounds.Y);
+            var width = annotation.Bounds.Width * camera.ScaleX;
+            var height = annotation.Bounds.Height * camera.ScaleY;
+            if (width <= 0 || height <= 0)
+            {
+                continue;
+            }
+
+            _annotationRecreatedCount++;
             var outlineBrush = new SolidColorBrush(ToMediaColor(annotation.Color));
-            var fillBrush = CreateFillBrush(_annotationDisplayOptions.Mode, annotation.Color);
+            var fillBrush = CreateRecreatedFillBrush(_annotationDisplayOptions.Mode, annotation.Color);
             var outline = new Rectangle
             {
                 Stroke = _annotationDisplayOptions.ShowBoxes ? outlineBrush : null,
@@ -819,16 +1035,18 @@ public partial class MainWindow : Window, ICanvasSceneSource
             Canvas.SetLeft(annotationElement, topLeft.X);
             Canvas.SetTop(annotationElement, topLeft.Y);
             annotationLayer.Children.Add(annotationElement);
+            _annotationElementAddCount++;
 
             if (_annotationDisplayOptions.ShowLabels)
             {
-                var labelPanel = BuildAnnotationLabel(
+                var labelPanel = BuildRecreatedAnnotationLabel(
                     annotation,
                     topLeft,
                     outlineBrush,
                     _annotationDisplayOptions.LabelSize,
                     _annotationDisplayOptions.LabelDisplay);
                 annotationLayer.Children.Add(labelPanel);
+                _annotationLabelAddCount++;
             }
 
             if (annotation.Id == _selectedAnnotationId)
@@ -838,13 +1056,107 @@ public partial class MainWindow : Window, ICanvasSceneSource
         }
     }
 
+    private static AnnotationOverlayMode ResolveAnnotationOverlayMode()
+    {
+        const string commandLinePrefix = "--annotation-overlay=";
+        var requestedMode = Environment.GetCommandLineArgs()
+            .FirstOrDefault(argument => argument.StartsWith(commandLinePrefix, StringComparison.OrdinalIgnoreCase))
+            ?.Substring(commandLinePrefix.Length);
+        requestedMode ??= Environment.GetEnvironmentVariable("INFINITE_CANVAS_ANNOTATION_OVERLAY_MODE");
+
+        return requestedMode?.Trim().ToLowerInvariant() switch
+        {
+            "recreate" or "legacy" => AnnotationOverlayMode.Recreate,
+            _ => AnnotationOverlayMode.Retained
+        };
+    }
+
+    private static bool AreEquivalentAnnotationItems(
+        IReadOnlyList<ICanvasItem>? previous,
+        IReadOnlyList<ICanvasItem> current)
+    {
+        if (ReferenceEquals(previous, current))
+        {
+            return true;
+        }
+
+        if (previous is null || previous.Count != current.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < current.Count; i++)
+        {
+            if (!ReferenceEquals(previous[i], current[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private void FitSceneToWidth()
     {
         ApplyFitToWidthZoom();
         ClampCameraToScene();
     }
 
-    private static Border BuildAnnotationLabel(
+    private AnnotationOverlayState CreateAnnotationOverlayState(SampleAnnotation annotation)
+    {
+        var outline = new Rectangle
+        {
+            SnapsToDevicePixels = true,
+            StrokeDashCap = PenLineCap.Round,
+            StrokeLineJoin = PenLineJoin.Round
+        };
+        var annotationElement = new Border
+        {
+            Background = Brushes.Transparent,
+            Child = outline,
+            Tag = annotation
+        };
+        return new AnnotationOverlayState(annotationElement, outline, annotation);
+    }
+
+    private static Border UpdateAnnotationLabel(
+        AnnotationOverlayState state,
+        SampleAnnotation annotation,
+        ScreenPoint topLeft,
+        SolidColorBrush outlineBrush,
+        double labelSize,
+        AnnotationLabelDisplay labelDisplay)
+    {
+        if (state.LabelPanel is null || state.LabelText is null)
+        {
+            state.LabelText = new TextBlock
+            {
+                Foreground = Brushes.White,
+                FontFamily = AnnotationLabelFont,
+                FontWeight = FontWeights.SemiBold,
+                TextAlignment = TextAlignment.Left
+            };
+            state.LabelPanel = new Border
+            {
+                Background = AnnotationLabelBackgroundBrush,
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(4, 1, 4, 1),
+                Child = state.LabelText
+            };
+        }
+
+        state.LabelText.Text = labelDisplay == AnnotationLabelDisplay.Id
+            ? annotation.ObjectId
+            : annotation.Classification;
+        state.LabelText.FontSize = labelSize;
+        state.LabelPanel.BorderBrush = outlineBrush;
+        var labelPanel = state.LabelPanel;
+        Canvas.SetLeft(labelPanel, topLeft.X);
+        Canvas.SetTop(labelPanel, topLeft.Y - 22);
+        return labelPanel;
+    }
+
+    private static Border BuildRecreatedAnnotationLabel(
         SampleAnnotation annotation,
         ScreenPoint topLeft,
         SolidColorBrush outlineBrush,
@@ -875,7 +1187,7 @@ public partial class MainWindow : Window, ICanvasSceneSource
         return labelPanel;
     }
 
-    private static Brush CreateFillBrush(AnnotationDisplayMode mode, Bgra32Color classColor)
+    private static Brush CreateRecreatedFillBrush(AnnotationDisplayMode mode, Bgra32Color classColor)
     {
         var fillColor = Color.FromArgb(220, classColor.Red, classColor.Green, classColor.Blue);
         var overlayColor = Color.FromArgb(64, classColor.Red, classColor.Green, classColor.Blue);
@@ -886,6 +1198,46 @@ public partial class MainWindow : Window, ICanvasSceneSource
             AnnotationDisplayMode.OutlineAndFill => new SolidColorBrush(overlayColor),
             _ => Brushes.Transparent
         };
+    }
+
+    private SolidColorBrush GetOutlineBrush(Bgra32Color color)
+    {
+        if (_annotationOutlineBrushes.TryGetValue(color, out var brush))
+        {
+            return brush;
+        }
+
+        brush = new SolidColorBrush(ToMediaColor(color));
+        brush.Freeze();
+        _annotationOutlineBrushes.Add(color, brush);
+        return brush;
+    }
+
+    private Brush GetFillBrush(AnnotationDisplayMode mode, Bgra32Color classColor)
+    {
+        if (mode == AnnotationDisplayMode.Outline)
+        {
+            return Brushes.Transparent;
+        }
+
+        var key = (mode, classColor);
+        if (_annotationFillBrushes.TryGetValue(key, out var brush))
+        {
+            return brush;
+        }
+
+        var alpha = mode == AnnotationDisplayMode.Fill ? (byte)220 : (byte)64;
+        brush = new SolidColorBrush(Color.FromArgb(alpha, classColor.Red, classColor.Green, classColor.Blue));
+        brush.Freeze();
+        _annotationFillBrushes.Add(key, brush);
+        return brush;
+    }
+
+    private static SolidColorBrush CreateFrozenBrush(Color color)
+    {
+        var brush = new SolidColorBrush(color);
+        brush.Freeze();
+        return brush;
     }
 
     private static Color ToMediaColor(Bgra32Color color)
@@ -1428,6 +1780,57 @@ public partial class MainWindow : Window, ICanvasSceneSource
         Serilog.Log.Debug("Cache summary: {Summary} (visible backgrounds {Visible})", cacheSummary, visibleCount);
     }
 
+    private void LogAnnotationDiagnostics()
+    {
+        if (_annotationUpdateCount == 0)
+        {
+            return;
+        }
+
+        var averageMilliseconds = _annotationUpdateTicks * 1000.0
+            / Stopwatch.Frequency
+            / _annotationUpdateCount;
+        var maximumMilliseconds = _annotationMaxUpdateTicks * 1000.0 / Stopwatch.Frequency;
+
+        Serilog.Log.Information(
+            "AnnotationDiag: mode {Mode} | {Updates,4}u | avg {AverageMs,6:F2}ms max {MaximumMs,6:F2}ms | " +
+            "fast {FastPath,4} | created {Created,4} pool-hit {PoolHit,4} return {PoolReturn,4} drop {PoolDrop,4} " +
+            "rebuild {Rebuild,4} recreated {Recreated,4} | pool-size {PoolSize,3}/{PoolCapacity,3} | " +
+            "element +{ElementAdds,4}/-{ElementRemoves,4} label +{LabelAdds,4}/-{LabelRemoves,4}",
+            _annotationOverlayMode,
+            _annotationUpdateCount,
+            averageMilliseconds,
+            maximumMilliseconds,
+            _annotationFastPathCount,
+            _annotationStateCreatedCount,
+            _annotationPoolHitCount,
+            _annotationPoolReturnCount,
+            _annotationPoolDropCount,
+            _annotationRebuildCount,
+            _annotationRecreatedCount,
+            _detachedAnnotationOverlayStates.Count,
+            MaxDetachedAnnotationOverlayStates,
+            _annotationElementAddCount,
+            _annotationElementRemoveCount,
+            _annotationLabelAddCount,
+            _annotationLabelRemoveCount);
+
+        _annotationUpdateCount = 0;
+        _annotationFastPathCount = 0;
+        _annotationUpdateTicks = 0;
+        _annotationMaxUpdateTicks = 0;
+        _annotationStateCreatedCount = 0;
+        _annotationPoolHitCount = 0;
+        _annotationPoolReturnCount = 0;
+        _annotationPoolDropCount = 0;
+        _annotationElementAddCount = 0;
+        _annotationElementRemoveCount = 0;
+        _annotationLabelAddCount = 0;
+        _annotationLabelRemoveCount = 0;
+        _annotationRebuildCount = 0;
+        _annotationRecreatedCount = 0;
+    }
+
     private void UpdateSelectedAnnotationFeatures(SampleAnnotation? annotation = null)
     {
         var selectedAnnotation = annotation ?? _annotations.FirstOrDefault(item => item.Id == _selectedAnnotationId);
@@ -1643,10 +2046,85 @@ public partial class MainWindow : Window, ICanvasSceneSource
             true);
     }
 
+    private sealed class AnnotationOverlayState(Border element, Rectangle outline, SampleAnnotation annotation)
+    {
+        public Border Element { get; } = element;
+
+        public Rectangle Outline { get; } = outline;
+
+        public SampleAnnotation? Annotation { get; set; } = annotation;
+
+        public string TooltipContent { get; set; } = AnnotationFeaturePresenter.BuildTooltipContent(annotation);
+
+        public Border? LabelPanel { get; set; }
+
+        public TextBlock? LabelText { get; set; }
+
+        public int LastSeenVersion { get; set; }
+
+        public bool IsSelected { get; set; }
+
+        public void Rebind(SampleAnnotation annotation)
+        {
+            Annotation = annotation;
+            TooltipContent = AnnotationFeaturePresenter.BuildTooltipContent(annotation);
+            Element.Tag = annotation;
+            Element.Width = 0;
+            Element.Height = 0;
+            Outline.Stroke = null;
+            Outline.Fill = null;
+            Outline.StrokeThickness = 0;
+            LastSeenVersion = 0;
+            IsSelected = false;
+            if (LabelText is not null)
+            {
+                LabelText.Text = string.Empty;
+            }
+
+            if (LabelPanel is not null)
+            {
+                LabelPanel.BorderBrush = null;
+                Canvas.SetLeft(LabelPanel, 0);
+                Canvas.SetTop(LabelPanel, 0);
+            }
+        }
+
+        public void PrepareForPool()
+        {
+            Annotation = null;
+            TooltipContent = string.Empty;
+            Element.Tag = null;
+            Element.Width = 0;
+            Element.Height = 0;
+            Outline.Stroke = null;
+            Outline.Fill = null;
+            Outline.StrokeThickness = 0;
+            LastSeenVersion = 0;
+            IsSelected = false;
+            if (LabelText is not null)
+            {
+                LabelText.Text = string.Empty;
+            }
+
+            if (LabelPanel is not null)
+            {
+                LabelPanel.BorderBrush = null;
+                Canvas.SetLeft(LabelPanel, 0);
+                Canvas.SetTop(LabelPanel, 0);
+            }
+        }
+    }
+
     private enum AnnotationLabelDisplay
     {
         Class,
         Id
+    }
+
+    private enum AnnotationOverlayMode
+    {
+        Retained,
+        Recreate
     }
 
     private enum AnnotationDisplayMode
@@ -1659,6 +2137,8 @@ public partial class MainWindow : Window, ICanvasSceneSource
     private interface ISelectionOutlineAnimator
     {
         void Apply(Shape outline);
+
+        void Clear(Shape outline);
     }
 
     private sealed class MarchingDashSelectionOutlineAnimator : ISelectionOutlineAnimator
@@ -1672,6 +2152,12 @@ public partial class MainWindow : Window, ICanvasSceneSource
             };
             outline.BeginAnimation(Shape.StrokeDashOffsetProperty, animation);
         }
+
+        public void Clear(Shape outline)
+        {
+            outline.BeginAnimation(Shape.StrokeDashOffsetProperty, null);
+            outline.StrokeDashArray = null;
+        }
     }
 
     private sealed class PulseOpacitySelectionOutlineAnimator : ISelectionOutlineAnimator
@@ -1684,6 +2170,12 @@ public partial class MainWindow : Window, ICanvasSceneSource
                 RepeatBehavior = RepeatBehavior.Forever
             };
             outline.BeginAnimation(OpacityProperty, animation);
+        }
+
+        public void Clear(Shape outline)
+        {
+            outline.BeginAnimation(OpacityProperty, null);
+            outline.Opacity = 1;
         }
     }
 
